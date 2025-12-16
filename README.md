@@ -270,6 +270,119 @@ style :sticky_header, %{
 }
 ```
 
+## Contextual Selectors (LiveStyle.When)
+
+Style elements based on ancestor, descendant, or sibling state - like StyleX's `stylex.when.*` API:
+
+```elixir
+defmodule MyApp.Card do
+  use LiveStyle
+  import LiveStyle.When
+
+  style :card_content, %{
+    transform: %{
+      default: "translateX(0)",
+      ancestor(":hover"): "translateX(10px)"
+    }
+  }
+
+  def render(assigns) do
+    ~H"""
+    <div class={LiveStyle.default_marker()}>
+      <div class={style(:card_content)}>
+        Hover the parent to move me
+      </div>
+    </div>
+    """
+  end
+end
+```
+
+### Available Selectors
+
+| Function | Description | Generated CSS Pattern |
+|----------|-------------|----------------------|
+| `ancestor(pseudo)` | Style when ancestor has state | `.class:where(.marker:hover *)` |
+| `descendant(pseudo)` | Style when descendant has state | `.class:where(:has(.marker:focus))` |
+| `sibling_before(pseudo)` | Style when preceding sibling has state | `.class:where(.marker:hover ~ *)` |
+| `sibling_after(pseudo)` | Style when following sibling has state | `.class:where(:has(~ .marker:focus))` |
+| `any_sibling(pseudo)` | Style when any sibling has state | Combined selector |
+
+### Custom Markers
+
+Use custom markers to create independent sets of contextual selectors:
+
+```elixir
+defmodule MyApp.Table do
+  use LiveStyle
+  import LiveStyle.When
+
+  @row_marker LiveStyle.define_marker(:row)
+  @row_hover ancestor(":hover", @row_marker)
+  @col_hover ancestor(":has(td:nth-of-type(2):hover)")
+
+  style :cell, %{
+    opacity: conditions([
+      {:default, "1"},
+      {ancestor(":hover"), "0.1"},     # Dim when container hovered
+      {@row_hover, "1"},                # Restore for hovered row
+      {":hover", "1"}                   # Restore for direct hover
+    ]),
+    background_color: conditions([
+      {:default, "transparent"},
+      {@row_hover, "#2266cc77"},
+      {@col_hover, "#2266cc77"},
+      {":hover", "#2266cc77"}
+    ])
+  }
+
+  def render(assigns) do
+    ~H"""
+    <div class={LiveStyle.default_marker()}>
+      <table>
+        <tr class={@row_marker}>
+          <td class={style(:cell)}>Cell</td>
+        </tr>
+      </table>
+    </div>
+    """
+  end
+end
+```
+
+### The `conditions/1` Helper
+
+Use `conditions/1` when you need module attributes as condition keys:
+
+```elixir
+@row_hover ancestor(":hover", @row_marker)
+
+style :cell, %{
+  opacity: conditions([
+    {:default, "1"},
+    {@row_hover, "0.5"},  # Module attribute as key
+    {":hover", "1"}
+  ])
+}
+```
+
+### Nested Conditions
+
+Combine pseudo-classes with contextual selectors for precise targeting:
+
+```elixir
+style :cell, %{
+  background_color: conditions([
+    {:default, "transparent"},
+    # Only apply to nth-child(2) when column 2 is hovered
+    {":nth-child(2)", %{
+      :default => nil,
+      ancestor(":has(td:nth-of-type(2):hover)") => "#2266cc77"
+    }}
+  ])
+}
+```
+
 ## Typed Variables
 
 For advanced use cases like animating gradients:
@@ -357,6 +470,24 @@ The watcher monitors the LiveStyle manifest file and regenerates CSS whenever st
 | `keyframes/2` | Define a keyframes animation |
 | `var/1` | Reference a CSS custom property |
 | `first_that_works/1` | Declare fallback values for a property |
+| `conditions/1` | Build conditional value map from tuples (for module attrs as keys) |
+
+### Marker Functions
+
+| Function | Description |
+|----------|-------------|
+| `LiveStyle.default_marker/0` | Returns the default marker class (`"x-marker"`) |
+| `LiveStyle.define_marker/1` | Creates a unique marker class for custom contexts |
+
+### Contextual Selectors (via `import LiveStyle.When`)
+
+| Function | Description |
+|----------|-------------|
+| `ancestor/1,2` | Style when ancestor has pseudo-state |
+| `descendant/1,2` | Style when descendant has pseudo-state |
+| `sibling_before/1,2` | Style when preceding sibling has pseudo-state |
+| `sibling_after/1,2` | Style when following sibling has pseudo-state |
+| `any_sibling/1,2` | Style when any sibling has pseudo-state |
 
 ### Token Macros (via `use LiveStyle.Tokens`)
 

@@ -318,7 +318,7 @@ defmodule LiveStyle do
 
   defmacro __using__(_opts) do
     quote do
-      import LiveStyle, only: [style: 2, keyframes: 2, var: 1, first_that_works: 1]
+      import LiveStyle, only: [style: 2, keyframes: 2, var: 1, first_that_works: 1, conditions: 1]
 
       Module.register_attribute(__MODULE__, :__live_styles__, accumulate: true)
       Module.register_attribute(__MODULE__, :__live_keyframes__, accumulate: true)
@@ -331,7 +331,18 @@ defmodule LiveStyle do
     styles = Module.get_attribute(env.module, :__live_styles__) |> Enum.reverse()
     keyframes_defs = Module.get_attribute(env.module, :__live_keyframes__) |> Enum.reverse()
 
-    raw_styles = Map.new(styles)
+    # First pass: collect raw styles for include resolution
+    raw_styles_map = Map.new(styles)
+
+    # Second pass: resolve includes for each style
+    resolved_styles =
+      styles
+      |> Enum.map(fn {name, declarations} ->
+        resolved = LiveStyle.resolve_includes(declarations, raw_styles_map, env.module)
+        {name, resolved}
+      end)
+
+    raw_styles = Map.new(resolved_styles)
 
     keyframes_map =
       keyframes_defs
@@ -342,7 +353,7 @@ defmodule LiveStyle do
       |> Map.new()
 
     styles_map =
-      styles
+      resolved_styles
       |> Enum.map(fn {name, declarations} ->
         atomic = LiveStyle.process_style_map(declarations, keyframes_map)
         {name, atomic}
@@ -431,14 +442,18 @@ defmodule LiveStyle do
       }
   """
   defmacro style(name, declarations) when is_atom(name) do
-    caller_module = __CALLER__.module
-    {evaluated, _} = Code.eval_quoted(declarations, [], __CALLER__)
-    local_styles = LiveStyle.get_module_styles(caller_module)
-    resolved = LiveStyle.resolve_includes(evaluated, local_styles, caller_module)
-    LiveStyle.store_module_style(caller_module, name, resolved)
-
+    # Defer all evaluation to the module body context where module attributes
+    # are properly resolved. The declarations AST will be evaluated when the
+    # @__live_styles__ attribute is set.
     quote do
-      @__live_styles__ {unquote(name), unquote(Macro.escape(resolved))}
+      # Evaluate declarations in this module's context (module attrs available)
+      evaluated_decl = unquote(declarations)
+
+      # Store for processing in __before_compile__
+      @__live_styles__ {unquote(name), evaluated_decl}
+
+      # Also store and process immediately for include support
+      LiveStyle.store_module_style(__MODULE__, unquote(name), evaluated_decl)
     end
   end
 
@@ -542,6 +557,123 @@ defmodule LiveStyle do
   defmacro first_that_works(values) when is_list(values) do
     quote do
       %{__first_that_works__: true, values: unquote(values)}
+    end
+  end
+
+  @doc """
+  Returns the default marker class name for use with `LiveStyle.When` selectors.
+
+  Apply this class to elements you want to observe for state changes (hover, focus, etc.)
+  when using contextual selectors like `ancestor/1`, `descendant/1`, or `sibling_*/1`.
+
+  ## Example
+
+      defmodule MyComponent do
+        use LiveStyle
+        import LiveStyle.When
+
+        style(:card_content, %{
+          transform: %{
+            default: "translateX(0)",
+            ancestor(":hover"): "translateX(10px)"
+          }
+        })
+
+        def render(assigns) do
+          ~H\"\"\"
+          <div class={LiveStyle.default_marker()}>
+            <div class={style(:card_content)}>
+              Hover the parent to move me
+            </div>
+          </div>
+          \"\"\"
+        end
+      end
+  """
+  def default_marker, do: "x-marker"
+
+  @doc """
+  Generates a unique marker class name for use with `LiveStyle.When` selectors.
+
+  Custom markers allow you to have multiple independent sets of contextual selectors
+  in the same component tree.
+
+  ## Parameters
+
+    * `name` - An atom identifying this marker
+
+  ## Example
+
+      defmodule MyApp.Markers do
+        @card_marker LiveStyle.define_marker(:card)
+        @row_marker LiveStyle.define_marker(:row)
+
+        def card_marker, do: @card_marker
+        def row_marker, do: @row_marker
+      end
+
+      defmodule MyComponent do
+        use LiveStyle
+        import LiveStyle.When
+        alias MyApp.Markers
+
+        style(:heading, %{
+          transform: %{
+            default: "translateX(0)",
+            ancestor(":hover", Markers.card_marker()): "translateX(10px)",
+            ancestor(":hover", Markers.row_marker()): "translateX(4px)"
+          }
+        })
+      end
+  """
+  def define_marker(name) when is_atom(name) do
+    hash =
+      :crypto.hash(:md5, "marker:#{name}")
+      |> Base.encode16(case: :lower)
+      |> String.slice(0, 7)
+
+    "x-marker-#{hash}"
+  end
+
+  @doc """
+  Builds a conditional value map from a list of `{condition, value}` tuples.
+
+  This helper allows using module attributes and computed values as condition keys,
+  which isn't possible with map literal syntax.
+
+  ## Example
+
+      import LiveStyle.When
+
+      @row_marker LiveStyle.define_marker(:row)
+      @row_hover ancestor(":hover", @row_marker)
+      @col1_hover ":where(:has(td:nth-of-type(1):hover))"
+
+      style(:td, %{
+        background_color: conditions([
+          {:default, "transparent"},
+          {@row_hover, var(:color_indigo_50)},
+          {@col1_hover, var(:color_indigo_50)},
+          {":hover", var(:color_indigo_200)}
+        ])
+      })
+
+  This is equivalent to:
+
+      style(:td, %{
+        background_color: %{
+          :default => "transparent",
+          ":where(.x-marker-abc:hover *)" => var(:color_indigo_50),
+          ":where(:has(td:nth-of-type(1):hover))" => var(:color_indigo_50),
+          ":hover" => var(:color_indigo_200)
+        }
+      })
+  """
+  defmacro conditions(condition_list) do
+    # Return code that builds the map in the caller's module context
+    # This allows module attributes (@foo) to be resolved correctly
+    quote do
+      Map.new(unquote(condition_list))
     end
   end
 
@@ -1148,10 +1280,11 @@ defmodule LiveStyle do
     fetch_external_style(module, style_name)
   end
 
-  defp fetch_included_style(style_name, local_styles, _caller_module) when is_atom(style_name) do
+  defp fetch_included_style(style_name, local_styles, caller_module) when is_atom(style_name) do
     case Map.fetch(local_styles, style_name) do
       {:ok, declarations} ->
-        declarations
+        # Recursively resolve includes in the included style
+        resolve_includes(declarations, local_styles, caller_module)
 
       :error ->
         raise CompileError,
@@ -1275,10 +1408,14 @@ defmodule LiveStyle do
   defp process_style_entry(key, value, keyframes_map) do
     key_str = to_string(key)
 
-    if String.starts_with?(key_str, "::") do
-      process_pseudo_element(key_str, value, keyframes_map)
-    else
-      process_property_with_conditions(key, value, keyframes_map, nil, nil)
+    cond do
+      # Pseudo-elements (::before, ::after, etc.) - value is a map of properties
+      String.starts_with?(key_str, "::") ->
+        process_pseudo_element(key_str, value, keyframes_map)
+
+      # Regular CSS property (possibly with conditional values)
+      true ->
+        process_property_with_conditions(key, value, keyframes_map, nil, nil)
     end
   end
 
@@ -1297,7 +1434,7 @@ defmodule LiveStyle do
          value,
          keyframes_map,
          pseudo_element,
-         _parent_condition
+         parent_pseudo_class
        )
        when is_map(value) do
     Enum.flat_map(value, fn {condition, cond_value} ->
@@ -1305,13 +1442,42 @@ defmodule LiveStyle do
 
       cond do
         condition == :default or condition_str == "default" ->
-          generate_rule(key, cond_value, keyframes_map, pseudo_element, nil, nil)
+          # Default value - use parent pseudo class if any
+          generate_rule(key, cond_value, keyframes_map, pseudo_element, parent_pseudo_class, nil)
 
         String.starts_with?(condition_str, ":") and not String.starts_with?(condition_str, "::") ->
-          generate_rule(key, cond_value, keyframes_map, pseudo_element, condition_str, nil)
+          # This is a pseudo-class condition
+          # Combine with parent pseudo class if present
+          combined_pseudo =
+            if parent_pseudo_class do
+              "#{parent_pseudo_class}#{condition_str}"
+            else
+              condition_str
+            end
+
+          # Check if cond_value is a nested map (nested conditions)
+          if is_map(cond_value) and not Map.has_key?(cond_value, :__first_that_works__) do
+            # Recursively process nested conditions with this pseudo as parent
+            process_property_with_conditions(
+              key,
+              cond_value,
+              keyframes_map,
+              pseudo_element,
+              combined_pseudo
+            )
+          else
+            generate_rule(key, cond_value, keyframes_map, pseudo_element, combined_pseudo, nil)
+          end
 
         String.starts_with?(condition_str, "@") ->
-          generate_rule(key, cond_value, keyframes_map, pseudo_element, nil, condition_str)
+          generate_rule(
+            key,
+            cond_value,
+            keyframes_map,
+            pseudo_element,
+            parent_pseudo_class,
+            condition_str
+          )
 
         true ->
           []

@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `LiveStyle.When` module with contextual selectors (inspired by StyleX's `stylex.when.*`):
+  - `ancestor/1,2` - style when ancestor has pseudo-state
+  - `descendant/1,2` - style when descendant has pseudo-state
+  - `sibling_before/1,2` - style when preceding sibling has pseudo-state
+  - `sibling_after/1,2` - style when following sibling has pseudo-state
+  - `any_sibling/1,2` - style when any sibling has pseudo-state
+- `LiveStyle.default_marker/0` - returns the default marker class for contextual selectors
+- `LiveStyle.define_marker/1` - creates unique marker classes for custom contexts
+- `conditions/1` macro - allows module attributes as condition keys in style declarations
+- Nested pseudo-class conditions - combine selectors like `:nth-child(2):where(.marker:hover *)`
+
 ## [0.1.0] - 2024-12-16
 
 ### Added

@@ -395,22 +395,27 @@ defmodule LiveStyleIncludeTest do
       end
     end
 
-    test "raises error when self-referencing style defined later" do
-      assert_raise CompileError, ~r/Cannot include :later/, fn ->
-        defmodule TestSelfRefOrderError do
-          use LiveStyle
+    test "can include styles defined later in the same module" do
+      # Note: Unlike the old implementation, styles can now be defined in any order
+      # because all styles are collected first, then resolved
+      defmodule TestSelfRefOrderWorks do
+        use LiveStyle
 
-          # Trying to include a style that's defined below
-          style(:first, %{
-            __include__: [:later],
-            color: "red"
-          })
+        # Include a style that's defined below - this now works!
+        style(:first, %{
+          __include__: [:later],
+          color: "red"
+        })
 
-          style(:later, %{
-            padding: "8px"
-          })
-        end
+        style(:later, %{
+          padding: "8px"
+        })
       end
+
+      css = LiveStyle.get_all_css()
+      # :first should have both padding (from :later) and color
+      assert css =~ "padding: 8px"
+      assert css =~ "color: red"
     end
 
     test "self-reference includes resolve nested includes" do
