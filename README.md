@@ -100,16 +100,25 @@ style :button, %{
 }
 ```
 
-**When to use map syntax:** Computed keys (like function calls or module attributes) require map syntax with `=>`:
+**Computed keys:** When using function calls or module attributes as keys, you have two options:
 
 ```elixir
-# Computed keys require map syntax with =>
+# Option 1: Map syntax with =>
 style :responsive,
   font_size: %{
     :default => "1rem",
-    Tokens.breakpoints_lg() => "1.5rem"  # Function call as key
+    Tokens.breakpoints_lg() => "1.5rem"
   }
+
+# Option 2: Tuple list syntax (more consistent with keyword style)
+style :responsive,
+  font_size: [
+    {:default, "1rem"},
+    {Tokens.breakpoints_lg(), "1.5rem"}
+  ]
 ```
+
+Both produce identical CSS output. Use whichever style you prefer.
 
 ## Design Tokens
 

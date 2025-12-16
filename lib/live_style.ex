@@ -261,20 +261,34 @@ defmodule LiveStyle do
   macro expansion (Code.eval_quoted evaluates at compile time but the
   result needs to be normalized).
   """
-  @spec normalize_to_map(map() | keyword()) :: map()
+  @spec normalize_to_map(map() | keyword() | [{any(), any()}]) :: map() | any()
   def normalize_to_map(data) when is_map(data) do
     Map.new(data, fn {k, v} -> {k, normalize_to_map(v)} end)
   end
 
   def normalize_to_map(data) when is_list(data) do
-    if Keyword.keyword?(data) do
-      Map.new(data, fn {k, v} -> {k, normalize_to_map(v)} end)
-    else
-      data
+    cond do
+      # Empty list - return as-is
+      data == [] ->
+        data
+
+      # Check if it's a list of 2-tuples (key-value pairs)
+      # This handles both keyword lists and lists with computed keys
+      tuple_list?(data) ->
+        Map.new(data, fn {k, v} -> {k, normalize_to_map(v)} end)
+
+      # Regular list (e.g., for first_that_works values)
+      true ->
+        data
     end
   end
 
   def normalize_to_map(data), do: data
+
+  # Check if a list is a list of 2-tuples (key-value pairs)
+  defp tuple_list?([{_, _} | rest]), do: tuple_list?(rest)
+  defp tuple_list?([]), do: true
+  defp tuple_list?(_), do: false
 
   @doc """
   Returns the configured output path for the generated CSS file.

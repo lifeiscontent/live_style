@@ -146,6 +146,51 @@ defmodule LiveStyle.KeywordSyntaxTest do
       assert css =~ "background-color: blue"
       assert css =~ "color: white"
     end
+
+    test "accepts tuple list with computed keys" do
+      defmodule TupleListComputedKeys do
+        use LiveStyle
+
+        # Simulate a computed key (like Tokens.breakpoints_lg())
+        @lg_breakpoint "@media (min-width: 1024px)"
+
+        style(:responsive,
+          font_size: [
+            {:default, "1rem"},
+            {@lg_breakpoint, "1.5rem"}
+          ]
+        )
+      end
+
+      css = LiveStyle.get_all_css()
+      assert css =~ "font-size: 1rem"
+      assert css =~ "@media (min-width: 1024px)"
+      assert css =~ "font-size: 1.5rem"
+    end
+
+    test "accepts tuple list with external function call keys" do
+      # Define a separate module to simulate Tokens.breakpoints_lg()
+      defmodule BreakpointHelper do
+        def lg, do: "@media (min-width: 768px)"
+      end
+
+      defmodule TupleListFunctionKeys do
+        use LiveStyle
+        alias LiveStyle.KeywordSyntaxTest.BreakpointHelper
+
+        style(:text,
+          color: [
+            {:default, "black"},
+            {BreakpointHelper.lg(), "gray"}
+          ]
+        )
+      end
+
+      css = LiveStyle.get_all_css()
+      assert css =~ "color: black"
+      assert css =~ "@media (min-width: 768px)"
+      assert css =~ "color: gray"
+    end
   end
 
   # ===========================================================================

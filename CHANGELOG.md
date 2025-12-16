@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2024-12-17
+
+### Added
+
+- Tuple list syntax support for computed keys as an alternative to map syntax:
+  ```elixir
+  # Now you can use tuple lists with computed keys
+  style :responsive,
+    font_size: [
+      {:default, "1rem"},
+      {Tokens.breakpoints_lg(), "1.5rem"}
+    ]
+  ```
+
+### Fixed
+
+- CI now only checks formatting on Elixir 1.17 to avoid formatter version differences
+
 ## [0.4.0] - 2024-12-17
 
 ### Added
@@ -22,8 +40,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Notes
 
-- When using computed keys (like `Tokens.breakpoints_lg()` or `var(:name)`), map syntax with `=>` is still required due to Elixir language constraints
 - Keyword list syntax is more idiomatic Elixir and recommended for most use cases
+- For computed keys, use either map syntax with `=>` or tuple list syntax `[{key, value}]`
 
 ## [0.3.0] - 2024-12-17
 
