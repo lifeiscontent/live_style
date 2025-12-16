@@ -223,6 +223,23 @@ defmodule LiveStyle.ViewTransitions do
   - `:new` - Styles for `::view-transition-new` (incoming snapshot)
   - `:old_only_child` - Styles for `::view-transition-old:only-child`
   - `:new_only_child` - Styles for `::view-transition-new:only-child`
+
+  ## Note on Keyframe References
+
+  Unlike `view_transition/2`, this macro does not support atom-based keyframe
+  references with compile-time validation. Use the function call syntax instead:
+
+      # Use function calls (works):
+      view_transition_class :fade, %{
+        old: %{animation: "\#{fade_out()} 200ms ease-out both"}
+      }
+
+      # Atom references won't be resolved:
+      view_transition_class :fade, %{
+        old: %{animation_name: :fade_out}  # Won't work!
+      }
+
+  For keyframe atom references with validation, use `view_transition/2` instead.
   """
   defmacro view_transition_class(name, styles) when is_atom(name) do
     {evaluated_styles, _} = Code.eval_quoted(styles, [], __CALLER__)
@@ -334,8 +351,9 @@ defmodule LiveStyle.ViewTransitions do
     end
   end
 
-  # Generate CSS for class-based view transitions
   @doc false
+  # Generate CSS for class-based view transitions.
+  # Public for testing purposes only.
   def generate_class_css(class_name, styles) when is_map(styles) do
     styles
     |> Enum.map(fn {key, declarations} ->
@@ -346,8 +364,9 @@ defmodule LiveStyle.ViewTransitions do
     |> Enum.join("\n\n")
   end
 
-  # Generate CSS for name-based view transitions
   @doc false
+  # Generate CSS for name-based view transitions.
+  # Public for testing purposes only.
   def generate_name_css(name, styles) when is_map(styles) do
     styles
     |> Enum.map(fn {key, declarations} ->
@@ -360,15 +379,7 @@ defmodule LiveStyle.ViewTransitions do
 
   # Build selector for class-based transitions: ::view-transition-old(*.vt123)
   defp build_class_selector(class_name, key) when is_atom(key) do
-    case Map.get(@pseudo_element_map, key) do
-      nil ->
-        raise ArgumentError, """
-        Invalid view transition key: #{inspect(key)}
-
-        Valid keys are: :group, :image_pair, :old, :new,
-        :group_only_child, :image_pair_only_child, :old_only_child, :new_only_child
-        """
-
+    case lookup_pseudo_element(key) do
       {pseudo_element, pseudo_class} ->
         "::#{pseudo_element}(*.#{class_name}):#{pseudo_class}"
 
@@ -379,15 +390,7 @@ defmodule LiveStyle.ViewTransitions do
 
   # Build selector for name-based transitions
   defp build_name_selector(name, key) when is_atom(key) do
-    case Map.get(@pseudo_element_map, key) do
-      nil ->
-        raise ArgumentError, """
-        Invalid view transition key: #{inspect(key)}
-
-        Valid keys are: :group, :image_pair, :old, :new,
-        :group_only_child, :image_pair_only_child, :old_only_child, :new_only_child
-        """
-
+    case lookup_pseudo_element(key) do
       {pseudo_element, pseudo_class} ->
         "::#{pseudo_element}(#{name}):#{pseudo_class}"
 
@@ -399,6 +402,21 @@ defmodule LiveStyle.ViewTransitions do
   # Legacy support for string keys like "::view-transition-old"
   defp build_name_selector(name, key) when is_binary(key) do
     build_legacy_selector(name, key)
+  end
+
+  defp lookup_pseudo_element(key) do
+    case Map.get(@pseudo_element_map, key) do
+      nil ->
+        raise ArgumentError, """
+        Invalid view transition key: #{inspect(key)}
+
+        Valid keys are: :group, :image_pair, :old, :new,
+        :group_only_child, :image_pair_only_child, :old_only_child, :new_only_child
+        """
+
+      value ->
+        value
+    end
   end
 
   defp build_legacy_selector(name, "::" <> rest) do
@@ -487,6 +505,9 @@ defmodule LiveStyle.ViewTransitions do
   @animation_properties ~w(animation_name animationName)a
 
   @doc false
+  # Validates that all animation_name atom references are defined keyframes.
+  # Raises CompileError with helpful message if undefined keyframes are found.
+  # Public because it's called from __before_compile__ macro.
   def validate_keyframe_references!(styles, keyframes_map, transition_name, env) do
     undefined_refs = collect_undefined_keyframe_refs(styles, keyframes_map, [])
 
@@ -572,9 +593,12 @@ defmodule LiveStyle.ViewTransitions do
   defp keyframe_atom?(atom) when atom in @pseudo_element_keys, do: false
   defp keyframe_atom?(_atom), do: true
 
-  # Recursively resolve keyframe atom references in styles
-  # Atoms that match keyframe names get replaced with their hashed names
   @doc false
+  # Recursively resolve keyframe atom references in styles.
+  # Atoms that match keyframe names get replaced with their hashed names.
+  # Public because it's called from __before_compile__ macro and tests.
+  def resolve_keyframes(styles, keyframes_map)
+
   def resolve_keyframes(styles, keyframes_map) when is_map(styles) do
     Map.new(styles, fn {key, value} ->
       {key, resolve_keyframes(value, keyframes_map)}
