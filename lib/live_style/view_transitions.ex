@@ -23,36 +23,73 @@ defmodule LiveStyle.ViewTransitions do
           to: %{opacity: "0", transform: "scale(0.8)"}
         }
 
-        # Define view transitions using StyleX-like syntax
-        # Returns a class name string
-        view_transition_class :card_transition, %{
+        # Define view transitions - reference keyframes by atom
+        view_transition "card-*", %{
           old: %{
-            animation: "\#{scale_out()} 250ms ease-out both"
+            animation_name: :scale_out,
+            animation_duration: "250ms",
+            animation_fill_mode: "both"
           },
           new: %{
-            animation: "\#{scale_in()} 250ms ease-out both"
+            animation_name: :scale_in,
+            animation_duration: "250ms",
+            animation_fill_mode: "both"
           }
         }
       end
 
-      # Use in templates by adding the class to view-transition-class attribute:
-      <div style="view-transition-name: card-1" class={MyAppWeb.Tokens.card_transition()}>
-        ...
-      </div>
+  ## Keyframe References
+
+  When using `animation_name`, you can reference keyframes defined with `defkeyframes/2`
+  using atom syntax. The atom is automatically resolved to the hashed keyframe name
+  at compile time:
+
+      defkeyframes :fade_out, %{from: %{opacity: "1"}, to: %{opacity: "0"}}
+
+      view_transition "item-*", %{
+        old: %{animation_name: :fade_out}  # Resolves to "k1a2b3c4"
+      }
+
+  ### Compile-time Validation
+
+  LiveStyle validates that all `animation_name` atom references correspond to
+  defined keyframes. If you reference an undefined keyframe, you'll get a
+  compile-time error with a helpful message:
+
+      # This will raise a CompileError:
+      view_transition "item-*", %{
+        old: %{animation_name: :nonexistent}
+      }
+      # => Undefined keyframe reference(s): :nonexistent
+      #    Defined keyframes: :fade_in, :fade_out
+
+  ### CSS Keywords
+
+  Standard CSS keywords like `:none`, `:inherit`, `:initial`, and `:unset` are
+  allowed without being defined as keyframes:
+
+      view_transition "item-*", %{
+        old: %{
+          animation_name: %{
+            :default => :fade_out,
+            "@media (prefers-reduced-motion: reduce)" => :none  # OK!
+          }
+        }
+      }
 
   ## Pseudo-element Keys
 
   The options map accepts these keys which map to View Transition pseudo-elements:
 
-  - `:group` → `::view-transition-group(*.theClass)`
-  - `:image_pair` → `::view-transition-image-pair(*.theClass)`
-  - `:old` → `::view-transition-old(*.theClass)`
-  - `:new` → `::view-transition-new(*.theClass)`
+  - `:group` → `::view-transition-group(name)`
+  - `:image_pair` → `::view-transition-image-pair(name)`
+  - `:old` → `::view-transition-old(name)`
+  - `:new` → `::view-transition-new(name)`
 
   Each key can also have pseudo-class variants:
 
-  - `:old_only_child` → `::view-transition-old(*.theClass):only-child`
-  - `:new_only_child` → `::view-transition-new(*.theClass):only-child`
+  - `:old_only_child` → `::view-transition-old(name):only-child`
+  - `:new_only_child` → `::view-transition-new(name):only-child`
 
   The `:only-child` variants apply when an element is being added or removed
   (not replaced), useful for different add/remove vs reorder animations.
@@ -61,26 +98,30 @@ defmodule LiveStyle.ViewTransitions do
 
   Properties support conditional values for media queries:
 
-      view_transition_class :reduced_motion_aware, %{
+      view_transition "item-*", %{
         old: %{
-          animation: %{
-            :default => "\#{fade_out()} 250ms ease-out both",
-            "@media (prefers-reduced-motion: reduce)" => "none"
-          }
+          animation_name: %{
+            :default => :fade_out,
+            "@media (prefers-reduced-motion: reduce)" => :none
+          },
+          animation_duration: "250ms"
         }
       }
 
-  ## Alternative: Name-based View Transitions
+  ## Class-based View Transitions
 
-  For simpler cases or when you need wildcard matching, use `view_transition/2`:
+  For more control, use `view_transition_class/2` which generates a class name
+  you can apply to elements:
 
-      view_transition "todo-*", %{
-        old: %{animation: "\#{fade_out()} 200ms ease-out both"},
-        new: %{animation: "\#{fade_in()} 200ms ease-out both"}
+      view_transition_class :card_transition, %{
+        old: %{animation_name: :scale_out, animation_duration: "250ms"},
+        new: %{animation_name: :scale_in, animation_duration: "250ms"}
       }
 
-  This generates CSS for `::view-transition-old(todo-*)` etc., matching any
-  element with `view-transition-name: todo-1`, `todo-2`, etc.
+      # In templates:
+      <div style="view-transition-name: card-1" class={MyApp.Tokens.card_transition()}>
+        ...
+      </div>
 
   ## JavaScript Integration
 
@@ -225,29 +266,64 @@ defmodule LiveStyle.ViewTransitions do
 
   ## Example
 
+      defkeyframes :fade_out, %{from: %{opacity: "1"}, to: %{opacity: "0"}}
+      defkeyframes :fade_in, %{from: %{opacity: "0"}, to: %{opacity: "1"}}
+
       view_transition "todo-*", %{
-        old: %{animation: "\#{fade_out()} 200ms ease-out both"},
-        new: %{animation: "\#{fade_in()} 200ms ease-out both"}
+        old: %{
+          animation_name: :fade_out,
+          animation_duration: "200ms",
+          animation_fill_mode: "both"
+        },
+        new: %{
+          animation_name: :fade_in,
+          animation_duration: "200ms",
+          animation_fill_mode: "both"
+        }
       }
 
   This generates CSS like:
 
-      ::view-transition-old(todo-*) { animation: kf123 200ms ease-out both; }
-      ::view-transition-new(todo-*) { animation: kf456 200ms ease-out both; }
+      ::view-transition-old(todo-*) {
+        animation-name: k1a2b3c4;
+        animation-duration: 200ms;
+        animation-fill-mode: both;
+      }
 
   ## Keys
 
-  Same as `view_transition_class/2`:
-  - `:group`, `:image_pair`, `:old`, `:new`
-  - `:old_only_child`, `:new_only_child` (for add/remove animations)
+  - `:group` - styles for `::view-transition-group(name)`
+  - `:image_pair` - styles for `::view-transition-image-pair(name)`
+  - `:old` - styles for `::view-transition-old(name)` (outgoing snapshot)
+  - `:new` - styles for `::view-transition-new(name)` (incoming snapshot)
+  - `:old_only_child` - styles for `::view-transition-old(name):only-child`
+  - `:new_only_child` - styles for `::view-transition-new(name):only-child`
 
-  ## Legacy Selector Syntax
+  ## Keyframe References
 
-  For backwards compatibility, you can also use the full pseudo-element syntax:
+  Use atoms to reference keyframes defined with `defkeyframes/2`. They are
+  validated at compile time - referencing an undefined keyframe raises a
+  `CompileError`:
 
-      view_transition "todo-*", %{
-        "::view-transition-old": %{...},
-        "::view-transition-new:only-child": %{...}
+      view_transition "item-*", %{
+        old: %{animation_name: :undefined_keyframe}
+      }
+      # => ** (CompileError) Undefined keyframe reference(s): :undefined_keyframe
+
+  CSS keywords like `:none`, `:inherit`, `:initial`, `:unset` are allowed
+  without being defined as keyframes.
+
+  ## Conditional Values
+
+  Use maps for conditional values (e.g., media queries):
+
+      view_transition "item-*", %{
+        old: %{
+          animation_name: %{
+            :default => :fade_out,
+            "@media (prefers-reduced-motion: reduce)" => :none
+          }
+        }
       }
   """
   defmacro view_transition(name, styles) do

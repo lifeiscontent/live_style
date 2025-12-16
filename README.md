@@ -435,6 +435,20 @@ end
 
 The `:only-child` variants apply when an element is being added or removed (not replaced), useful for different add/remove vs reorder animations.
 
+### Compile-time Validation
+
+LiveStyle validates keyframe references at compile time. If you reference an undefined keyframe, you'll get a helpful error:
+
+```elixir
+view_transition "item-*", %{
+  old: %{animation_name: :nonexistent_keyframe}
+}
+# => ** (CompileError) Undefined keyframe reference(s): :nonexistent_keyframe
+#    Defined keyframes: :fade_in, :fade_out
+```
+
+CSS keywords like `:none`, `:inherit`, `:initial`, and `:unset` are allowed without being defined as keyframes.
+
 ### Respecting Reduced Motion
 
 ```elixir
