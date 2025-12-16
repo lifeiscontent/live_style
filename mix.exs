@@ -31,7 +31,7 @@ defmodule LiveStyle.MixProject do
     [
       {:phoenix_live_view, "~> 1.0", optional: true},
       {:file_system, "~> 1.0", optional: true},
-      {:ex_doc, "~> 0.31", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.31", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
     ]
