@@ -1408,14 +1408,12 @@ defmodule LiveStyle do
   defp process_style_entry(key, value, keyframes_map) do
     key_str = to_string(key)
 
-    cond do
-      # Pseudo-elements (::before, ::after, etc.) - value is a map of properties
-      String.starts_with?(key_str, "::") ->
-        process_pseudo_element(key_str, value, keyframes_map)
-
+    # Pseudo-elements (::before, ::after, etc.) - value is a map of properties
+    if String.starts_with?(key_str, "::") do
+      process_pseudo_element(key_str, value, keyframes_map)
+    else
       # Regular CSS property (possibly with conditional values)
-      true ->
-        process_property_with_conditions(key, value, keyframes_map, nil, nil)
+      process_property_with_conditions(key, value, keyframes_map, nil, nil)
     end
   end
 
@@ -1438,50 +1436,14 @@ defmodule LiveStyle do
        )
        when is_map(value) do
     Enum.flat_map(value, fn {condition, cond_value} ->
-      condition_str = to_string(condition)
-
-      cond do
-        condition == :default or condition_str == "default" ->
-          # Default value - use parent pseudo class if any
-          generate_rule(key, cond_value, keyframes_map, pseudo_element, parent_pseudo_class, nil)
-
-        String.starts_with?(condition_str, ":") and not String.starts_with?(condition_str, "::") ->
-          # This is a pseudo-class condition
-          # Combine with parent pseudo class if present
-          combined_pseudo =
-            if parent_pseudo_class do
-              "#{parent_pseudo_class}#{condition_str}"
-            else
-              condition_str
-            end
-
-          # Check if cond_value is a nested map (nested conditions)
-          if is_map(cond_value) and not Map.has_key?(cond_value, :__first_that_works__) do
-            # Recursively process nested conditions with this pseudo as parent
-            process_property_with_conditions(
-              key,
-              cond_value,
-              keyframes_map,
-              pseudo_element,
-              combined_pseudo
-            )
-          else
-            generate_rule(key, cond_value, keyframes_map, pseudo_element, combined_pseudo, nil)
-          end
-
-        String.starts_with?(condition_str, "@") ->
-          generate_rule(
-            key,
-            cond_value,
-            keyframes_map,
-            pseudo_element,
-            parent_pseudo_class,
-            condition_str
-          )
-
-        true ->
-          []
-      end
+      process_condition(
+        key,
+        condition,
+        cond_value,
+        keyframes_map,
+        pseudo_element,
+        parent_pseudo_class
+      )
     end)
   end
 
@@ -1493,6 +1455,78 @@ defmodule LiveStyle do
          _parent_condition
        ) do
     generate_rule(key, value, keyframes_map, pseudo_element, nil, nil)
+  end
+
+  defp process_condition(
+         key,
+         condition,
+         cond_value,
+         keyframes_map,
+         pseudo_element,
+         parent_pseudo_class
+       ) do
+    condition_str = to_string(condition)
+
+    cond do
+      condition == :default or condition_str == "default" ->
+        generate_rule(key, cond_value, keyframes_map, pseudo_element, parent_pseudo_class, nil)
+
+      pseudo_class?(condition_str) ->
+        process_pseudo_class_condition(
+          key,
+          condition_str,
+          cond_value,
+          keyframes_map,
+          pseudo_element,
+          parent_pseudo_class
+        )
+
+      String.starts_with?(condition_str, "@") ->
+        generate_rule(
+          key,
+          cond_value,
+          keyframes_map,
+          pseudo_element,
+          parent_pseudo_class,
+          condition_str
+        )
+
+      true ->
+        []
+    end
+  end
+
+  defp pseudo_class?(str),
+    do: String.starts_with?(str, ":") and not String.starts_with?(str, "::")
+
+  defp process_pseudo_class_condition(
+         key,
+         condition_str,
+         cond_value,
+         keyframes_map,
+         pseudo_element,
+         parent_pseudo_class
+       ) do
+    combined_pseudo = combine_pseudo_classes(parent_pseudo_class, condition_str)
+
+    if nested_condition_map?(cond_value) do
+      process_property_with_conditions(
+        key,
+        cond_value,
+        keyframes_map,
+        pseudo_element,
+        combined_pseudo
+      )
+    else
+      generate_rule(key, cond_value, keyframes_map, pseudo_element, combined_pseudo, nil)
+    end
+  end
+
+  defp combine_pseudo_classes(nil, condition_str), do: condition_str
+  defp combine_pseudo_classes(parent, condition_str), do: "#{parent}#{condition_str}"
+
+  defp nested_condition_map?(value) do
+    is_map(value) and not Map.has_key?(value, :__first_that_works__)
   end
 
   defp generate_rule(key, value, keyframes_map, pseudo_element, pseudo_class, at_rule) do
