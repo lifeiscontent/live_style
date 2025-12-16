@@ -28,16 +28,21 @@ defmodule LiveStyle do
         use Phoenix.Component
         use LiveStyle
 
-        style :base, %{
+        # Keyword list syntax (idiomatic Elixir)
+        style :base,
           display: "flex",
           align_items: "center",
           padding: "8px 16px",
           border_radius: "8px"
-        }
 
-        style :primary, %{
+        style :primary,
           background_color: var(:fill_primary),
           color: var(:color_white)
+
+        # Map syntax also works
+        style :secondary, %{
+          background_color: var(:fill_secondary),
+          color: var(:text_primary)
         }
 
         attr :variant, :atom, default: :primary
@@ -74,12 +79,13 @@ defmodule LiveStyle do
       defmodule MyApp.Tokens do
         use LiveStyle.Tokens
 
-        defvars :color, %{
+        # Keyword list syntax
+        defvars :color,
           white: "#ffffff",
           black: "#000000",
           primary: "#1e68fa"
-        }
 
+        # Map syntax also works
         defvars :radius, %{
           sm: "0.125rem",
           md: "0.25rem",
@@ -228,6 +234,47 @@ defmodule LiveStyle do
 
   @default_manifest_path "_build/live_style_manifest.etf"
   @default_output_path "priv/static/assets/live.css"
+
+  @doc """
+  Normalizes a keyword list or map to a map.
+
+  This allows all LiveStyle macros to accept either syntax:
+
+      # Map syntax (original)
+      style :button, %{display: "flex", padding: "8px"}
+
+      # Keyword list syntax (more idiomatic Elixir)
+      style :button, display: "flex", padding: "8px"
+
+  Nested values are also normalized recursively:
+
+      style :button, [
+        color: [
+          default: "blue",
+          ":hover": "darkblue"
+        ]
+      ]
+
+  ## Implementation Note
+
+  This function is public because it needs to be called at runtime during
+  macro expansion (Code.eval_quoted evaluates at compile time but the
+  result needs to be normalized).
+  """
+  @spec normalize_to_map(map() | keyword()) :: map()
+  def normalize_to_map(data) when is_map(data) do
+    Map.new(data, fn {k, v} -> {k, normalize_to_map(v)} end)
+  end
+
+  def normalize_to_map(data) when is_list(data) do
+    if Keyword.keyword?(data) do
+      Map.new(data, fn {k, v} -> {k, normalize_to_map(v)} end)
+    else
+      data
+    end
+  end
+
+  def normalize_to_map(data), do: data
 
   @doc """
   Returns the configured output path for the generated CSS file.
@@ -405,41 +452,42 @@ defmodule LiveStyle do
   @doc """
   Declares a named style.
 
-  ## Example
+  Accepts either map or keyword list syntax:
 
+      # Map syntax
       style :base, %{
         display: "flex",
         padding: "8px 16px"
       }
 
-      style :primary, %{
+      # Keyword list syntax (more idiomatic Elixir)
+      style :base,
+        display: "flex",
+        padding: "8px 16px"
+
+      style :primary,
         background_color: var(:fill_primary),
         color: var(:color_white)
-      }
 
       # With pseudo-classes
-      style :link, %{
+      style :link,
         color: "blue",
-        ":hover": %{color: "darkblue"}
-      }
+        ":hover": [color: "darkblue"]
 
       # With media queries
-      style :responsive, %{
+      style :responsive,
         padding: "8px",
-        "@media (min-width: 768px)": %{padding: "16px"}
-      }
+        "@media (min-width: 768px)": [padding: "16px"]
 
       # With include for composition from other modules
-      style :primary_button, %{
+      style :primary_button,
         __include__: [{BaseStyles, :button}],
         background_color: var(:fill_primary)
-      }
 
       # With include for self-references (same module)
-      style :large_primary_button, %{
+      style :large_primary_button,
         __include__: [:primary_button],
         font_size: "1.25rem"
-      }
   """
   defmacro style(name, declarations) when is_atom(name) do
     # Defer all evaluation to the module body context where module attributes
@@ -447,7 +495,8 @@ defmodule LiveStyle do
     # @__live_styles__ attribute is set.
     quote do
       # Evaluate declarations in this module's context (module attrs available)
-      evaluated_decl = unquote(declarations)
+      # and normalize keyword lists to maps
+      evaluated_decl = LiveStyle.normalize_to_map(unquote(declarations))
 
       # Store for processing in __before_compile__
       @__live_styles__ {unquote(name), evaluated_decl}
@@ -460,23 +509,27 @@ defmodule LiveStyle do
   @doc """
   Declares a named keyframes animation.
 
-  ## Example
+  Accepts either map or keyword list syntax:
 
+      # Map syntax
       keyframes :spin, %{
         from: %{transform: "rotate(0deg)"},
         to: %{transform: "rotate(360deg)"}
       }
 
-      style :spinner, %{
-        animation_name: :spin,
-        animation_duration: "1s"
-      }
+      # Keyword list syntax
+      keyframes :spin,
+        from: [transform: "rotate(0deg)"],
+        to: [transform: "rotate(360deg)"]
+
+      style :spinner, animation_name: :spin, animation_duration: "1s"
   """
   defmacro keyframes(name, frames) when is_atom(name) do
     {evaluated_frames, _} = Code.eval_quoted(frames, [], __CALLER__)
+    normalized_frames = LiveStyle.normalize_to_map(evaluated_frames)
 
     quote do
-      @__live_keyframes__ {unquote(name), unquote(Macro.escape(evaluated_frames))}
+      @__live_keyframes__ {unquote(name), unquote(Macro.escape(normalized_frames))}
     end
   end
 
@@ -802,25 +855,27 @@ defmodule LiveStyle do
   This macro is used in token modules to define design tokens.
   The variables are written to the manifest file during compilation.
 
-  ## Example
+  Accepts either map or keyword list syntax:
 
       defmodule MyApp.Tokens do
         use LiveStyle.Tokens
 
+        # Map syntax
         defvars :color, %{
           white: "#ffffff",
           black: "#000000",
           blue_500: "#1e68fa"
         }
 
-        defvars :radius, %{
+        # Keyword list syntax
+        defvars :radius,
           sm: "0.125rem",
           lg: "0.5rem"
-        }
       end
   """
   defmacro defvars(namespace, vars) when is_atom(namespace) do
     {evaluated_vars, _} = Code.eval_quoted(vars, [], __CALLER__)
+    evaluated_vars = LiveStyle.normalize_to_map(evaluated_vars)
     namespace_str = Atom.to_string(namespace)
 
     {var_defs, property_defs} =
@@ -884,38 +939,39 @@ defmodule LiveStyle do
   for values that are used as condition keys (media queries, etc.) or values
   that should be inlined rather than referenced via CSS variables.
 
-  ## Example
+  Accepts either map or keyword list syntax:
 
       defmodule MyApp.Tokens do
         use LiveStyle.Tokens
 
+        # Map syntax
         defconsts :breakpoints, %{
           sm: "@media (max-width: 640px)",
           md: "@media (min-width: 641px) and (max-width: 1024px)",
           lg: "@media (min-width: 1025px)"
         }
 
-        defconsts :z, %{
+        # Keyword list syntax
+        defconsts :z,
           modal: "1000",
           tooltip: "1100",
           toast: "1200"
-        }
       end
 
   Then use in styles:
 
       import MyApp.Tokens
 
-      style :responsive, %{
-        padding: %{
+      style :responsive,
+        padding: [
           default: "8px",
-          breakpoints.sm => "4px",
-          breakpoints.lg => "16px"
-        }
-      }
+          {breakpoints_sm(), "4px"},
+          {breakpoints_lg(), "16px"}
+        ]
   """
   defmacro defconsts(namespace, consts) when is_atom(namespace) do
     {evaluated_consts, _} = Code.eval_quoted(consts, [], __CALLER__)
+    evaluated_consts = LiveStyle.normalize_to_map(evaluated_consts)
     namespace_str = Atom.to_string(namespace)
 
     const_definitions =
@@ -944,20 +1000,21 @@ defmodule LiveStyle do
   This follows the StyleX pattern where `keyframes` returns a string that can
   be used in animation properties.
 
-  ## Example
+  Accepts either map or keyword list syntax:
 
       defmodule MyApp.Tokens do
         use LiveStyle.Tokens
 
+        # Map syntax
         defkeyframes :spin, %{
           from: %{transform: "rotate(0deg)"},
           to: %{transform: "rotate(360deg)"}
         }
 
-        defkeyframes :fade_in, %{
-          from: %{opacity: "0"},
-          to: %{opacity: "1"}
-        }
+        # Keyword list syntax
+        defkeyframes :fade_in,
+          from: [opacity: "0"],
+          to: [opacity: "1"]
       end
 
       # Use the generated functions:
@@ -965,14 +1022,12 @@ defmodule LiveStyle do
       MyApp.Tokens.fade_in()  # => "k5e6f7g8"
 
       # In styles or view transitions:
-      view_transition "card-*", %{
-        old: %{
-          animation: "\#{fade_out()} 200ms ease-out both"
-        }
-      }
+      view_transition "card-*",
+        old: [animation: "\#{fade_out()} 200ms ease-out both"]
   """
   defmacro defkeyframes(name, frames) when is_atom(name) do
     {evaluated_frames, _} = Code.eval_quoted(frames, [], __CALLER__)
+    evaluated_frames = LiveStyle.normalize_to_map(evaluated_frames)
 
     frames_string = inspect(evaluated_frames, limit: :infinity)
 
@@ -1009,18 +1064,23 @@ defmodule LiveStyle do
   overrides. Returns a class name that when applied to an element,
   overrides those CSS variables for that element and its descendants.
 
-  ## Example
+  Accepts either map or keyword list syntax:
 
       defmodule MyApp.Tokens do
         use LiveStyle.Tokens
 
-        defvars :fill, %{primary: "#3b82f6", secondary: "#e5e7eb"}
+        defvars :fill, primary: "#3b82f6", secondary: "#e5e7eb"
 
-        # Define themes using create_theme
+        # Map syntax
         create_theme :dark_fill, :fill, %{
           primary: "#60a5fa",
           secondary: "#374151"
         }
+
+        # Keyword list syntax
+        create_theme :dark_fill, :fill,
+          primary: "#60a5fa",
+          secondary: "#374151"
       end
 
   Then use in templates:
@@ -1032,6 +1092,7 @@ defmodule LiveStyle do
   defmacro create_theme(theme_name, namespace, overrides)
            when is_atom(theme_name) and is_atom(namespace) do
     {evaluated_overrides, _} = Code.eval_quoted(overrides, [], __CALLER__)
+    evaluated_overrides = LiveStyle.normalize_to_map(evaluated_overrides)
     namespace_str = Atom.to_string(namespace)
 
     declarations =

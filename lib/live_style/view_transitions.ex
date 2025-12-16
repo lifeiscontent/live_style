@@ -161,6 +161,8 @@ defmodule LiveStyle.ViewTransitions do
     # Process each view transition with the complete keyframes map
     for {name, styles_ast} <- Enum.reverse(view_transitions) do
       {evaluated_styles, _} = Code.eval_quoted(styles_ast, [], env)
+      # Normalize keyword lists to maps (supports both syntaxes)
+      evaluated_styles = LiveStyle.normalize_to_map(evaluated_styles)
 
       # Validate that all animation_name atom references are defined keyframes
       LiveStyle.ViewTransitions.validate_keyframe_references!(
@@ -205,12 +207,18 @@ defmodule LiveStyle.ViewTransitions do
   2. Creates CSS rules for the specified pseudo-elements
   3. Defines a function that returns the class name
 
-  ## Example
+  Accepts either map or keyword list syntax:
 
+      # Map syntax
       view_transition_class :card_transition, %{
         old: %{animation: "\#{scale_out()} 250ms ease-out both"},
         new: %{animation: "\#{scale_in()} 250ms ease-out both"}
       }
+
+      # Keyword list syntax
+      view_transition_class :card_transition,
+        old: [animation: "\#{scale_out()} 250ms ease-out both"],
+        new: [animation: "\#{scale_in()} 250ms ease-out both"]
 
       # Use in templates:
       <div class={MyApp.Tokens.card_transition()}>...</div>
@@ -230,19 +238,18 @@ defmodule LiveStyle.ViewTransitions do
   references with compile-time validation. Use the function call syntax instead:
 
       # Use function calls (works):
-      view_transition_class :fade, %{
-        old: %{animation: "\#{fade_out()} 200ms ease-out both"}
-      }
+      view_transition_class :fade,
+        old: [animation: "\#{fade_out()} 200ms ease-out both"]
 
       # Atom references won't be resolved:
-      view_transition_class :fade, %{
-        old: %{animation_name: :fade_out}  # Won't work!
-      }
+      view_transition_class :fade,
+        old: [animation_name: :fade_out]  # Won't work!
 
   For keyframe atom references with validation, use `view_transition/2` instead.
   """
   defmacro view_transition_class(name, styles) when is_atom(name) do
     {evaluated_styles, _} = Code.eval_quoted(styles, [], __CALLER__)
+    evaluated_styles = LiveStyle.normalize_to_map(evaluated_styles)
 
     # Generate a unique class name based on the styles
     styles_string = inspect(evaluated_styles, limit: :infinity)
@@ -281,23 +288,32 @@ defmodule LiveStyle.ViewTransitions do
   Use this for wildcard patterns (e.g., "todo-*") or when you prefer
   name-based transitions over class-based ones.
 
-  ## Example
+  Accepts either map or keyword list syntax:
 
-      defkeyframes :fade_out, %{from: %{opacity: "1"}, to: %{opacity: "0"}}
-      defkeyframes :fade_in, %{from: %{opacity: "0"}, to: %{opacity: "1"}}
+      defkeyframes :fade_out, from: [opacity: "1"], to: [opacity: "0"]
+      defkeyframes :fade_in, from: [opacity: "0"], to: [opacity: "1"]
 
+      # Map syntax
       view_transition "todo-*", %{
         old: %{
           animation_name: :fade_out,
           animation_duration: "200ms",
           animation_fill_mode: "both"
-        },
-        new: %{
+        }
+      }
+
+      # Keyword list syntax
+      view_transition "todo-*",
+        old: [
+          animation_name: :fade_out,
+          animation_duration: "200ms",
+          animation_fill_mode: "both"
+        ],
+        new: [
           animation_name: :fade_in,
           animation_duration: "200ms",
           animation_fill_mode: "both"
-        }
-      }
+        ]
 
   This generates CSS like:
 
@@ -322,9 +338,8 @@ defmodule LiveStyle.ViewTransitions do
   validated at compile time - referencing an undefined keyframe raises a
   `CompileError`:
 
-      view_transition "item-*", %{
-        old: %{animation_name: :undefined_keyframe}
-      }
+      view_transition "item-*",
+        old: [animation_name: :undefined_keyframe]
       # => ** (CompileError) Undefined keyframe reference(s): :undefined_keyframe
 
   CSS keywords like `:none`, `:inherit`, `:initial`, `:unset` are allowed
@@ -332,16 +347,15 @@ defmodule LiveStyle.ViewTransitions do
 
   ## Conditional Values
 
-  Use maps for conditional values (e.g., media queries):
+  Use keyword lists or maps for conditional values (e.g., media queries):
 
-      view_transition "item-*", %{
-        old: %{
-          animation_name: %{
-            :default => :fade_out,
-            "@media (prefers-reduced-motion: reduce)" => :none
-          }
-        }
-      }
+      view_transition "item-*",
+        old: [
+          animation_name: [
+            default: :fade_out,
+            "@media (prefers-reduced-motion: reduce)": :none
+          ]
+        ]
   """
   defmacro view_transition(name, styles) do
     # Store the view transition definition for later processing in __before_compile__

@@ -18,7 +18,7 @@ Add `live_style` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:live_style, "~> 0.1.0"}
+    {:live_style, "~> 0.4.0"}
   ]
 end
 ```
@@ -62,18 +62,16 @@ defmodule MyAppWeb.Components.Button do
   use Phoenix.Component
   use LiveStyle
 
-  # Define styles using the macro
-  style :base, %{
+  # Define styles using keyword list syntax
+  style :base,
     display: "flex",
     align_items: "center",
     padding: "8px 16px",
     border_radius: "8px"
-  }
 
-  style :primary, %{
+  style :primary,
     background_color: var(:fill_primary),
     color: "white"
-  }
 
   def button(assigns) do
     ~H"""
@@ -85,6 +83,34 @@ defmodule MyAppWeb.Components.Button do
 end
 ```
 
+## Syntax Options
+
+LiveStyle supports both **keyword list syntax** (recommended) and **map syntax**:
+
+```elixir
+# Keyword list syntax (recommended - more idiomatic Elixir)
+style :button,
+  display: "flex",
+  padding: "8px"
+
+# Map syntax (also supported)
+style :button, %{
+  display: "flex",
+  padding: "8px"
+}
+```
+
+**When to use map syntax:** Computed keys (like function calls or module attributes) require map syntax with `=>`:
+
+```elixir
+# Computed keys require map syntax with =>
+style :responsive,
+  font_size: %{
+    :default => "1rem",
+    Tokens.breakpoints_lg() => "1.5rem"  # Function call as key
+  }
+```
+
 ## Design Tokens
 
 Define CSS custom properties for your design system:
@@ -93,32 +119,28 @@ Define CSS custom properties for your design system:
 defmodule MyApp.Tokens do
   use LiveStyle.Tokens
 
-  defvars :color, %{
+  defvars :color,
     white: "#ffffff",
     black: "#000000",
     primary: "#1e68fa"
-  }
 
-  defvars :fill, %{
+  defvars :fill,
     primary: "#3b82f6",
     secondary: "#6b7280"
-  }
 
-  defvars :space, %{
+  defvars :space,
     sm: "8px",
     md: "16px",
     lg: "24px"
-  }
 end
 ```
 
 Use tokens in your styles with the `var/1` macro:
 
 ```elixir
-style :container, %{
+style :container,
   padding: var(:space_md),
   background_color: var(:fill_primary)
-}
 ```
 
 ## Theming
@@ -129,15 +151,13 @@ Create theme overrides that scope to an element and its children:
 defmodule MyApp.Tokens do
   use LiveStyle.Tokens
 
-  defvars :fill, %{
+  defvars :fill,
     background: "#ffffff",
     surface: "#f5f5f5"
-  }
 
-  create_theme :dark, :fill, %{
+  create_theme :dark, :fill,
     background: "#1a1a1a",
     surface: "#2d2d2d"
-  }
 end
 ```
 
@@ -169,35 +189,32 @@ end
 LiveStyle uses the StyleX pattern of condition-in-value:
 
 ```elixir
-style :link, %{
-  color: %{
+style :link,
+  color: [
     default: "blue",
     ":hover": "darkblue",
     ":focus": "navy"
-  },
+  ],
   text_decoration: "none"
-}
 
-style :container, %{
-  padding: %{
+style :container,
+  padding: [
     default: "16px",
     "@media (min-width: 768px)": "32px"
-  }
-}
+  ]
 ```
 
 ## Pseudo-elements
 
 ```elixir
-style :with_before, %{
+style :with_before,
   position: "relative",
-  "::before": %{
+  "::before": [
     content: "'*'",
     color: "red",
     position: "absolute",
     left: "-1em"
-  }
-}
+  ]
 ```
 
 ## Style Composition
@@ -209,35 +226,31 @@ Include styles from other modules or self-reference within the same module:
 defmodule MyApp.BaseStyles do
   use LiveStyle
 
-  style :button_base, %{
+  style :button_base,
     display: "inline-flex",
     padding: "8px 16px",
     cursor: "pointer"
-  }
 end
 
 defmodule MyApp.Button do
   use LiveStyle
 
-  style :primary, %{
+  style :primary,
     __include__: [{MyApp.BaseStyles, :button_base}],
     background_color: var(:fill_primary)
-  }
 end
 
 # Self-reference (same module)
 defmodule MyApp.Card do
   use LiveStyle
 
-  style :base, %{
+  style :base,
     border_radius: "8px",
     padding: "16px"
-  }
 
-  style :elevated, %{
+  style :elevated,
     __include__: [:base],
     box_shadow: "0 4px 6px rgba(0,0,0,0.1)"
-  }
 end
 ```
 
@@ -247,16 +260,14 @@ end
 defmodule MyApp.Animations do
   use LiveStyle
 
-  keyframes :spin, %{
-    from: %{transform: "rotate(0deg)"},
-    to: %{transform: "rotate(360deg)"}
-  }
+  keyframes :spin,
+    from: [transform: "rotate(0deg)"],
+    to: [transform: "rotate(360deg)"]
 
-  style :spinner, %{
+  style :spinner,
     animation_name: :spin,
     animation_duration: "1s",
     animation_iteration_count: "infinite"
-  }
 end
 ```
 
@@ -265,9 +276,8 @@ end
 Use `first_that_works/1` for CSS fallbacks:
 
 ```elixir
-style :sticky_header, %{
+style :sticky_header,
   position: first_that_works(["sticky", "-webkit-sticky", "fixed"])
-}
 ```
 
 ## Contextual Selectors (LiveStyle.When)
@@ -279,12 +289,11 @@ defmodule MyApp.Card do
   use LiveStyle
   import LiveStyle.When
 
-  style :card_content, %{
+  style :card_content,
     transform: %{
-      default: "translateX(0)",
-      ancestor(":hover"): "translateX(10px)"
+      :default => "translateX(0)",
+      ancestor(":hover") => "translateX(10px)"
     }
-  }
 
   def render(assigns) do
     ~H"""
@@ -297,6 +306,8 @@ defmodule MyApp.Card do
   end
 end
 ```
+
+> **Note:** When using computed keys like `ancestor(":hover")`, you must use map syntax with `=>` arrows. This is an Elixir language requirement, not a LiveStyle limitation.
 
 ### Available Selectors
 
@@ -321,7 +332,7 @@ defmodule MyApp.Table do
   @row_hover ancestor(":hover", @row_marker)
   @col_hover ancestor(":has(td:nth-of-type(2):hover)")
 
-  style :cell, %{
+  style :cell,
     opacity: conditions([
       {:default, "1"},
       {ancestor(":hover"), "0.1"},     # Dim when container hovered
@@ -334,7 +345,6 @@ defmodule MyApp.Table do
       {@col_hover, "#2266cc77"},
       {":hover", "#2266cc77"}
     ])
-  }
 
   def render(assigns) do
     ~H"""
@@ -357,13 +367,12 @@ Use `conditions/1` when you need module attributes as condition keys:
 ```elixir
 @row_hover ancestor(":hover", @row_marker)
 
-style :cell, %{
+style :cell,
   opacity: conditions([
     {:default, "1"},
     {@row_hover, "0.5"},  # Module attribute as key
     {":hover", "1"}
   ])
-}
 ```
 
 ### Nested Conditions
@@ -371,7 +380,7 @@ style :cell, %{
 Combine pseudo-classes with contextual selectors for precise targeting:
 
 ```elixir
-style :cell, %{
+style :cell,
   background_color: conditions([
     {:default, "transparent"},
     # Only apply to nth-child(2) when column 2 is hovered
@@ -380,7 +389,6 @@ style :cell, %{
       ancestor(":has(td:nth-of-type(2):hover)") => "#2266cc77"
     }}
   ])
-}
 ```
 
 ## View Transitions
@@ -395,30 +403,27 @@ defmodule MyApp.Tokens do
   use LiveStyle.ViewTransitions
 
   # Define keyframes for your animations
-  defkeyframes :scale_in, %{
-    from: %{opacity: "0", transform: "scale(0.8)"},
-    to: %{opacity: "1", transform: "scale(1)"}
-  }
+  defkeyframes :scale_in,
+    from: [opacity: "0", transform: "scale(0.8)"],
+    to: [opacity: "1", transform: "scale(1)"]
 
-  defkeyframes :scale_out, %{
-    from: %{opacity: "1", transform: "scale(1)"},
-    to: %{opacity: "0", transform: "scale(0.8)"}
-  }
+  defkeyframes :scale_out,
+    from: [opacity: "1", transform: "scale(1)"],
+    to: [opacity: "0", transform: "scale(0.8)"]
 
   # Define view transitions using atom keys
   # Keyframe atoms are automatically resolved to their hashed names
-  view_transition "card-*", %{
-    old: %{
+  view_transition "card-*",
+    old: [
       animation_name: :scale_out,
       animation_duration: "200ms",
       animation_fill_mode: "both"
-    },
-    new: %{
+    ],
+    new: [
       animation_name: :scale_in,
       animation_duration: "200ms",
       animation_fill_mode: "both"
-    }
-  }
+    ]
 end
 ```
 
@@ -440,9 +445,9 @@ The `:only-child` variants apply when an element is being added or removed (not 
 LiveStyle validates keyframe references at compile time. If you reference an undefined keyframe, you'll get a helpful error:
 
 ```elixir
-view_transition "item-*", %{
-  old: %{animation_name: :nonexistent_keyframe}
-}
+view_transition "item-*",
+  old: [animation_name: :nonexistent_keyframe]
+
 # => ** (CompileError) Undefined keyframe reference(s): :nonexistent_keyframe
 #    Defined keyframes: :fade_in, :fade_out
 ```
@@ -452,15 +457,14 @@ CSS keywords like `:none`, `:inherit`, `:initial`, and `:unset` are allowed with
 ### Respecting Reduced Motion
 
 ```elixir
-view_transition "todo-*", %{
-  old: %{
+view_transition "todo-*",
+  old: [
     animation_name: %{
       :default => :fade_out,
       "@media (prefers-reduced-motion: reduce)" => "none"
     },
     animation_duration: "200ms"
-  }
-}
+  ]
 ```
 
 ### JavaScript Integration
@@ -501,14 +505,12 @@ defmodule MyApp.Tokens do
   use LiveStyle.Tokens
   import LiveStyle.Types
 
-  defvars :anim, %{
+  defvars :anim,
     rotation: angle("0deg"),
     progress: percentage("0%")
-  }
 
-  defvars :theme, %{
+  defvars :theme,
     accent: color("#ff0000")
-  }
 end
 ```
 

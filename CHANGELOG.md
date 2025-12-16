@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2024-12-17
+
+### Added
+
+- Keyword list syntax support for all macros as an alternative to map syntax:
+  - `style/2`, `keyframes/2`, `defvars/2`, `defconsts/2`, `defkeyframes/2`, `create_theme/3`
+  - `view_transition/2`, `view_transition_class/2`
+- `normalize_to_map/1` helper function for recursively converting keyword lists to maps
+- Dedicated test file `test/live_style/keyword_syntax_test.exs` for keyword syntax coverage
+
+### Changed
+
+- All style macros now accept both map syntax (`%{key: value}`) and keyword list syntax (`key: value`)
+- Documentation updated with keyword list examples throughout
+
+### Notes
+
+- When using computed keys (like `Tokens.breakpoints_lg()` or `var(:name)`), map syntax with `=>` is still required due to Elixir language constraints
+- Keyword list syntax is more idiomatic Elixir and recommended for most use cases
+
 ## [0.3.0] - 2024-12-17
 
 ### Added
