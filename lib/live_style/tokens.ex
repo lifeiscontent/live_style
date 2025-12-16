@@ -63,6 +63,9 @@ defmodule LiveStyle.Tokens do
   defmacro __using__(_opts) do
     quote do
       import LiveStyle, only: [defvars: 2, defconsts: 2, defkeyframes: 2, create_theme: 3, var: 1]
+
+      # Register attribute for compile-time keyframe lookups (used by ViewTransitions)
+      Module.register_attribute(__MODULE__, :__live_keyframes_map__, accumulate: true)
     end
   end
 end

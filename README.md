@@ -383,6 +383,101 @@ style :cell, %{
 }
 ```
 
+## View Transitions
+
+LiveStyle provides first-class support for the [View Transitions API](https://developer.mozilla.org/en-US/docs/Web/API/View_Transition_API), following StyleX's `viewTransitionClass` pattern.
+
+### Basic Usage
+
+```elixir
+defmodule MyApp.Tokens do
+  use LiveStyle.Tokens
+  use LiveStyle.ViewTransitions
+
+  # Define keyframes for your animations
+  defkeyframes :scale_in, %{
+    from: %{opacity: "0", transform: "scale(0.8)"},
+    to: %{opacity: "1", transform: "scale(1)"}
+  }
+
+  defkeyframes :scale_out, %{
+    from: %{opacity: "1", transform: "scale(1)"},
+    to: %{opacity: "0", transform: "scale(0.8)"}
+  }
+
+  # Define view transitions using atom keys
+  # Keyframe atoms are automatically resolved to their hashed names
+  view_transition "card-*", %{
+    old: %{
+      animation_name: :scale_out,
+      animation_duration: "200ms",
+      animation_fill_mode: "both"
+    },
+    new: %{
+      animation_name: :scale_in,
+      animation_duration: "200ms",
+      animation_fill_mode: "both"
+    }
+  }
+end
+```
+
+### Available Pseudo-element Keys
+
+| Key | CSS Selector |
+|-----|-------------|
+| `:old` | `::view-transition-old(name)` |
+| `:new` | `::view-transition-new(name)` |
+| `:group` | `::view-transition-group(name)` |
+| `:image_pair` | `::view-transition-image-pair(name)` |
+| `:old_only_child` | `::view-transition-old(name):only-child` |
+| `:new_only_child` | `::view-transition-new(name):only-child` |
+
+The `:only-child` variants apply when an element is being added or removed (not replaced), useful for different add/remove vs reorder animations.
+
+### Respecting Reduced Motion
+
+```elixir
+view_transition "todo-*", %{
+  old: %{
+    animation_name: %{
+      :default => :fade_out,
+      "@media (prefers-reduced-motion: reduce)" => "none"
+    },
+    animation_duration: "200ms"
+  }
+}
+```
+
+### JavaScript Integration
+
+To enable View Transitions with Phoenix LiveView, add to your `app.js`:
+
+```javascript
+if (document.startViewTransition) {
+  const originalRequestDOMUpdate = liveSocket.requestDOMUpdate.bind(liveSocket)
+  liveSocket.requestDOMUpdate = (callback) => {
+    document.startViewTransition(() => originalRequestDOMUpdate(callback))
+  }
+}
+```
+
+### Using in Templates
+
+Add `view-transition-name` to elements you want to animate:
+
+```heex
+<li style={"view-transition-name: todo-#{@id}"}>
+  <%= @item.text %>
+</li>
+```
+
+The wildcard pattern `todo-*` in `view_transition/2` matches all elements with names like `todo-1`, `todo-2`, etc.
+
+### Browser Support
+
+View Transitions are supported in Chrome 111+, Edge 111+, and Safari 18+. Animations gracefully degrade in unsupported browsers.
+
 ## Typed Variables
 
 For advanced use cases like animating gradients:
@@ -495,8 +590,15 @@ The watcher monitors the LiveStyle manifest file and regenerates CSS whenever st
 |-------|-------------|
 | `defvars/2` | Define CSS custom properties with a namespace |
 | `defconsts/2` | Define compile-time constants (not CSS variables) |
-| `defkeyframes/2` | Define keyframes in token modules |
+| `defkeyframes/2` | Define keyframes and create a function returning the hashed name |
 | `create_theme/3` | Create theme overrides for a var group |
+
+### View Transitions (via `use LiveStyle.ViewTransitions`)
+
+| Macro | Description |
+|-------|-------------|
+| `view_transition/2` | Define view transition styles for a name pattern |
+| `view_transition_class/2` | Define view transition styles with a generated class |
 
 ### Type Helpers (via `import LiveStyle.Types`)
 

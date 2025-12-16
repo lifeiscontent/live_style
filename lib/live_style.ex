@@ -939,7 +939,10 @@ defmodule LiveStyle do
   end
 
   @doc """
-  Define a keyframes animation (standalone function for use in token modules).
+  Define a keyframes animation and create a function that returns its name.
+
+  This follows the StyleX pattern where `keyframes` returns a string that can
+  be used in animation properties.
 
   ## Example
 
@@ -950,7 +953,23 @@ defmodule LiveStyle do
           from: %{transform: "rotate(0deg)"},
           to: %{transform: "rotate(360deg)"}
         }
+
+        defkeyframes :fade_in, %{
+          from: %{opacity: "0"},
+          to: %{opacity: "1"}
+        }
       end
+
+      # Use the generated functions:
+      MyApp.Tokens.spin()     # => "k1a2b3c4" (the hashed keyframe name)
+      MyApp.Tokens.fade_in()  # => "k5e6f7g8"
+
+      # In styles or view transitions:
+      view_transition "card-*", %{
+        old: %{
+          animation: "\#{fade_out()} 200ms ease-out both"
+        }
+      }
   """
   defmacro defkeyframes(name, frames) when is_atom(name) do
     {evaluated_frames, _} = Code.eval_quoted(frames, [], __CALLER__)
@@ -965,8 +984,21 @@ defmodule LiveStyle do
     keyframe_name = "k#{hash}"
     LiveStyle.register_keyframes(keyframe_name, evaluated_frames)
 
+    # Define a function that returns the keyframe name string
+    # This follows StyleX's pattern where keyframes() returns a string
+    # Also store in module attribute for compile-time access by view_transition
     quote do
-      %{__keyframes__: true, name: unquote(keyframe_name)}
+      @__live_keyframes_map__ {unquote(name), unquote(keyframe_name)}
+
+      @doc """
+      Returns the generated keyframe name for `#{unquote(name)}`.
+
+      Use this in animation properties:
+
+          animation: "\#{#{unquote(name)}()} 1s ease-out"
+          animation_name: #{unquote(name)}()
+      """
+      def unquote(name)(), do: unquote(keyframe_name)
     end
   end
 
@@ -1035,6 +1067,7 @@ defmodule LiveStyle do
       get_properties_css(manifest),
       get_vars_css(manifest),
       get_keyframes_css(manifest),
+      get_view_transitions_css(manifest),
       get_rules_css(manifest)
     ]
     |> Enum.reject(&(&1 == ""))
@@ -1103,6 +1136,18 @@ defmodule LiveStyle do
       |> Enum.sort_by(fn {name, _} -> name end)
       |> Enum.map_join("\n\n", fn {_name, css} -> css end)
       |> Kernel.<>("\n")
+    end
+  end
+
+  defp get_view_transitions_css(manifest) do
+    vt_css = manifest[:view_transition_css] || []
+
+    if Enum.empty?(vt_css) do
+      ""
+    else
+      vt_css
+      |> Enum.reverse()
+      |> Enum.join("\n")
     end
   end
 

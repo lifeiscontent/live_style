@@ -46,7 +46,12 @@ defmodule Mix.Tasks.Compile.LiveStyle do
   defp maybe_write_css(manifest) do
     output_path = LiveStyle.output_path()
     css = LiveStyle.get_all_css()
-    current_css = File.read(output_path) |> elem(1)
+
+    current_css =
+      case File.read(output_path) do
+        {:ok, content} -> content
+        {:error, _} -> nil
+      end
 
     if css != current_css do
       write_css(manifest, output_path, css)

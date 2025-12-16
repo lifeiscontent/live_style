@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2024-12-17
+
+### Added
+
+- `LiveStyle.ViewTransitions` module for CSS View Transitions API support:
+  - `view_transition/2` macro for defining transitions by name pattern
+  - `view_transition_class/2` macro for class-based transitions
+  - Automatic keyframe name resolution in view transition styles
+  - Support for `:old`, `:new`, `:group`, `:image_pair` pseudo-element keys
+  - Support for `:only-child` variants (`:old_only_child`, `:new_only_child`, etc.)
+  - Media query conditions (e.g., `prefers-reduced-motion`)
+
+### Changed
+
+- `defkeyframes/2` now defines a function that returns the hashed keyframe name
+  - Allows keyframes to be used in both styles and view transitions
+  - Example: `MyApp.Tokens.fade_in()` returns `"k1a2b3c4"`
+
 ## [0.2.0] - 2024-12-17
 
 ### Added
