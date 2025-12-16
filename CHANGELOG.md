@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Support for `:old`, `:new`, `:group`, `:image_pair` pseudo-element keys
   - Support for `:only-child` variants (`:old_only_child`, `:new_only_child`, etc.)
   - Media query conditions (e.g., `prefers-reduced-motion`)
+  - Compile-time validation for keyframe references in `animation_name`
 
 ### Changed
 
