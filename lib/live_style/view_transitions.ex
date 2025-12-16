@@ -121,6 +121,14 @@ defmodule LiveStyle.ViewTransitions do
     for {name, styles_ast} <- Enum.reverse(view_transitions) do
       {evaluated_styles, _} = Code.eval_quoted(styles_ast, [], env)
 
+      # Validate that all animation_name atom references are defined keyframes
+      LiveStyle.ViewTransitions.validate_keyframe_references!(
+        evaluated_styles,
+        keyframes_map,
+        name,
+        env
+      )
+
       resolved_styles =
         LiveStyle.ViewTransitions.resolve_keyframes(evaluated_styles, keyframes_map)
 
@@ -398,6 +406,95 @@ defmodule LiveStyle.ViewTransitions do
       "#{property}: #{value};"
     end)
   end
+
+  # Properties that accept keyframe/animation names as values
+  @animation_properties ~w(animation_name animationName)a
+
+  @doc false
+  def validate_keyframe_references!(styles, keyframes_map, transition_name, env) do
+    undefined_refs = collect_undefined_keyframe_refs(styles, keyframes_map, [])
+
+    if undefined_refs != [] do
+      defined_keyframes =
+        keyframes_map
+        |> Map.keys()
+        |> Enum.sort()
+        |> Enum.map_join(", ", &inspect/1)
+
+      undefined_list =
+        undefined_refs
+        |> Enum.uniq()
+        |> Enum.sort()
+        |> Enum.map_join(", ", &inspect/1)
+
+      hint =
+        if defined_keyframes == "" do
+          "No keyframes are defined. Define them with defkeyframes/2 before view_transition/2."
+        else
+          "Defined keyframes: #{defined_keyframes}"
+        end
+
+      raise CompileError,
+        file: env.file,
+        line: env.line,
+        description: """
+        Undefined keyframe reference(s) in view_transition #{inspect(transition_name)}: #{undefined_list}
+
+        #{hint}
+
+        Example:
+            defkeyframes :fade_out, %{from: %{opacity: "1"}, to: %{opacity: "0"}}
+
+            view_transition "item-*", %{
+              old: %{animation_name: :fade_out}
+            }
+        """
+    end
+
+    :ok
+  end
+
+  # Collect undefined keyframe references from animation_name properties
+  defp collect_undefined_keyframe_refs(styles, keyframes_map, acc) when is_map(styles) do
+    Enum.reduce(styles, acc, fn {key, value}, acc ->
+      if key in @animation_properties do
+        collect_animation_name_refs(value, keyframes_map, acc)
+      else
+        collect_undefined_keyframe_refs(value, keyframes_map, acc)
+      end
+    end)
+  end
+
+  defp collect_undefined_keyframe_refs(_value, _keyframes_map, acc), do: acc
+
+  # Check animation_name values for undefined keyframe atoms
+  defp collect_animation_name_refs(value, keyframes_map, acc) when is_atom(value) do
+    # Skip known CSS keywords and pseudo-element keys
+    if keyframe_atom?(value) and not Map.has_key?(keyframes_map, value) do
+      [value | acc]
+    else
+      acc
+    end
+  end
+
+  defp collect_animation_name_refs(value, keyframes_map, acc) when is_map(value) do
+    # Conditional map like %{:default => :fade_out, "@media ..." => "none"}
+    Enum.reduce(value, acc, fn {_condition, val}, acc ->
+      collect_animation_name_refs(val, keyframes_map, acc)
+    end)
+  end
+
+  defp collect_animation_name_refs(_value, _keyframes_map, acc), do: acc
+
+  # Determine if an atom looks like a keyframe reference vs a CSS keyword
+  # CSS keywords like :none, :inherit, :initial, :unset should not be flagged
+  @css_keywords ~w(none inherit initial unset revert revert-layer)a
+  @pseudo_element_keys ~w(old new group image_pair old_only_child new_only_child
+                          group_only_child image_pair_only_child default)a
+
+  defp keyframe_atom?(atom) when atom in @css_keywords, do: false
+  defp keyframe_atom?(atom) when atom in @pseudo_element_keys, do: false
+  defp keyframe_atom?(_atom), do: true
 
   # Recursively resolve keyframe atom references in styles
   # Atoms that match keyframe names get replaced with their hashed names

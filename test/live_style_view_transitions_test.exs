@@ -344,4 +344,100 @@ defmodule LiveStyleViewTransitionsTest do
       assert result == %{old: %{animation_name: :unknown}}
     end
   end
+
+  describe "keyframe validation" do
+    test "raises compile error for undefined keyframe reference" do
+      assert_raise CompileError, ~r/Undefined keyframe reference.*:nonexistent_keyframe/, fn ->
+        defmodule TestUndefinedKeyframe do
+          use LiveStyle.Tokens
+          use LiveStyle.ViewTransitions
+
+          view_transition("test-*", %{
+            old: %{
+              animation_name: :nonexistent_keyframe
+            }
+          })
+        end
+      end
+    end
+
+    test "raises compile error for undefined keyframe in conditional" do
+      assert_raise CompileError, ~r/Undefined keyframe reference.*:missing_fade/, fn ->
+        defmodule TestUndefinedConditionalKeyframe do
+          use LiveStyle.Tokens
+          use LiveStyle.ViewTransitions
+
+          view_transition("test-*", %{
+            old: %{
+              animation_name: %{
+                :default => :missing_fade,
+                "@media test" => "none"
+              }
+            }
+          })
+        end
+      end
+    end
+
+    test "allows CSS keyword atoms like :none" do
+      defmodule TestCSSKeywords do
+        use LiveStyle.Tokens
+        use LiveStyle.ViewTransitions
+
+        view_transition("test-*", %{
+          old: %{
+            animation_name: %{
+              :default => "some-animation",
+              "@media (prefers-reduced-motion: reduce)" => :none
+            }
+          }
+        })
+      end
+
+      css = LiveStyle.get_all_css()
+      assert css =~ "animation-name: none;"
+    end
+
+    test "shows defined keyframes in error message" do
+      error =
+        assert_raise CompileError, fn ->
+          defmodule TestShowsDefinedKeyframes do
+            use LiveStyle.Tokens
+            use LiveStyle.ViewTransitions
+
+            defkeyframes(:existing_fade, %{
+              from: %{opacity: "1"},
+              to: %{opacity: "0"}
+            })
+
+            view_transition("test-*", %{
+              old: %{
+                animation_name: :wrong_name
+              }
+            })
+          end
+        end
+
+      assert error.description =~ "Defined keyframes: :existing_fade"
+      assert error.description =~ ":wrong_name"
+    end
+
+    test "validates multiple undefined references" do
+      error =
+        assert_raise CompileError, fn ->
+          defmodule TestMultipleUndefined do
+            use LiveStyle.Tokens
+            use LiveStyle.ViewTransitions
+
+            view_transition("test-*", %{
+              old: %{animation_name: :missing_one},
+              new: %{animation_name: :missing_two}
+            })
+          end
+        end
+
+      assert error.description =~ ":missing_one"
+      assert error.description =~ ":missing_two"
+    end
+  end
 end
