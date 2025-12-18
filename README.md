@@ -54,6 +54,7 @@ config :live_style,
 
 - `:output_path` - Path where the generated CSS file is written (default: `"priv/static/assets/live.css"`)
 - `:manifest_path` - Path where the compile-time manifest is stored (default: `"_build/live_style_manifest.etf"`). Useful for monorepos or custom build directories.
+- `:style_resolution` - Strategy for handling shorthand CSS properties (default: `:atomic`). See [Style Resolution Modes](#style-resolution-modes) below.
 
 ## Quick Start
 
@@ -263,20 +264,77 @@ defmodule MyApp.Card do
 end
 ```
 
+## Dynamic Styles
+
+For styles that depend on runtime values, use a function in `style/2`:
+
+```elixir
+defmodule MyApp.Components do
+  use LiveStyle
+
+  style :dynamic_opacity, fn opacity ->
+    [opacity: opacity]
+  end
+
+  style :dynamic_color, fn r, g, b ->
+    [color: "rgb(#{r}, #{g}, #{b})"]
+  end
+end
+```
+
+Dynamic styles return `{class, style_map}` tuples. Use `props/1` to convert them for templates:
+
+```heex
+<div {LiveStyle.props(MyApp.Components.dynamic_opacity(0.5))}>
+  Faded content
+</div>
+```
+
+### Merging Multiple Styles
+
+Use `props/1` with a list to merge multiple style sources:
+
+```heex
+<div {LiveStyle.props([
+  MyStyles.button(),
+  MyStyles.dynamic_color(255, 0, 0),
+  MyStyles.dynamic_size(100),
+  @is_active && MyStyles.active()
+])}>
+  Button
+</div>
+```
+
+The list can contain:
+- Class strings (from static styles)
+- `{class, style}` tuples (from dynamic styles)
+- `nil` or `false` (ignored, useful for conditional styles)
+
 ## Keyframes Animations
 
 ```elixir
 defmodule MyApp.Animations do
   use LiveStyle
 
-  keyframes :spin,
+  # keyframes/1 returns the generated animation name
+  @spin keyframes(
     from: [transform: "rotate(0deg)"],
     to: [transform: "rotate(360deg)"]
+  )
 
   style :spinner,
-    animation_name: :spin,
+    animation_name: @spin,
     animation_duration: "1s",
     animation_iteration_count: "infinite"
+
+  # Or inline directly
+  style :pulse,
+    animation_name: keyframes(
+      "0%": [opacity: "1"],
+      "50%": [opacity: "0.5"],
+      "100%": [opacity: "1"]
+    ),
+    animation_duration: "2s"
 end
 ```
 
@@ -587,16 +645,17 @@ The watcher monitors the LiveStyle manifest file and regenerates CSS whenever st
 | Macro | Description |
 |-------|-------------|
 | `style/2` | Define a named style with CSS declarations |
-| `keyframes/2` | Define a keyframes animation |
+| `keyframes/1` | Create keyframes animation and return the generated name |
 | `var/1` | Reference a CSS custom property |
 | `first_that_works/1` | Declare fallback values for a property |
 | `conditions/1` | Build conditional value map from tuples (for module attrs as keys) |
+| `position_try/1` | Create `@position-try` rules for CSS Anchor Positioning |
 
 ### Marker Functions
 
 | Function | Description |
 |----------|-------------|
-| `LiveStyle.default_marker/0` | Returns the default marker class (`"x-marker"`) |
+| `LiveStyle.default_marker/0` | Returns the default marker class (`"{prefix}-default-marker"`) |
 | `LiveStyle.define_marker/1` | Creates a unique marker class for custom contexts |
 
 ### Contextual Selectors (via `import LiveStyle.When`)
@@ -616,14 +675,16 @@ The watcher monitors the LiveStyle manifest file and regenerates CSS whenever st
 | `defvars/2` | Define CSS custom properties with a namespace |
 | `defconsts/2` | Define compile-time constants (not CSS variables) |
 | `defkeyframes/2` | Define keyframes and create a function returning the hashed name |
+| `keyframes/1` | Create keyframes and return the generated name |
 | `create_theme/3` | Create theme overrides for a var group |
+| `position_try/1` | Create `@position-try` rules for CSS Anchor Positioning |
 
 ### View Transitions (via `use LiveStyle.ViewTransitions`)
 
 | Macro | Description |
 |-------|-------------|
 | `view_transition/2` | Define view transition styles for a name pattern |
-| `view_transition_class/2` | Define view transition styles with a generated class |
+| `view_transition_class/1` | Create view transition styles and return the generated class name |
 
 ### Type Helpers (via `import LiveStyle.Types`)
 
@@ -641,10 +702,109 @@ The watcher monitors the LiveStyle manifest file and regenerates CSS whenever st
 
 | Function | Description |
 |----------|-------------|
+| `LiveStyle.props/1` | Merge style references into `[class: "...", style: "..."]` for templates |
+| `LiveStyle.inline_style/1` | Convert a style map to a CSS style string |
 | `LiveStyle.get_all_css/0` | Get complete CSS output |
+| `LiveStyle.write_css/1` | Write CSS to file if changed (used by compiler/watcher) |
 | `LiveStyle.clear/0` | Clear all collected CSS (useful for testing) |
 | `LiveStyle.output_path/0` | Get configured CSS output path |
 | `LiveStyle.manifest_path/0` | Get configured manifest path |
+| `LiveStyle.style_resolution/0` | Get configured style resolution mode |
+
+## Style Resolution Modes
+
+LiveStyle supports three strategies for handling CSS shorthand properties:
+
+```elixir
+config :live_style,
+  style_resolution: :atomic  # default
+```
+
+### Available Modes
+
+| Mode | Description | CSS Output for `margin: "10px 20px"` |
+|------|-------------|--------------------------------------|
+| `:atomic` | Pass through with null resets for cascade control | `margin: 10px 20px` |
+| `:strict` | Pass through as-is, error on disallowed shorthands | `margin: 10px 20px` |
+| `:expanded` | Expand to longhand properties | `margin-top: 10px; margin-right: 20px; ...` |
+
+### `:atomic` (Default)
+
+Keeps shorthands intact and allows all shorthand properties. Uses null resets internally for cascade control. Last style wins, matching developer expectations from traditional CSS. Good for maximum CSS compatibility and intuitive behavior.
+
+### `:strict`
+
+Shorthands like `margin`, `padding`, `gap` pass through unchanged. Certain shorthands are disallowed and raise compile-time errors. Use this mode for large codebases where you want to enforce explicit property declarations:
+
+```elixir
+# These raise compile errors in :strict mode:
+style :button, border: "1px solid red"      # Use border_width, border_style, border_color
+style :card, background: "red url(...)"     # Use background_color, background_image
+style :animated, animation: "fade 1s"       # Use animation_name, animation_duration
+```
+
+### `:expanded`
+
+Expands shorthand properties to their longhand equivalents. Produces more verbose CSS but provides maximum specificity predictability when mixing shorthands and longhands.
+
+## CSS Anchor Positioning
+
+LiveStyle supports [CSS Anchor Positioning](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_anchor_positioning) through the `position_try/1` macro, which creates `@position-try` at-rules for fallback positioning.
+
+```elixir
+defmodule MyApp.Tooltip do
+  use LiveStyle
+
+  style :tooltip,
+    position: "absolute",
+    position_anchor: "--trigger",
+    top: "anchor(bottom)",
+    left: "anchor(center)",
+    # Fallback position if tooltip doesn't fit below
+    position_try_fallbacks: position_try(
+      bottom: "anchor(top)",
+      left: "anchor(center)"
+    )
+end
+```
+
+This generates CSS like:
+
+```css
+@position-try --x1a2b3c4 {
+  bottom: anchor(top);
+  left: anchor(center);
+}
+.x5e6f7g8 { position-try-fallbacks: --x1a2b3c4; }
+```
+
+### Allowed Properties
+
+Only positioning-related properties are allowed in `position_try`:
+
+- **Position anchor**: `position_anchor`, `position_area`
+- **Inset**: `top`, `right`, `bottom`, `left`, `inset`, `inset_block`, `inset_inline`, etc.
+- **Margin**: `margin`, `margin_top`, `margin_inline_start`, etc.
+- **Size**: `width`, `height`, `min_width`, `max_height`, `block_size`, `inline_size`, etc.
+- **Self-alignment**: `align_self`, `justify_self`, `place_self`
+
+### Sharing Position Fallbacks
+
+To share position-try values across modules, use `defvars`:
+
+```elixir
+defmodule MyApp.PositionFallbacks do
+  use LiveStyle.Tokens
+
+  defvars :fallback,
+    top_left: position_try(top: "0", left: "0", width: "100px"),
+    bottom_right: position_try(bottom: "0", right: "0", width: "100px")
+end
+```
+
+### Browser Support
+
+CSS Anchor Positioning is available in Chromium 125+ (June 2024). Firefox and Safari do not yet support this feature. Consider using feature detection or providing fallback positioning for broader browser support.
 
 ## Why LiveStyle?
 

@@ -1,0 +1,11 @@
+# time_properties.txt
+# CSS properties that use milliseconds instead of pixels for numeric values
+#
+# Format: property_name
+# One property per line
+
+animation-delay
+animation-duration
+transition-delay
+transition-duration
+voice-duration

@@ -2,8 +2,8 @@ defmodule Mix.Tasks.LiveStyle.Gen.Css do
   @moduledoc """
   Generates the LiveStyle CSS file from the compile-time manifest.
 
-  This task reads CSS rules and variables collected during compilation
-  and outputs them to a CSS file.
+  This task forces a recompilation and generates CSS. For regular usage,
+  prefer `mix live_style default` which uses the profile configuration.
 
   ## Usage
 
@@ -23,9 +23,13 @@ defmodule Mix.Tasks.LiveStyle.Gen.Css do
 
   ## Configuration
 
-  The default output path can be configured in `config/config.exs`:
+  Configure in your `config/config.exs`:
 
-      config :live_style, output_path: "priv/static/assets/live.css"
+      config :live_style,
+        default: [
+          output: "priv/static/assets/live.css",
+          cd: Path.expand("..", __DIR__)
+        ]
 
   ## Integration
 
@@ -48,39 +52,60 @@ defmodule Mix.Tasks.LiveStyle.Gen.Css do
 
     output_path = Keyword.get_lazy(opts, :output, &LiveStyle.output_path/0)
 
-    LiveStyle.clear()
+    # Clear storage and recompile
+    LiveStyle.Storage.clear()
     Mix.Task.run("compile", ["--force"])
 
-    css = LiveStyle.get_all_css()
+    # Read manifest and generate CSS
+    manifest = LiveStyle.Storage.read()
+    css = LiveStyle.CSS.generate(manifest)
 
+    # Add stats header
+    stats = collect_stats(manifest)
+    css_with_header = "/* LiveStyle: #{stats} */\n\n#{css}"
+
+    # Write file
     output_path
     |> Path.dirname()
     |> File.mkdir_p!()
 
-    File.write!(output_path, css)
+    File.write!(output_path, css_with_header)
 
-    manifest = LiveStyle.read_manifest()
-    var_count = map_size(manifest[:vars] || %{})
-    keyframe_count = map_size(manifest[:keyframes] || %{})
-    rule_count = map_size(manifest[:rules] || %{})
-
+    # Output summary
     Mix.shell().info([
       :green,
       "Generated LiveStyle CSS: ",
       :cyan,
-      "#{var_count}",
+      "#{stats}",
       :reset,
-      " variables, ",
-      :cyan,
-      "#{keyframe_count}",
-      :reset,
-      " keyframes, ",
-      :cyan,
-      "#{rule_count}",
-      :reset,
-      " rules -> ",
+      " -> ",
       :yellow,
       output_path
     ])
+  end
+
+  defp collect_stats(manifest) do
+    vars_count = map_size(manifest.vars)
+    consts_count = map_size(manifest.consts)
+    keyframes_count = map_size(manifest.keyframes)
+    rules_count = map_size(manifest.rules)
+    themes_count = map_size(manifest.themes)
+    vt_count = map_size(manifest.view_transitions)
+    pt_count = map_size(manifest.position_try)
+
+    parts =
+      [
+        {vars_count, "vars"},
+        {consts_count, "consts"},
+        {keyframes_count, "keyframes"},
+        {rules_count, "rules"},
+        {themes_count, "themes"},
+        {vt_count, "view transitions"},
+        {pt_count, "position-try"}
+      ]
+      |> Enum.filter(fn {count, _} -> count > 0 end)
+      |> Enum.map(fn {count, label} -> "#{count} #{label}" end)
+
+    Enum.join(parts, ", ")
   end
 end

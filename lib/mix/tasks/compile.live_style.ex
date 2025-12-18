@@ -16,11 +16,13 @@ defmodule Mix.Tasks.Compile.LiveStyle do
 
   ## Configuration
 
-  Configure paths in your `config/config.exs`:
+  Configure in your `config/config.exs`:
 
       config :live_style,
-        output_path: "priv/static/assets/live.css",
-        manifest_path: "_build/live_style_manifest.etf"
+        default: [
+          output: "priv/static/assets/live.css",
+          cd: Path.expand("..", __DIR__)
+        ]
   """
 
   use Mix.Task.Compiler
@@ -28,44 +30,14 @@ defmodule Mix.Tasks.Compile.LiveStyle do
   @impl true
   def run(_args) do
     LiveStyle.validate_var_references!()
-    manifest = LiveStyle.read_manifest()
 
-    if has_styles?(manifest) do
-      maybe_write_css(manifest)
-    end
-
-    {:ok, []}
-  end
-
-  defp has_styles?(manifest) do
-    map_size(manifest[:rules] || %{}) > 0 or
-      map_size(manifest[:vars] || %{}) > 0 or
-      map_size(manifest[:keyframes] || %{}) > 0
-  end
-
-  defp maybe_write_css(manifest) do
-    output_path = LiveStyle.output_path()
-    css = LiveStyle.get_all_css()
-
-    current_css =
-      case File.read(output_path) do
-        {:ok, content} -> content
-        {:error, _} -> nil
-      end
-
-    if css != current_css do
-      write_css(manifest, output_path, css)
+    case LiveStyle.write_css(log: &log_write/1) do
+      :ok -> {:ok, []}
+      {:error, reason} -> {:error, [reason]}
     end
   end
 
-  defp write_css(manifest, output_path, css) do
-    output_path |> Path.dirname() |> File.mkdir_p!()
-    File.write!(output_path, css)
-
-    var_count = map_size(manifest[:vars] || %{})
-    keyframe_count = map_size(manifest[:keyframes] || %{})
-    rule_count = map_size(manifest[:rules] || %{})
-
+  defp log_write({:written, var_count, keyframe_count, rule_count, output_path}) do
     Mix.shell().info([
       :green,
       "LiveStyle: ",
@@ -78,13 +50,31 @@ defmodule Mix.Tasks.Compile.LiveStyle do
 
   @impl true
   def manifests do
-    [LiveStyle.manifest_path()]
+    case get_manifest_path() do
+      nil -> []
+      path -> [path]
+    end
   end
 
   @impl true
   def clean do
-    File.rm(LiveStyle.manifest_path())
+    case get_manifest_path() do
+      nil -> :ok
+      path -> File.rm(path)
+    end
+
     File.rm(LiveStyle.output_path())
     :ok
+  end
+
+  # Gets the manifest path from storage config (only for File storage)
+  defp get_manifest_path do
+    {storage_module, storage_opts} = LiveStyle.storage()
+
+    if storage_module == LiveStyle.Storage.File do
+      Keyword.get(storage_opts, :path, "_build/live_style_manifest.etf")
+    else
+      nil
+    end
   end
 end

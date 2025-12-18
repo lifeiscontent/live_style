@@ -1,0 +1,92 @@
+# unitless_properties.txt
+# CSS properties that should remain unitless when given numeric values
+# Based on StyleX's unitlessNumberProperties
+#
+# Format: property_name
+# One property per line
+
+# Counters and clamps
+-webkit-line-clamp
+animation-iteration-count
+line-clamp
+
+# Aspect ratio
+aspect-ratio
+
+# Border image
+border-image-outset
+border-image-slice
+border-image-width
+
+# Counters
+counter-set
+counter-reset
+
+# Columns
+column-count
+
+# Flex
+flex
+flex-grow
+flex-shrink
+flex-order
+
+# Grid
+grid-row
+grid-row-start
+grid-row-end
+grid-column
+grid-column-start
+grid-column-end
+grid-area
+
+# Font
+font-weight
+
+# Hyphenation
+hyphenate-limit-chars
+
+# Line height
+line-height
+
+# Mask
+mask-border-outset
+mask-border-slice
+mask-border-width
+
+# Opacity
+opacity
+fill-opacity
+flood-opacity
+stop-opacity
+stroke-opacity
+shape-image-threshold
+
+# Order
+order
+
+# Orphans/widows
+orphans
+widows
+
+# Tab size (can be unitless for character count)
+tab-size
+
+# Z-index
+z-index
+
+# Transform
+rotate
+scale
+
+# Stroke
+stroke-dasharray
+stroke-dashoffset
+stroke-miterlimit
+stroke-width
+
+# Math
+math-depth
+
+# Zoom
+zoom

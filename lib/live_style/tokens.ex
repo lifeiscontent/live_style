@@ -1,71 +1,80 @@
 defmodule LiveStyle.Tokens do
   @moduledoc """
-  Provides macros for defining design tokens (CSS custom properties).
+  Defines design tokens (CSS variables, keyframes, themes).
+
+  Use this for centralized token modules that are shared across your app.
+  Use `LiveStyle.Sheet` for component styles.
 
   ## Usage
 
       defmodule MyApp.Tokens do
         use LiveStyle.Tokens
 
-        defvars :color, %{
+        css_vars :color,
           white: "#ffffff",
           black: "#000000",
-          blue_500: "#1e68fa"
-        }
+          primary: "#3b82f6"
 
-        defvars :fill, %{
-          primary: "var(--v...)",  # Can reference other vars
-          danger: "#d62931"
-        }
+        css_vars :space,
+          sm: "0.5rem",
+          lg: "2rem"
 
-        defvars :radius, %{
-          sm: "0.125rem",
-          lg: "0.5rem"
-        }
+        css_keyframes :spin,
+          from: [transform: "rotate(0deg)"],
+          to: [transform: "rotate(360deg)"]
 
-        defkeyframes :spin, %{
-          from: %{transform: "rotate(0deg)"},
-          to: %{transform: "rotate(360deg)"}
-        }
+        css_theme {:color, :dark},
+          white: "#1f2937",
+          black: "#f9fafb"
       end
 
   ## Typed Variables
 
-  For advanced use cases like animating gradients, you can declare types:
+  For animatable properties, declare types with `LiveStyle.Types`:
 
       defmodule MyApp.Tokens do
         use LiveStyle.Tokens
         import LiveStyle.Types
 
-        defvars :anim, %{
+        css_vars :anim,
           angle: angle("0deg"),
-          color: color("blue")
-        }
+          hue: percentage("0%")
       end
 
   This generates CSS `@property` rules that enable CSS to interpolate values.
 
-  Then in your components:
+  ## Referencing Tokens
+
+  In components using `LiveStyle.Sheet`:
 
       defmodule MyApp.Button do
-        use LiveStyle
+        use LiveStyle.Sheet
 
-        style :base, %{
-          background_color: var(:fill_primary),
-          border_radius: var(:radius_lg)
-        }
+        css_rule :base,
+          background_color: css_var({MyApp.Tokens, :color, :primary}),
+          animation: "\#{css_keyframes({MyApp.Tokens, :spin})} 1s linear infinite"
       end
-
-  The `var(:fill_primary)` macro generates a deterministic hashed CSS variable
-  reference like `var(--v1a2b3c4)` at compile time.
   """
 
   defmacro __using__(_opts) do
     quote do
-      import LiveStyle, only: [defvars: 2, defconsts: 2, defkeyframes: 2, create_theme: 3, var: 1]
-
-      # Register attribute for compile-time keyframe lookups (used by ViewTransitions)
-      Module.register_attribute(__MODULE__, :__live_keyframes_map__, accumulate: true)
+      import LiveStyle,
+        only: [
+          # Definition macros
+          css_vars: 2,
+          css_consts: 2,
+          css_keyframes: 2,
+          css_position_try: 2,
+          css_view_transition: 2,
+          css_theme: 3,
+          # Reference macros
+          css_var: 1,
+          css_const: 1,
+          css_keyframes: 1,
+          css_position_try: 1,
+          css_view_transition: 1,
+          css_theme: 1
+        ]
     end
   end
 end

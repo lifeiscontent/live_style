@@ -1,0 +1,19 @@
+# Disallowed shorthand properties in strict mode
+# Based on StyleX's property-specificity.js
+# Format: property ; error_message
+#
+# These properties throw compile-time errors when used in :strict mode.
+# Users must use the longhand alternatives instead.
+
+all ; 'all' is not supported.
+animation ; 'animation' is not supported. Use animation-name, animation-duration, etc. instead.
+background ; 'background' is not supported. Use background-color, background-image, etc. instead.
+border ; 'border' is not supported. Use border-width, border-style and border-color instead.
+border-inline ; 'border-inline' is not supported. Use border-inline-width, border-inline-style and border-inline-color instead.
+border-block ; 'border-block' is not supported. Use border-block-width, border-block-style and border-block-color instead.
+border-top ; 'border-top' is not supported. Use border-top-width, border-top-style and border-top-color instead.
+border-right ; 'border-right' is not supported. Use border-right-width, border-right-style and border-right-color instead.
+border-bottom ; 'border-bottom' is not supported. Use border-bottom-width, border-bottom-style and border-bottom-color instead.
+border-left ; 'border-left' is not supported. Use border-left-width, border-left-style and border-left-color instead. Prefer border-inline-start-* for RTL support.
+border-inline-start ; 'border-inline-start' is not supported. Use border-inline-start-width, border-inline-start-style and border-inline-start-color instead.
+border-inline-end ; 'border-inline-end' is not supported. Use border-inline-end-width, border-inline-end-style and border-inline-end-color instead.

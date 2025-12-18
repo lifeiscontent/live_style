@@ -9,6 +9,7 @@ defmodule LiveStyle.MixProject do
       app: :live_style,
       version: @version,
       elixir: "~> 1.14",
+      elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       package: package(),
@@ -20,6 +21,9 @@ defmodule LiveStyle.MixProject do
       homepage_url: @source_url
     ]
   end
+
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
 
   def application do
     [
@@ -33,7 +37,8 @@ defmodule LiveStyle.MixProject do
       {:file_system, "~> 1.0", optional: true},
       {:ex_doc, "~> 0.31", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:benchee, "~> 1.0", only: :dev, optional: true}
     ]
   end
 
@@ -44,7 +49,7 @@ defmodule LiveStyle.MixProject do
       links: %{
         "GitHub" => @source_url
       },
-      files: ~w(lib .formatter.exs mix.exs README.md LICENSE)
+      files: ~w(lib data .formatter.exs mix.exs README.md LICENSE)
     ]
   end
 

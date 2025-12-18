@@ -1,0 +1,10 @@
+# logical_values.txt
+# Logical value to physical value mappings for LTR and RTL
+# Used for properties like float, clear, text-align
+#
+# Format: logical_value ; ltr_physical ; rtl_physical
+
+start ; left ; right
+end ; right ; left
+inline-start ; left ; right
+inline-end ; right ; left

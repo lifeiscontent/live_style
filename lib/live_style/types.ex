@@ -34,13 +34,19 @@ defmodule LiveStyle.Types do
 
   ## Supported Types
 
-  - `color/1` - CSS `<color>` values
-  - `length/1` - CSS `<length>` values (px, rem, em, etc.)
   - `angle/1` - CSS `<angle>` values (deg, rad, turn, etc.)
+  - `color/1` - CSS `<color>` values
+  - `image/1` - CSS `<image>` values (url, gradients, etc.)
   - `integer/1` - CSS `<integer>` values
+  - `length/1` - CSS `<length>` values (px, rem, em, etc.)
+  - `length_percentage/1` - CSS `<length-percentage>` values
   - `number/1` - CSS `<number>` values (floating point)
-  - `time/1` - CSS `<time>` values (s, ms)
   - `percentage/1` - CSS `<percentage>` values
+  - `resolution/1` - CSS `<resolution>` values (dpi, dppx, etc.)
+  - `time/1` - CSS `<time>` values (s, ms)
+  - `transform_function/1` - CSS `<transform-function>` values
+  - `transform_list/1` - CSS `<transform-list>` values
+  - `url/1` - CSS `<url>` values
 
   ## Use Cases
 
@@ -81,54 +87,130 @@ defmodule LiveStyle.Types do
           value: String.t() | map()
         }
 
-  @doc """
-  Declares a CSS `<color>` type for a variable.
+  # Type definitions: {function_name, css_syntax, doc_examples}
+  @simple_types [
+    {:color, "<color>",
+     """
+     Declares a CSS `<color>` type for a variable.
 
-  Enables color interpolation in animations and transitions.
+     Enables color interpolation in animations and transitions.
 
-  ## Examples
+     ## Examples
 
-      color("black")
-      color("#ff0000")
-      color("rgb(255, 0, 0)")
-      color({default: "black", "@media (prefers-color-scheme: dark)": "white"})
-  """
-  @spec color(String.t() | map()) :: typed_value()
-  def color(value) do
-    %{__type__: :typed_var, syntax: "<color>", value: value}
-  end
+         color("black")
+         color("#ff0000")
+         color("rgb(255, 0, 0)")
+         color({default: "black", "@media (prefers-color-scheme: dark)": "white"})
+     """},
+    {:length, "<length>",
+     """
+     Declares a CSS `<length>` type for a variable.
 
-  @doc """
-  Declares a CSS `<length>` type for a variable.
+     Enables length interpolation and capturing computed values like `1em`.
 
-  Enables length interpolation and capturing computed values like `1em`.
+     ## Examples
 
-  ## Examples
+         length("4px")
+         length("1rem")
+         length("1em")
+         length({default: "8px", "@media (min-width: 768px)": "16px"})
+     """},
+    {:angle, "<angle>",
+     """
+     Declares a CSS `<angle>` type for a variable.
 
-      length("4px")
-      length("1rem")
-      length("1em")
-      length({default: "8px", "@media (min-width: 768px)": "16px"})
-  """
-  @spec length(String.t() | map()) :: typed_value()
-  def length(value) do
-    %{__type__: :typed_var, syntax: "<length>", value: value}
-  end
+     Enables angle interpolation - useful for animating gradients.
 
-  @doc """
-  Declares a CSS `<angle>` type for a variable.
+     ## Examples
 
-  Enables angle interpolation - useful for animating gradients.
+         angle("0deg")
+         angle("45deg")
+         angle("0.5turn")
+     """},
+    {:time, "<time>",
+     """
+     Declares a CSS `<time>` type for a variable.
 
-  ## Examples
+     For duration values in animations and transitions.
 
-      angle("0deg")
-      angle("45deg")
-      angle("0.5turn")
-  """
-  @spec angle(String.t() | map()) :: typed_value()
-  def angle(value) do
-    %{__type__: :typed_var, syntax: "<angle>", value: value}
+     ## Examples
+
+         time("0.5s")
+         time("300ms")
+     """},
+    {:percentage, "<percentage>",
+     """
+     Declares a CSS `<percentage>` type for a variable.
+
+     ## Examples
+
+         percentage("50%")
+         percentage("100%")
+     """},
+    {:url, "<url>",
+     """
+     Declares a CSS `<url>` type for a variable.
+
+     ## Examples
+
+         url("url(#image)")
+         url("url(https://example.com/image.png)")
+     """},
+    {:image, "<image>",
+     """
+     Declares a CSS `<image>` type for a variable.
+
+     ## Examples
+
+         image("url(#image)")
+         image("linear-gradient(red, blue)")
+     """},
+    {:resolution, "<resolution>",
+     """
+     Declares a CSS `<resolution>` type for a variable.
+
+     ## Examples
+
+         resolution("96dpi")
+         resolution("2dppx")
+     """},
+    {:length_percentage, "<length-percentage>",
+     """
+     Declares a CSS `<length-percentage>` type for a variable.
+
+     Accepts either length or percentage values.
+
+     ## Examples
+
+         length_percentage("50%")
+         length_percentage("100px")
+     """},
+    {:transform_function, "<transform-function>",
+     """
+     Declares a CSS `<transform-function>` type for a variable.
+
+     ## Examples
+
+         transform_function("translateX(10px)")
+         transform_function("rotate(45deg)")
+     """},
+    {:transform_list, "<transform-list>",
+     """
+     Declares a CSS `<transform-list>` type for a variable.
+
+     ## Examples
+
+         transform_list("translateX(10px) rotate(45deg)")
+     """}
+  ]
+
+  # Generate simple type functions
+  for {name, syntax, doc} <- @simple_types do
+    @doc doc
+    @spec unquote(name)(String.t() | map()) :: typed_value()
+    def unquote(name)(value) do
+      %{__type__: :typed_var, syntax: unquote(syntax), value: value}
+    end
   end
 
   @doc """
@@ -171,34 +253,6 @@ defmodule LiveStyle.Types do
   end
 
   @doc """
-  Declares a CSS `<time>` type for a variable.
-
-  For duration values in animations and transitions.
-
-  ## Examples
-
-      time("0.5s")
-      time("300ms")
-  """
-  @spec time(String.t() | map()) :: typed_value()
-  def time(value) do
-    %{__type__: :typed_var, syntax: "<time>", value: value}
-  end
-
-  @doc """
-  Declares a CSS `<percentage>` type for a variable.
-
-  ## Examples
-
-      percentage("50%")
-      percentage("100%")
-  """
-  @spec percentage(String.t() | map()) :: typed_value()
-  def percentage(value) do
-    %{__type__: :typed_var, syntax: "<percentage>", value: value}
-  end
-
-  @doc """
   Checks if a value is a typed variable.
   """
   @spec typed?(any()) :: boolean()
@@ -233,4 +287,42 @@ defmodule LiveStyle.Types do
   """
   @spec unwrap_value(typed_value()) :: String.t() | map()
   def unwrap_value(%{value: value}), do: value
+
+  @doc """
+  Creates a typed variable with a custom syntax.
+
+  This is the low-level function used by `css_prop/3` macro.
+
+  ## Examples
+
+      typed_var(:color, "blue")
+      typed_var(:angle, "0deg")
+      typed_var("<color>#", "red, blue, green")  # Advanced syntax
+      typed_var(:length, "1rem", true)  # inherits: true
+
+  ## Syntax
+
+  - Atoms like `:color`, `:angle`, `:length` are converted to CSS syntax strings
+  - Strings are used as-is for advanced CSS syntax like `"<color>#"`
+  """
+  @spec typed_var(atom() | String.t(), String.t() | map(), boolean()) :: typed_value()
+  def typed_var(syntax, value, inherits \\ false)
+
+  def typed_var(syntax, value, inherits) when is_atom(syntax) do
+    css_syntax = atom_to_syntax(syntax)
+    %{__type__: :typed_var, syntax: css_syntax, value: value, inherits: inherits}
+  end
+
+  def typed_var(syntax, value, inherits) when is_binary(syntax) do
+    %{__type__: :typed_var, syntax: syntax, value: value, inherits: inherits}
+  end
+
+  # Generate atom_to_syntax clauses from type definitions
+  for {name, syntax, _doc} <- @simple_types do
+    defp atom_to_syntax(unquote(name)), do: unquote(syntax)
+  end
+
+  defp atom_to_syntax(:integer), do: "<integer>"
+  defp atom_to_syntax(:number), do: "<number>"
+  defp atom_to_syntax(other), do: "<#{other}>"
 end

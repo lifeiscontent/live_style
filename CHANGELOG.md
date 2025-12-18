@@ -5,6 +5,92 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2024-12-17
+
+### Changed
+
+- **BREAKING**: Default style resolution changed from `:strict` to `:atomic` for more intuitive CSS behavior (last style wins)
+- **BREAKING**: Renamed style resolution modes for clarity:
+  - `:property_specificity` → `:strict`
+  - `:application_order` → `:atomic`
+  - `:legacy_expand` → `:expanded`
+  
+  ```elixir
+  # Before
+  config :live_style, style_resolution: :property_specificity
+  
+  # After
+  config :live_style, style_resolution: :strict
+  ```
+
+- Simplified `props/1` API - now only accepts a single value or a list (removed variadic `props/2-5`)
+
+### Added
+
+- `LiveStyle.StyleResolution` behaviour for custom style resolution strategies
+- `LiveStyle.StyleResolution.Strict`, `LiveStyle.StyleResolution.Atomic`, `LiveStyle.StyleResolution.Expanded` implementations
+- `LiveStyle.Storage` behaviour for manifest storage abstraction
+- `LiveStyle.Storage.File` (default) and `LiveStyle.Storage.Memory` (for testing) implementations
+- `LiveStyle.Config` module for unified configuration management with per-process overrides
+- `LiveStyle.write_css/1` function for writing CSS with change detection
+- `LiveStyle.Storage.has_styles?/1` helper function
+- `LiveStyle.to_css_property/1` now public for use by style resolution modules
+
+### Removed
+
+- Removed legacy backward compatibility code for old style reference formats
+- Removed unused variadic `props/2-5` functions
+
+### Internal
+
+- All tests now run with `async: true` using in-memory storage
+- Deduplicated code across compiler, watcher, and style resolution modules
+- Improved test isolation with `LiveStyle.TestCase` and `LiveStyle.TestHelper`
+
+## [0.5.0] - 2024-12-17
+
+### Changed
+
+- **BREAKING**: `keyframes/1` now takes only frames and returns the generated name (matching StyleX API)
+  ```elixir
+  # Before (0.4.x)
+  keyframes :spin, from: [...], to: [...]
+  style :spinner, animation_name: :spin
+
+  # After (0.5.0)
+  @spin keyframes(from: [...], to: [...])
+  style :spinner, animation_name: @spin
+  ```
+
+- **BREAKING**: `view_transition_class/1` now takes only styles and returns the generated class name
+  ```elixir
+  # Before (0.4.x)  
+  view_transition_class :fade, old: [...], new: [...]
+  # Then use fade() function
+
+  # After (0.5.0)
+  @fade view_transition_class(old: [...], new: [...])
+  # Use @fade directly
+  ```
+
+- Keyframe names now use `x<hash>-B` format (matching StyleX) instead of `k<hash>`
+
+### Added
+
+- `position_try/1` macro for CSS Anchor Positioning (`@position-try` at-rules)
+  - Creates fallback positioning options for anchor-positioned elements
+  - Returns a dashed-ident string (e.g., `"--x1a2b3c4"`) for use with `position_try_fallbacks`
+  - Validates that only allowed properties are used (position, inset, margin, size, self-alignment)
+  - Supports RTL/LTR transformations for logical properties
+  - Available in both `use LiveStyle` and `use LiveStyle.Tokens`
+  ```elixir
+  style :tooltip,
+    position_try_fallbacks: position_try(
+      bottom: "anchor(top)",
+      left: "anchor(center)"
+    )
+  ```
+
 ## [0.4.1] - 2024-12-17
 
 ### Added

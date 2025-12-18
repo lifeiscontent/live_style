@@ -1,0 +1,40 @@
+# logical_properties.txt
+# Logical to physical property mappings for LTR and RTL support
+# Based on StyleX's physical-rtl transformations (application-order mode)
+#
+# Format: logical_property ; ltr_physical ; rtl_physical
+#
+# NOTE: In StyleX's default "application-order" mode, modern logical properties
+# like margin-inline-start, padding-inline-end stay as-is (browser handles RTL).
+# Only legacy properties (margin-start, padding-end) get converted to physical.
+#
+# The *-inline-* properties are only converted in "legacy-expand-shorthands" mode
+# with enableLogicalStylesPolyfill: true.
+
+# Legacy Margin (non-standard, converted in all modes)
+margin-start ; margin-left ; margin-right
+margin-end ; margin-right ; margin-left
+
+# Legacy Padding (non-standard, converted in all modes)
+padding-start ; padding-left ; padding-right
+padding-end ; padding-right ; padding-left
+
+# Legacy Border (non-standard, converted in all modes)
+border-start ; border-left ; border-right
+border-end ; border-right ; border-left
+border-start-width ; border-left-width ; border-right-width
+border-end-width ; border-right-width ; border-left-width
+border-start-color ; border-left-color ; border-right-color
+border-end-color ; border-right-color ; border-left-color
+border-start-style ; border-left-style ; border-right-style
+border-end-style ; border-right-style ; border-left-style
+
+# Legacy Border radius (non-standard, converted in all modes)
+border-top-start-radius ; border-top-left-radius ; border-top-right-radius
+border-top-end-radius ; border-top-right-radius ; border-top-left-radius
+border-bottom-start-radius ; border-bottom-left-radius ; border-bottom-right-radius
+border-bottom-end-radius ; border-bottom-right-radius ; border-bottom-left-radius
+
+# Legacy Inset/Position (non-standard, converted in all modes)
+start ; left ; right
+end ; right ; left

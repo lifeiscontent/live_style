@@ -1,0 +1,87 @@
+# simple_expansions.txt
+# Simple shorthand expansions that map to one or more properties
+#
+# Format: function_name ; property1:value_type, property2:value_type, ...
+# Where value_type is:
+#   - "value" = use the input value
+#   - "nil" = reset to nil
+#
+# These are generated as compile-time function clauses
+
+# Margin block expansions
+expand_margin_block_start ; margin_top:value
+expand_margin_block_end ; margin_bottom:value
+
+# Padding block expansions
+expand_padding_block_start ; padding_top:value
+expand_padding_block_end ; padding_bottom:value
+
+# Gap expansions
+expand_gap ; gap:value, row_gap:nil, column_gap:nil
+expand_grid_row_gap ; row_gap:value
+expand_grid_column_gap ; column_gap:value
+
+# Overflow expansions
+expand_overflow ; overflow:value, overflow_x:nil, overflow_y:nil
+expand_overflow_block ; overflow_y:value
+expand_overflow_inline ; overflow_x:value
+
+# Border radius expansions (logical to logical)
+expand_border_top_start_radius ; border_start_start_radius:value
+expand_border_top_end_radius ; border_start_end_radius:value
+expand_border_bottom_start_radius ; border_end_start_radius:value
+expand_border_bottom_end_radius ; border_end_end_radius:value
+
+# Border block/inline expansions
+expand_border_block_start ; border_top:value
+expand_border_block_end ; border_bottom:value
+expand_border_inline_start ; border_inline_start:value
+expand_border_inline_end ; border_inline_end:value
+
+# Border block/inline width
+expand_border_block_start_width ; border_top_width:value
+expand_border_block_end_width ; border_bottom_width:value
+expand_border_inline_start_width ; border_inline_start_width:value
+expand_border_inline_end_width ; border_inline_end_width:value
+
+# Border block/inline style
+expand_border_block_start_style ; border_top_style:value
+expand_border_block_end_style ; border_bottom_style:value
+expand_border_inline_start_style ; border_inline_start_style:value
+expand_border_inline_end_style ; border_inline_end_style:value
+
+# Border block/inline color
+expand_border_block_start_color ; border_top_color:value
+expand_border_block_end_color ; border_bottom_color:value
+expand_border_inline_start_color ; border_inline_start_color:value
+expand_border_inline_end_color ; border_inline_end_color:value
+
+# Inset expansions
+expand_inset_block ; inset_block:value, top:nil, bottom:nil
+expand_start ; inset_inline_start:value, left:nil, right:nil
+expand_end ; inset_inline_end:value, left:nil, right:nil
+expand_inset_block_start ; top:value
+expand_inset_block_end ; bottom:value
+
+# Logical size expansions
+expand_block_size ; height:value
+expand_inline_size ; width:value
+expand_min_block_size ; min_height:value
+expand_min_inline_size ; min_width:value
+expand_max_block_size ; max_height:value
+expand_max_inline_size ; max_width:value
+
+# Columns expansion
+expand_columns ; columns:value, column_count:nil, column_width:nil
+
+# Scroll margin block expansions
+expand_scroll_margin_block_start ; scroll_margin_top:value
+expand_scroll_margin_block_end ; scroll_margin_bottom:value
+
+# Scroll padding block expansions
+expand_scroll_padding_block_start ; scroll_padding_top:value
+expand_scroll_padding_block_end ; scroll_padding_bottom:value
+
+# Contain intrinsic size expansions
+expand_contain_intrinsic_block_size ; contain_intrinsic_height:value
+expand_contain_intrinsic_inline_size ; contain_intrinsic_width:value

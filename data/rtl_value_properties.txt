@@ -1,0 +1,13 @@
+# rtl_value_properties.txt
+# Properties that have logical values needing RTL transformation
+# (float, clear - NOT text-align which browsers handle natively)
+#
+# StyleX explicitly does NOT transform text-align values because:
+# - text-align: start/end are handled natively by browsers based on dir attribute
+# - Only float and clear need explicit value transformation
+#
+# Format: property_name
+# One property per line
+
+float
+clear

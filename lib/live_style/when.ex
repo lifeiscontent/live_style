@@ -14,31 +14,32 @@ defmodule LiveStyle.When do
   ## Using Markers
 
   To use these selectors, you must mark the element being observed with a marker class.
-  Use `LiveStyle.default_marker/0` for the default marker, or define custom markers
-  with `LiveStyle.define_marker/1`.
+  Use `Marker.default/0` for the default marker, or `Marker.define/1` for custom markers.
 
   ## Example
 
       defmodule MyComponent do
         use LiveStyle
-        import LiveStyle.When
+        alias LiveStyle.When
+        alias LiveStyle.Marker
 
-        style(:card, %{
+        css_rule :card,
           transform: %{
             default: "translateX(0)",
-            ancestor(":hover"): "translateX(10px)"
+            When.ancestor(":hover") => "translateX(10px)"
           }
-        })
 
         def render(assigns) do
           ~H\"\"\"
-          <div class={LiveStyle.default_marker()}>
-            <div class={style(:card)}>Hover parent to move me</div>
+          <div class={Marker.default()}>
+            <div class={css_class([:card])}>Hover parent to move me</div>
           </div>
           \"\"\"
         end
       end
   """
+
+  alias LiveStyle.Marker
 
   @doc """
   Creates a selector that styles an element when an ancestor has the given pseudo-state.
@@ -49,20 +50,21 @@ defmodule LiveStyle.When do
   ## Parameters
 
     * `pseudo` - The pseudo selector (e.g., `":hover"`, `":focus"`)
-    * `marker` - Optional custom marker class name. Defaults to `"x-marker"`.
+    * `marker` - Optional custom marker class name. Defaults to the configured default marker.
 
   ## Example
 
-      style(:item, %{
+      css_rule :item,
         opacity: %{
           default: "1",
-          ancestor(":hover"): "0.5"
+          When.ancestor(":hover") => "0.5"
         }
-      })
 
-  Generates CSS like: `.class:where(.x-marker:hover *) { opacity: 0.5; }`
+  Generates CSS like: `.class:where(.{prefix}-default-marker:hover *) { opacity: 0.5; }`
   """
-  def ancestor(pseudo, marker \\ "x-marker") do
+  def ancestor(pseudo), do: ancestor(pseudo, Marker.default())
+
+  def ancestor(pseudo, marker) do
     validate_pseudo!(pseudo)
     ":where(.#{marker}#{pseudo} *)"
   end
@@ -76,20 +78,21 @@ defmodule LiveStyle.When do
   ## Parameters
 
     * `pseudo` - The pseudo selector (e.g., `":hover"`, `":focus"`)
-    * `marker` - Optional custom marker class name. Defaults to `"x-marker"`.
+    * `marker` - Optional custom marker class name. Defaults to the configured default marker.
 
   ## Example
 
-      style(:container, %{
+      css_rule :container,
         border_color: %{
           default: "gray",
-          descendant(":focus"): "blue"
+          When.descendant(":focus") => "blue"
         }
-      })
 
-  Generates CSS like: `.class:where(:has(.x-marker:focus)) { border-color: blue; }`
+  Generates CSS like: `.class:where(:has(.{prefix}-default-marker:focus)) { border-color: blue; }`
   """
-  def descendant(pseudo, marker \\ "x-marker") do
+  def descendant(pseudo), do: descendant(pseudo, Marker.default())
+
+  def descendant(pseudo, marker) do
     validate_pseudo!(pseudo)
     ":where(:has(.#{marker}#{pseudo}))"
   end
@@ -103,20 +106,21 @@ defmodule LiveStyle.When do
   ## Parameters
 
     * `pseudo` - The pseudo selector (e.g., `":hover"`, `":focus"`)
-    * `marker` - Optional custom marker class name. Defaults to `"x-marker"`.
+    * `marker` - Optional custom marker class name. Defaults to the configured default marker.
 
   ## Example
 
-      style(:item, %{
+      css_rule :item,
         background_color: %{
           default: "white",
-          sibling_before(":hover"): "lightblue"
+          When.sibling_before(":hover") => "lightblue"
         }
-      })
 
-  Generates CSS like: `.class:where(.x-marker:hover ~ *) { background-color: lightblue; }`
+  Generates CSS like: `.class:where(.{prefix}-default-marker:hover ~ *) { background-color: lightblue; }`
   """
-  def sibling_before(pseudo, marker \\ "x-marker") do
+  def sibling_before(pseudo), do: sibling_before(pseudo, Marker.default())
+
+  def sibling_before(pseudo, marker) do
     validate_pseudo!(pseudo)
     ":where(.#{marker}#{pseudo} ~ *)"
   end
@@ -130,20 +134,21 @@ defmodule LiveStyle.When do
   ## Parameters
 
     * `pseudo` - The pseudo selector (e.g., `":hover"`, `":focus"`)
-    * `marker` - Optional custom marker class name. Defaults to `"x-marker"`.
+    * `marker` - Optional custom marker class name. Defaults to the configured default marker.
 
   ## Example
 
-      style(:label, %{
+      css_rule :label,
         color: %{
           default: "black",
-          sibling_after(":focus"): "blue"
+          When.sibling_after(":focus") => "blue"
         }
-      })
 
-  Generates CSS like: `.class:where(:has(~ .x-marker:focus)) { color: blue; }`
+  Generates CSS like: `.class:where(:has(~ .{prefix}-default-marker:focus)) { color: blue; }`
   """
-  def sibling_after(pseudo, marker \\ "x-marker") do
+  def sibling_after(pseudo), do: sibling_after(pseudo, Marker.default())
+
+  def sibling_after(pseudo, marker) do
     validate_pseudo!(pseudo)
     ":where(:has(~ .#{marker}#{pseudo}))"
   end
@@ -157,31 +162,32 @@ defmodule LiveStyle.When do
   ## Parameters
 
     * `pseudo` - The pseudo selector (e.g., `":hover"`, `":focus"`)
-    * `marker` - Optional custom marker class name. Defaults to `"x-marker"`.
+    * `marker` - Optional custom marker class name. Defaults to the configured default marker.
 
   ## Example
 
-      style(:tab, %{
+      css_rule :tab,
         opacity: %{
           default: "1",
-          any_sibling(":hover"): "0.7"
+          When.any_sibling(":hover") => "0.7"
         }
-      })
 
-  Generates CSS like: `.class:where(.x-marker:hover ~ *, :has(~ .x-marker:hover)) { opacity: 0.7; }`
+  Generates CSS like: `.class:where(.{prefix}-default-marker:hover ~ *, :has(~ .{prefix}-default-marker:hover)) { opacity: 0.7; }`
   """
-  def any_sibling(pseudo, marker \\ "x-marker") do
+  def any_sibling(pseudo), do: any_sibling(pseudo, Marker.default())
+
+  def any_sibling(pseudo, marker) do
     validate_pseudo!(pseudo)
     ":where(.#{marker}#{pseudo} ~ *, :has(~ .#{marker}#{pseudo}))"
   end
 
-  defp validate_pseudo!(pseudo) do
-    unless String.starts_with?(pseudo, ":") do
-      raise ArgumentError, "Pseudo selector must start with ':' (got #{inspect(pseudo)})"
-    end
+  defp validate_pseudo!(<<"::", _rest::binary>>) do
+    raise ArgumentError, "Pseudo-elements (::) are not supported in contextual selectors"
+  end
 
-    if String.starts_with?(pseudo, "::") do
-      raise ArgumentError, "Pseudo-elements (::) are not supported in When selectors"
-    end
+  defp validate_pseudo!(<<":", _rest::binary>>), do: :ok
+
+  defp validate_pseudo!(pseudo) do
+    raise ArgumentError, "Pseudo selector must start with ':' (got #{inspect(pseudo)})"
   end
 end

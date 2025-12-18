@@ -1,0 +1,292 @@
+# shorthand_expansions.txt
+# Shorthand CSS properties mapped to their expansion functions
+#
+# Format: shorthand_property ; expansion_function
+# The expansion function is the name of the function in LiveStyle.Expansions
+
+# Margin expansions
+margin ; expand_margin
+margin-horizontal ; expand_margin_horizontal
+margin-vertical ; expand_margin_vertical
+margin-start ; expand_margin_start
+margin-end ; expand_margin_end
+margin-left ; expand_margin_left
+margin-right ; expand_margin_right
+margin-block ; expand_margin_vertical
+margin-block-start ; expand_margin_block_start
+margin-block-end ; expand_margin_block_end
+margin-inline ; expand_margin_horizontal
+
+# Padding expansions
+padding ; expand_padding
+padding-horizontal ; expand_padding_horizontal
+padding-vertical ; expand_padding_vertical
+padding-start ; expand_padding_start
+padding-end ; expand_padding_end
+padding-left ; expand_padding_left
+padding-right ; expand_padding_right
+padding-block ; expand_padding_vertical
+padding-block-start ; expand_padding_block_start
+padding-block-end ; expand_padding_block_end
+padding-inline ; expand_padding_horizontal
+
+# Gap expansions
+gap ; expand_gap
+grid-gap ; expand_gap
+grid-row-gap ; expand_grid_row_gap
+grid-column-gap ; expand_grid_column_gap
+
+# Overflow expansions
+overflow ; expand_overflow
+overflow-block ; expand_overflow_block
+overflow-inline ; expand_overflow_inline
+
+# Border radius expansions
+border-radius ; expand_border_radius
+border-top-start-radius ; expand_border_top_start_radius
+border-top-end-radius ; expand_border_top_end_radius
+border-bottom-start-radius ; expand_border_bottom_start_radius
+border-bottom-end-radius ; expand_border_bottom_end_radius
+
+# Border expansions
+border ; expand_border
+border-color ; expand_border_color
+border-style ; expand_border_style
+border-width ; expand_border_width
+border-horizontal ; expand_border_horizontal
+border-vertical ; expand_border_vertical
+border-block ; expand_border_vertical
+border-block-start ; expand_border_block_start
+border-block-end ; expand_border_block_end
+border-inline ; expand_border_horizontal
+border-inline-start ; expand_border_inline_start
+border-inline-end ; expand_border_inline_end
+
+# Border block/inline width
+border-block-width ; expand_border_block_width
+border-block-start-width ; expand_border_block_start_width
+border-block-end-width ; expand_border_block_end_width
+border-inline-width ; expand_border_inline_width
+border-inline-start-width ; expand_border_inline_start_width
+border-inline-end-width ; expand_border_inline_end_width
+
+# Border block/inline style
+border-block-style ; expand_border_block_style
+border-block-start-style ; expand_border_block_start_style
+border-block-end-style ; expand_border_block_end_style
+border-inline-style ; expand_border_inline_style
+border-inline-start-style ; expand_border_inline_start_style
+border-inline-end-style ; expand_border_inline_end_style
+
+# Border block/inline color
+border-block-color ; expand_border_block_color
+border-block-start-color ; expand_border_block_start_color
+border-block-end-color ; expand_border_block_end_color
+border-inline-color ; expand_border_inline_color
+border-inline-start-color ; expand_border_inline_start_color
+border-inline-end-color ; expand_border_inline_end_color
+
+# Inset expansions
+inset ; expand_inset
+inset-inline ; expand_inset_inline
+inset-block ; expand_inset_block
+start ; expand_start
+end ; expand_end
+left ; expand_left
+right ; expand_right
+inset-block-start ; expand_inset_block_start
+inset-block-end ; expand_inset_block_end
+inset-inline-start ; expand_start
+inset-inline-end ; expand_end
+
+# Logical size aliases
+block-size ; expand_block_size
+inline-size ; expand_inline_size
+min-block-size ; expand_min_block_size
+min-inline-size ; expand_min_inline_size
+max-block-size ; expand_max_block_size
+max-inline-size ; expand_max_inline_size
+
+# List style
+list-style ; expand_list_style
+
+# Contain intrinsic size
+contain-intrinsic-size ; expand_contain_intrinsic_size
+contain-intrinsic-block-size ; expand_contain_intrinsic_block_size
+contain-intrinsic-inline-size ; expand_contain_intrinsic_inline_size
+
+# Flex expansions
+flex ; expand_flex
+flex-flow ; expand_flex_flow
+
+# Transition expansion
+transition ; expand_transition
+
+# Animation expansion
+animation ; expand_animation
+animation-range ; expand_animation_range
+
+# Outline expansion
+outline ; expand_outline
+
+# Text decoration and emphasis
+text-decoration ; expand_text_decoration
+text-emphasis ; expand_text_emphasis
+
+# Place content/items/self
+place-content ; expand_place_content
+place-items ; expand_place_items
+place-self ; expand_place_self
+
+# Background expansions
+background ; expand_background
+background-position ; expand_background_position
+
+# Columns expansions
+columns ; expand_columns
+column-rule ; expand_column_rule
+
+# Container expansion
+container ; expand_container
+
+# Border side expansions (with null resets)
+border-top ; expand_border_top
+border-bottom ; expand_border_bottom
+border-left ; expand_border_left_shorthand
+border-right ; expand_border_right_shorthand
+border-inline-start ; expand_border_inline_start_shorthand
+border-inline-end ; expand_border_inline_end_shorthand
+
+# Border inline/block width with null resets
+border-inline-start-width ; expand_border_inline_start_width_with_resets
+border-inline-end-width ; expand_border_inline_end_width_with_resets
+border-left-width ; expand_border_left_width
+border-right-width ; expand_border_right_width
+
+# Border inline/block style with null resets
+border-inline-start-style ; expand_border_inline_start_style_with_resets
+border-inline-end-style ; expand_border_inline_end_style_with_resets
+border-left-style ; expand_border_left_style
+border-right-style ; expand_border_right_style
+
+# Border inline/block color with null resets
+border-inline-start-color ; expand_border_inline_start_color_with_resets
+border-inline-end-color ; expand_border_inline_end_color_with_resets
+border-left-color ; expand_border_left_color
+border-right-color ; expand_border_right_color
+
+# Border radius with bidirectional null resets
+border-start-start-radius ; expand_border_start_start_radius
+border-start-end-radius ; expand_border_start_end_radius
+border-end-start-radius ; expand_border_end_start_radius
+border-end-end-radius ; expand_border_end_end_radius
+border-top-left-radius ; expand_border_top_left_radius
+border-top-right-radius ; expand_border_top_right_radius
+border-bottom-left-radius ; expand_border_bottom_left_radius
+border-bottom-right-radius ; expand_border_bottom_right_radius
+
+# Grid expansions
+grid ; expand_grid
+grid-template ; expand_grid_template
+grid-area ; expand_grid_area
+grid-row ; expand_grid_row
+grid-column ; expand_grid_column
+
+# Scroll margin expansions
+scroll-margin ; expand_scroll_margin
+scroll-margin-block ; expand_scroll_margin_block
+scroll-margin-inline ; expand_scroll_margin_inline
+scroll-margin-inline-start ; expand_scroll_margin_inline_start
+scroll-margin-inline-end ; expand_scroll_margin_inline_end
+scroll-margin-left ; expand_scroll_margin_left
+scroll-margin-right ; expand_scroll_margin_right
+
+# Scroll padding expansions
+scroll-padding ; expand_scroll_padding
+scroll-padding-block ; expand_scroll_padding_block
+scroll-padding-inline ; expand_scroll_padding_inline
+scroll-padding-inline-start ; expand_scroll_padding_inline_start
+scroll-padding-inline-end ; expand_scroll_padding_inline_end
+scroll-padding-left ; expand_scroll_padding_left
+scroll-padding-right ; expand_scroll_padding_right
+
+# Scroll snap and timeline
+scroll-snap-type ; expand_scroll_snap_type
+scroll-timeline ; expand_scroll_timeline
+
+# Overscroll behavior
+overscroll-behavior ; expand_overscroll_behavior
+
+# Font expansions
+font ; expand_font
+font-variant ; expand_font_variant
+
+# Mask expansions
+mask ; expand_mask
+mask-border ; expand_mask_border
+
+# Border image expansion
+border-image ; expand_border_image
+
+# Offset expansion
+offset ; expand_offset
+
+# ==========================================================================
+# Aliases (from StyleX aliases section)
+# ==========================================================================
+
+# Border horizontal/vertical aliases (deprecated but supported)
+border-horizontal ; expand_border_horizontal
+border-vertical ; expand_border_vertical
+border-block-start ; expand_border_block_start
+border-end ; expand_border_inline_end_shorthand
+border-block-end ; expand_border_block_end
+border-start ; expand_border_inline_start_shorthand
+
+# Border horizontal/vertical width/style/color aliases
+border-horizontal-width ; expand_border_inline_width
+border-horizontal-style ; expand_border_inline_style
+border-horizontal-color ; expand_border_inline_color
+border-vertical-width ; expand_border_block_width
+border-vertical-style ; expand_border_block_style
+border-vertical-color ; expand_border_block_color
+
+# Border block start/end color/style/width aliases (map to physical)
+border-block-start-color ; expand_border_block_start_color
+border-block-end-color ; expand_border_block_end_color
+border-block-start-style ; expand_border_block_start_style
+border-block-end-style ; expand_border_block_end_style
+border-block-start-width ; expand_border_block_start_width
+border-block-end-width ; expand_border_block_end_width
+
+# Border start/end color/style/width aliases
+border-start-color ; expand_border_inline_start_color_with_resets
+border-end-color ; expand_border_inline_end_color_with_resets
+border-start-style ; expand_border_inline_start_style_with_resets
+border-end-style ; expand_border_inline_end_style_with_resets
+border-start-width ; expand_border_inline_start_width_with_resets
+border-end-width ; expand_border_inline_end_width_with_resets
+
+# Margin aliases
+margin-block-start ; expand_margin_block_start
+margin-block-end ; expand_margin_block_end
+margin-horizontal ; expand_margin_horizontal
+margin-vertical ; expand_margin_vertical
+margin-inline-start ; expand_margin_start
+margin-inline-end ; expand_margin_end
+
+# Padding aliases
+padding-block-start ; expand_padding_block_start
+padding-block-end ; expand_padding_block_end
+padding-horizontal ; expand_padding_horizontal
+padding-vertical ; expand_padding_vertical
+padding-inline-start ; expand_padding_start
+padding-inline-end ; expand_padding_end
+
+# Scroll margin block start/end aliases
+scroll-margin-block-start ; expand_scroll_margin_block_start
+scroll-margin-block-end ; expand_scroll_margin_block_end
+
+# Scroll padding block start/end aliases
+scroll-padding-block-start ; expand_scroll_padding_block_start
+scroll-padding-block-end ; expand_scroll_padding_block_end

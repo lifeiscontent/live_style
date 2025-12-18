@@ -1,0 +1,303 @@
+defmodule LiveStyle.Fallback do
+  @moduledoc """
+  CSS fallback value processing for LiveStyle.
+
+  This module implements StyleX-compatible fallback value handling:
+  - Plain array fallbacks (variableFallbacks behavior)
+  - Explicit first_that_works fallbacks (firstThatWorks behavior)
+  - CSS variable nesting: `var(--a, var(--b, fallback))`
+
+  ## StyleX Behavior
+
+  StyleX has two types of fallback handling:
+
+  1. **Plain arrays** - Uses variableFallbacks algorithm
+     - Order preserved for non-var values
+     - CSS vars get nested when non-var values precede them
+
+  2. **first_that_works()** - Uses firstThatWorks algorithm
+     - Reverses non-var values for proper CSS fallback order
+     - Nests CSS vars with their fallbacks
+  """
+
+  alias LiveStyle.Hash
+  alias LiveStyle.Priority
+  alias LiveStyle.Rule.CSS, as: RuleCss
+  alias LiveStyle.Value
+
+  @doc """
+  Process plain array fallback values (StyleX variableFallbacks behavior).
+
+  Arrays preserve order, only CSS vars get nested into `var(--x, var(--y, fallback))`.
+  This matches StyleX's convert-to-className.js variableFallbacks function.
+  """
+  @spec process_array(String.t(), list()) :: {String.t(), map()}
+  def process_array(css_prop, values) do
+    # StyleX validation: array values can only contain strings or numbers
+    validate_array_values!(values)
+
+    normalized_values =
+      values
+      |> Enum.map(&Value.to_css(&1, css_prop))
+
+    # Apply variableFallbacks transformation (nest vars, preserve order)
+    transformed = variable_fallbacks(normalized_values)
+
+    # StyleX joins array values with ", " for hashing
+    hash_value = Enum.join(normalized_values, ", ")
+    class_name = Hash.atomic_class(css_prop, hash_value, nil, nil, nil)
+
+    # Generate StyleX-compatible metadata
+    {ltr_css, rtl_css} =
+      RuleCss.generate_metadata(class_name, css_prop, transformed, nil, nil)
+
+    priority = Priority.calculate(css_prop, nil, nil)
+
+    build_result(css_prop, class_name, transformed, ltr_css, rtl_css, priority)
+  end
+
+  @doc """
+  Process explicit first_that_works() values (StyleX firstThatWorks behavior).
+
+  This reverses non-var values and nests CSS vars.
+  """
+  @spec process_first_that_works(String.t(), list()) :: {String.t(), map()}
+  def process_first_that_works(css_prop, values) do
+    normalized_values =
+      values
+      |> Enum.map(&Value.to_css(&1, css_prop))
+
+    # Apply firstThatWorks transformation (reverse + nest vars)
+    transformed = first_that_works_transform(normalized_values)
+
+    # StyleX joins array values with ", " for hashing
+    hash_value = Enum.join(normalized_values, ", ")
+    class_name = Hash.atomic_class(css_prop, hash_value, nil, nil, nil)
+
+    # Generate StyleX-compatible metadata
+    {ltr_css, rtl_css} =
+      RuleCss.generate_metadata(class_name, css_prop, transformed, nil, nil)
+
+    priority = Priority.calculate(css_prop, nil, nil)
+
+    build_result(css_prop, class_name, transformed, ltr_css, rtl_css, priority)
+  end
+
+  @doc """
+  Build the result map for fallback values.
+  """
+  @spec build_result(
+          String.t(),
+          String.t(),
+          list(),
+          String.t(),
+          String.t() | nil,
+          non_neg_integer()
+        ) ::
+          {String.t(), map()}
+  def build_result(css_prop, class_name, transformed, ltr_css, rtl_css, priority) do
+    result_value =
+      case transformed do
+        [single] -> single
+        multiple -> List.first(multiple)
+      end
+
+    base_result = %{
+      class: class_name,
+      value: result_value,
+      ltr: ltr_css,
+      rtl: rtl_css,
+      priority: priority
+    }
+
+    # Only include fallback_values if we have multiple CSS declarations
+    result =
+      case transformed do
+        [_single] -> base_result
+        multiple -> Map.put(base_result, :fallback_values, multiple)
+      end
+
+    {css_prop, result}
+  end
+
+  @doc """
+  Check if a value is a CSS variable reference.
+  """
+  @spec css_var?(term()) :: boolean()
+  def css_var?(value) when is_binary(value) do
+    String.starts_with?(value, "var(") and String.ends_with?(value, ")")
+  end
+
+  def css_var?(_), do: false
+
+  @doc """
+  Extract var name from var(--name) -> --name
+  """
+  @spec extract_var_name(String.t()) :: String.t()
+  def extract_var_name(value) do
+    value
+    |> String.trim_leading("var(")
+    |> String.trim_trailing(")")
+  end
+
+  # ===========================================================================
+  # Private Functions
+  # ===========================================================================
+
+  # StyleX validation: array values can only contain strings or numbers
+  # Matches validation-stylex-create-test.js: "A style array value can only contain strings or numbers."
+  defp validate_array_values!(values) do
+    Enum.each(values, fn value ->
+      unless valid_array_value?(value) do
+        raise ArgumentError,
+              "A style array value can only contain strings or numbers, got: #{inspect(value)}"
+      end
+    end)
+  end
+
+  defp valid_array_value?(value) when is_binary(value), do: true
+  defp valid_array_value?(value) when is_number(value), do: true
+  defp valid_array_value?(value) when is_atom(value) and value not in [true, false, nil], do: true
+  defp valid_array_value?(_), do: false
+
+  # StyleX variableFallbacks - used for plain arrays
+  # Nests vars only when non-var values come BEFORE the first var
+  # Matches convert-to-className.js variableFallbacks function
+  defp variable_fallbacks(values) do
+    has_vars = Enum.any?(values, &css_var?/1)
+
+    if not has_vars do
+      # No vars - return as-is (order preserved)
+      values
+    else
+      first_var = Enum.find_index(values, &css_var?/1)
+      last_var = find_last_index(values, &css_var?/1)
+
+      values_before = Enum.slice(values, 0, first_var)
+      var_values = Enum.slice(values, first_var, last_var - first_var + 1)
+      values_after = Enum.slice(values, last_var + 1, length(values) - last_var - 1)
+
+      # Extract var names (unwrap var(--x) to --x)
+      var_names =
+        var_values
+        |> Enum.reverse()
+        |> Enum.map(fn val ->
+          if css_var?(val), do: extract_var_name(val), else: val
+        end)
+
+      nested =
+        case values_before do
+          [] ->
+            # No values before first var - just compose vars (no nesting with after values)
+            [compose_vars(var_names)]
+
+          _ ->
+            # Values before first var get nested with the vars
+            # compose_vars expects innermost first, so val goes at the beginning
+            Enum.map(values_before, fn val -> compose_vars([val | var_names]) end)
+        end
+
+      nested ++ values_after
+    end
+  end
+
+  # StyleX firstThatWorks transformation
+  # Nests vars when var comes FIRST, otherwise keeps separate declarations
+  # Matches stylex-first-that-works.js
+  defp first_that_works_transform(values) do
+    first_var_index = Enum.find_index(values, &css_var?/1)
+
+    case first_var_index do
+      nil ->
+        # No CSS variables - reverse for fallback order
+        Enum.reverse(values)
+
+      0 ->
+        # Var comes first - nest vars with following non-var fallback
+        # Find first non-var after the vars
+        rest = values
+        first_non_var = Enum.find_index(rest, &(not css_var?(&1)))
+
+        var_parts =
+          case first_non_var do
+            nil -> rest
+            idx -> Enum.slice(rest, 0, idx + 1)
+          end
+
+        # Reverse and extract var names
+        var_names =
+          var_parts
+          |> Enum.reverse()
+          |> Enum.map(fn val ->
+            if css_var?(val), do: extract_var_name(val), else: val
+          end)
+
+        [compose_vars(var_names)]
+
+      idx ->
+        # Non-var values come first - they become separate declarations
+        priorities = Enum.slice(values, 0, idx) |> Enum.reverse()
+        rest = Enum.slice(values, idx, length(values) - idx)
+
+        # Process the rest (vars + possible fallback)
+        first_non_var = Enum.find_index(rest, &(not css_var?(&1)))
+
+        var_parts =
+          case first_non_var do
+            nil -> rest
+            i -> Enum.slice(rest, 0, i + 1)
+          end
+
+        var_names =
+          var_parts
+          |> Enum.reverse()
+          |> Enum.map(fn val ->
+            if css_var?(val), do: extract_var_name(val), else: val
+          end)
+
+        [compose_vars(var_names) | priorities]
+    end
+  end
+
+  # Find last index matching predicate
+  defp find_last_index(list, pred) do
+    list
+    |> Enum.with_index()
+    |> Enum.filter(fn {val, _idx} -> pred.(val) end)
+    |> List.last()
+    |> case do
+      nil -> -1
+      {_val, idx} -> idx
+    end
+  end
+
+  # Compose CSS variables using StyleX's reduce pattern
+  # Input: ["fallback", "--b", "--a"] (reversed - innermost first)
+  # Output: "var(--a, var(--b, fallback))"
+  #
+  # The reduce wraps previous result inside current var:
+  # "" + "fallback" → "fallback"
+  # "fallback" + "--b" → "var(--b, fallback)"
+  # "var(--b, fallback)" + "--a" → "var(--a, var(--b, fallback))"
+  defp compose_vars(vars) do
+    Enum.reduce(vars, "", fn var_name, so_far ->
+      cond do
+        so_far == "" and String.starts_with?(var_name, "--") ->
+          "var(#{var_name})"
+
+        so_far == "" ->
+          # Non-var as innermost fallback
+          var_name
+
+        String.starts_with?(var_name, "--") ->
+          # Wrap so_far inside this var
+          "var(#{var_name},#{so_far})"
+
+        true ->
+          # Non-var after first element - shouldn't happen in valid input
+          # But if it does, just return as-is
+          so_far
+      end
+    end)
+  end
+end
