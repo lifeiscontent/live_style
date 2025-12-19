@@ -66,27 +66,27 @@ defmodule LiveStyle.Fallback do
           non_neg_integer()
         ) ::
           {String.t(), map()}
-  defp build_result(css_prop, class_name, transformed, ltr_css, rtl_css, priority) do
-    result_value =
-      case transformed do
-        [single] -> single
-        multiple -> List.first(multiple)
-      end
-
-    base_result = %{
+  defp build_result(css_prop, class_name, [single], ltr_css, rtl_css, priority) do
+    result = %{
       class: class_name,
-      value: result_value,
+      value: single,
       ltr: ltr_css,
       rtl: rtl_css,
       priority: priority
     }
 
-    # Only include fallback_values if we have multiple CSS declarations
-    result =
-      case transformed do
-        [_single] -> base_result
-        multiple -> Map.put(base_result, :fallback_values, multiple)
-      end
+    {css_prop, result}
+  end
+
+  defp build_result(css_prop, class_name, [first | _] = multiple, ltr_css, rtl_css, priority) do
+    result = %{
+      class: class_name,
+      value: first,
+      ltr: ltr_css,
+      rtl: rtl_css,
+      priority: priority,
+      fallback_values: multiple
+    }
 
     {css_prop, result}
   end

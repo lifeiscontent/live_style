@@ -131,17 +131,15 @@ defmodule LiveStyle.Keyframes do
   # Returns the sort order for a keyframe key (0 = from, 100 = to).
   # Used by both Keyframes and CSS.Keyframes for consistent ordering.
   @spec frame_sort_order(atom() | String.t()) :: integer()
-  def frame_sort_order(:from), do: 0
-  def frame_sort_order("from"), do: 0
-  def frame_sort_order("0%"), do: 0
-  def frame_sort_order(:to), do: 100
-  def frame_sort_order("to"), do: 100
-  def frame_sort_order("100%"), do: 100
-
   def frame_sort_order(key) when is_atom(key) do
-    # Handle atom keys like :"50%" by converting to string
+    # Normalize atom keys to strings for unified handling
     frame_sort_order(Atom.to_string(key))
   end
+
+  def frame_sort_order("from"), do: 0
+  def frame_sort_order("0%"), do: 0
+  def frame_sort_order("to"), do: 100
+  def frame_sort_order("100%"), do: 100
 
   def frame_sort_order(key) when is_binary(key) do
     case Integer.parse(String.trim_trailing(key, "%")) do

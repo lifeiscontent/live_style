@@ -52,11 +52,7 @@ defmodule LiveStyle.MediaQuery.Transform do
   """
   def transform(value_map) when is_map(value_map) do
     # Extract media query keys
-    media_keys =
-      value_map
-      |> Map.keys()
-      |> Enum.filter(&media_query_key?/1)
-      |> Enum.map(&to_string/1)
+    media_keys = for key <- Map.keys(value_map), media_query_key?(key), do: to_string(key)
 
     # If less than 2 media queries, no transformation needed
     if length(media_keys) < 2 do

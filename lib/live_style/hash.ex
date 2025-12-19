@@ -48,11 +48,8 @@ defmodule LiveStyle.Hash do
     at_rule_hash_string = Enum.join(sorted_at_rules, "")
 
     # StyleX uses 'null' when no modifiers to keep existing hashes stable
-    modifier_hash_string =
-      case pseudo_hash_string <> at_rule_hash_string do
-        "" -> "null"
-        str -> str
-      end
+    combined = pseudo_hash_string <> at_rule_hash_string
+    modifier_hash_string = if combined == "", do: "null", else: combined
 
     # StyleX prefixes with '<>' for hash stability
     string_to_hash = "<>" <> property <> value <> modifier_hash_string
