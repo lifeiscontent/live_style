@@ -11,10 +11,6 @@ defmodule LiveStyle.Value do
 
   alias LiveStyle.Property
 
-  # Properties that need snake_case to dash-case conversion for their values
-  # e.g., :background_color -> "background-color" in transition-property
-  @snake_case_value_properties ["transition-property", "will-change"]
-
   # Compile regex patterns at module level (compiled once, reused)
   @whitespace_comma_regex ~r/\s*,\s*/
   @multiple_spaces_regex ~r/\s{2,}/
@@ -57,29 +53,24 @@ defmodule LiveStyle.Value do
     end
   end
 
-  def to_css(v, property) when is_binary(v) do
-    normalized = normalize(v)
+  # content needs special quoting handling
+  def to_css(v, "content") when is_binary(v), do: v |> normalize() |> quote_content_value()
 
-    cond do
-      # content needs special quoting handling
-      property == "content" ->
-        quote_content_value(normalized)
+  # hyphenate-character needs special quoting handling
+  # but "auto" is a valid keyword that shouldn't be quoted
+  def to_css(v, "hyphenate-character") when is_binary(v),
+    do: v |> normalize() |> quote_hyphenate_character_value()
 
-      # hyphenate-character needs special quoting handling
-      # but "auto" is a valid keyword that shouldn't be quoted
-      property == "hyphenate-character" ->
-        quote_hyphenate_character_value(normalized)
+  # For transition-property and will-change, convert snake_case strings to dash-case
+  # e.g., "background_color" -> "background-color"
+  # This is the Elixir idiom equivalent of StyleX's camelCase -> kebab-case
+  def to_css(v, "transition-property") when is_binary(v),
+    do: v |> normalize() |> convert_snake_case_to_dash_case()
 
-      # For transition-property and will-change, convert snake_case strings to dash-case
-      # e.g., "background_color" -> "background-color"
-      # This is the Elixir idiom equivalent of StyleX's camelCase -> kebab-case
-      property in @snake_case_value_properties ->
-        convert_snake_case_to_dash_case(normalized)
+  def to_css(v, "will-change") when is_binary(v),
+    do: v |> normalize() |> convert_snake_case_to_dash_case()
 
-      true ->
-        normalized
-    end
-  end
+  def to_css(v, _property) when is_binary(v), do: normalize(v)
 
   # nil is not a valid CSS value - catch this explicitly rather than letting
   # it fall through to to_string(nil) which would produce "nil"
@@ -97,17 +88,15 @@ defmodule LiveStyle.Value do
     raise ArgumentError, "Invalid property value: boolean `false` is not a valid CSS value"
   end
 
-  def to_css(v, property) when is_atom(v) do
-    str = Atom.to_string(v)
+  # For transition-property and will-change, convert snake_case atoms to dash-case
+  # e.g., :background_color -> "background-color"
+  def to_css(v, "transition-property") when is_atom(v),
+    do: v |> Atom.to_string() |> convert_snake_case_to_dash_case()
 
-    # For transition-property and will-change, convert snake_case atoms to dash-case
-    # e.g., :background_color -> "background-color"
-    if property in @snake_case_value_properties do
-      convert_snake_case_to_dash_case(str)
-    else
-      str
-    end
-  end
+  def to_css(v, "will-change") when is_atom(v),
+    do: v |> Atom.to_string() |> convert_snake_case_to_dash_case()
+
+  def to_css(v, _property) when is_atom(v), do: Atom.to_string(v)
 
   def to_css(v, _property), do: to_string(v)
 
@@ -209,15 +198,20 @@ defmodule LiveStyle.Value do
 
   defp hyphenate_keyword?(_), do: false
 
+  # CSS function patterns that should not be quoted in content property
+  @css_function_patterns [
+    "attr(",
+    "counter(",
+    "counters(",
+    "url(",
+    "linear-gradient(",
+    "image-set(",
+    "var(--"
+  ]
+
   # Check if value contains a CSS function
   defp contains_css_function?(val) do
-    String.contains?(val, "attr(") or
-      String.contains?(val, "counter(") or
-      String.contains?(val, "counters(") or
-      String.contains?(val, "url(") or
-      String.contains?(val, "linear-gradient(") or
-      String.contains?(val, "image-set(") or
-      String.contains?(val, "var(--")
+    Enum.any?(@css_function_patterns, &String.contains?(val, &1))
   end
 
   # Check if value has matching quotes (at least 2 of the same quote character)
@@ -231,13 +225,11 @@ defmodule LiveStyle.Value do
 
   defp quote_content_value(value) do
     val = String.trim(value)
+    if skip_quoting_content?(val), do: val, else: "\"#{val}\""
+  end
 
-    cond do
-      contains_css_function?(val) -> val
-      content_keyword?(val) -> val
-      has_matching_quotes?(val) -> val
-      true -> "\"#{val}\""
-    end
+  defp skip_quoting_content?(val) do
+    contains_css_function?(val) or content_keyword?(val) or has_matching_quotes?(val)
   end
 
   # Quote hyphenate-character property values
@@ -245,12 +237,11 @@ defmodule LiveStyle.Value do
   # "auto" is a keyword that shouldn't be quoted, everything else should be
   defp quote_hyphenate_character_value(value) do
     val = String.trim(value)
+    if skip_quoting_hyphenate?(val), do: val, else: "\"#{val}\""
+  end
 
-    cond do
-      hyphenate_keyword?(val) -> val
-      has_matching_quotes?(val) -> val
-      true -> "\"#{val}\""
-    end
+  defp skip_quoting_hyphenate?(val) do
+    hyphenate_keyword?(val) or has_matching_quotes?(val)
   end
 
   # Convert snake_case to dash-case for transition-property and will-change values

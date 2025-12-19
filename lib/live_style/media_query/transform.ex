@@ -110,17 +110,26 @@ defmodule LiveStyle.MediaQuery.Transform do
   defp apply_transformation(acc, old_key, old_key), do: acc
 
   defp apply_transformation(acc, old_key, new_key) do
-    cond do
-      Map.has_key?(acc, old_key) ->
-        replace_key(acc, old_key, new_key)
+    # Try string key first, then atom key (without creating new atoms)
+    case Map.pop(acc, old_key) do
+      {nil, _} -> try_atom_key(acc, old_key, new_key)
+      {value, rest} -> Map.put(rest, new_key, value)
+    end
+  end
 
-      # Try to find atom key without creating new atoms
-      # Use String.to_existing_atom to avoid atom table exhaustion
-      (atom_key = safe_to_existing_atom(old_key)) && Map.has_key?(acc, atom_key) ->
-        replace_key(acc, atom_key, new_key)
+  # Try to find atom key without creating new atoms
+  # Use String.to_existing_atom to avoid atom table exhaustion
+  defp try_atom_key(acc, old_key, new_key) do
+    case safe_to_existing_atom(old_key) do
+      nil -> acc
+      atom_key -> replace_if_exists(acc, atom_key, new_key)
+    end
+  end
 
-      true ->
-        acc
+  defp replace_if_exists(acc, old_key, new_key) do
+    case Map.pop(acc, old_key) do
+      {nil, _} -> acc
+      {value, rest} -> Map.put(rest, new_key, value)
     end
   end
 
@@ -131,30 +140,27 @@ defmodule LiveStyle.MediaQuery.Transform do
     ArgumentError -> nil
   end
 
-  defp replace_key(acc, old_key, new_key) do
-    value = Map.get(acc, old_key)
-
-    acc
-    |> Map.delete(old_key)
-    |> Map.put(new_key, value)
-  end
-
   defp parse_media_query(query) do
     # Parse @media (min-width: 1000px) or @media (max-width: 900px)
-    cond do
-      # min-width pattern
-      match = Regex.run(@min_width_regex, query) ->
-        [_, value_str, unit] = match
-        value = parse_number(value_str)
-        %{type: :min_width, value: value, unit: unit, original: query}
+    parse_min_width(query) || parse_max_width(query)
+  end
 
-      # max-width pattern
-      match = Regex.run(@max_width_regex, query) ->
-        [_, value_str, unit] = match
-        value = parse_number(value_str)
-        %{type: :max_width, value: value, unit: unit, original: query}
+  defp parse_min_width(query) do
+    case Regex.run(@min_width_regex, query) do
+      [_, value_str, unit] ->
+        %{type: :min_width, value: parse_number(value_str), unit: unit, original: query}
 
-      true ->
+      nil ->
+        nil
+    end
+  end
+
+  defp parse_max_width(query) do
+    case Regex.run(@max_width_regex, query) do
+      [_, value_str, unit] ->
+        %{type: :max_width, value: parse_number(value_str), unit: unit, original: query}
+
+      nil ->
         nil
     end
   end

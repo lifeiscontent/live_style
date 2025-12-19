@@ -91,26 +91,31 @@ defmodule LiveStyle.RTL do
   @doc false
   @spec generate_rtl(String.t(), String.t()) :: {String.t(), String.t()} | nil
   def generate_rtl(css_property, css_value) do
-    cond do
-      # Property is a logical property that needs RTL override
-      ltr_property(css_property) != nil ->
-        {rtl_property(css_property), css_value}
+    # NOTE: StyleX has `enableLegacyValueFlipping` option (default: false) for
+    # cursor and shadow flipping. This is marked as "Legacy / Incorrect" in StyleX.
+    # LiveStyle follows StyleX's modern behavior and does NOT flip these by default.
+    # If legacy behavior is needed, it can be added as a configuration option.
+    generate_rtl_for_property(css_property, css_value) ||
+      generate_rtl_for_value(css_property, css_value)
+  end
 
-      # Value contains logical keywords that need flipping
-      needs_value_rtl?(css_property, css_value) ->
-        {css_property, transform_value_rtl(css_property, css_value)}
+  # Property is a logical property that needs RTL override
+  defp generate_rtl_for_property(css_property, css_value) do
+    case ltr_property(css_property) do
+      nil -> nil
+      _ -> {rtl_property(css_property), css_value}
+    end
+  end
 
-      # Background-position with logical values
-      css_property == "background-position" ->
-        flip_background_position_rtl(css_value)
+  # Background-position with logical values
+  defp generate_rtl_for_value("background-position", css_value) do
+    flip_background_position_rtl(css_value)
+  end
 
-      # NOTE: StyleX has `enableLegacyValueFlipping` option (default: false) for
-      # cursor and shadow flipping. This is marked as "Legacy / Incorrect" in StyleX.
-      # LiveStyle follows StyleX's modern behavior and does NOT flip these by default.
-      # If legacy behavior is needed, it can be added as a configuration option.
-
-      true ->
-        nil
+  # Value contains logical keywords that need flipping (for float, clear)
+  defp generate_rtl_for_value(css_property, css_value) do
+    if needs_value_rtl?(css_property, css_value) do
+      {css_property, transform_value_rtl(css_property, css_value)}
     end
   end
 
