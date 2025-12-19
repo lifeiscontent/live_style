@@ -28,6 +28,10 @@ defmodule LiveStyle.CSS.RuleGenerator do
     "::-ms-thumb"
   ]
 
+  # Compiled regex patterns
+  @rtl_class_selector_regex ~r/(\.x[a-f0-9]+)(\s*\{)/
+  @var_closing_paren_regex ~r/\)$/
+
   @doc """
   Generates all CSS rules from the manifest.
 
@@ -253,7 +257,7 @@ defmodule LiveStyle.CSS.RuleGenerator do
   defp build_rtl_rule(css, _suffix, _pseudo), do: css
 
   defp rewrite_rtl_rule_with_suffix(rtl_css, selector_suffix) do
-    Regex.replace(~r/(\.x[a-f0-9]+)(\s*\{)/, rtl_css, "\\1#{selector_suffix}\\2")
+    Regex.replace(@rtl_class_selector_regex, rtl_css, "\\1#{selector_suffix}\\2")
   end
 
   # Fallback value processing
@@ -296,6 +300,6 @@ defmodule LiveStyle.CSS.RuleGenerator do
   defp finalize_var_chain(output, chain), do: [chain | output]
 
   defp nest_var_with_fallback(var_value, fallback) do
-    String.replace(var_value, ~r/\)$/, ",#{fallback})")
+    String.replace(var_value, @var_closing_paren_regex, ",#{fallback})")
   end
 end

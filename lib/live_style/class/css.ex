@@ -5,6 +5,9 @@ defmodule LiveStyle.Class.CSS do
   alias LiveStyle.Pseudo.Sort, as: PseudoSort
   alias LiveStyle.RTL
 
+  # Compiled regex for splitting at-rules on @ symbol
+  @at_rule_split_regex ~r/(?=@)/
+
   @doc false
   @spec generate_metadata(
           String.t(),
@@ -111,7 +114,7 @@ defmodule LiveStyle.Class.CSS do
   # Split combined at-rules into individual rules.
   # "@media (x)@supports (y)" -> ["@media (x)", "@supports (y)"]
   defp split_at_rules(at_rule) do
-    Regex.split(~r/(?=@)/, at_rule, trim: true)
+    Regex.split(@at_rule_split_regex, at_rule, trim: true)
   end
 
   # Check if selector_suffix is a contextual selector.
