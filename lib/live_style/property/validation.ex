@@ -29,9 +29,9 @@ defmodule LiveStyle.Property.Validation do
   alias LiveStyle.Data.Parser
 
   # Load known CSS properties at compile time
-  # Source: @webref/css (W3C) + LiveStyle internal logical properties
+  # Source: W3C standard properties + vendor-prefixed properties
   @data_dir Parser.data_dir()
-  @known_properties_path Path.join(@data_dir, "w3c_css_properties.txt")
+  @known_properties_path Path.join(@data_dir, "css_properties.txt")
   @external_resource @known_properties_path
 
   @known_properties @known_properties_path
