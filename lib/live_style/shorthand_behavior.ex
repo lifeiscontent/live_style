@@ -27,27 +27,28 @@ defmodule LiveStyle.ShorthandBehavior do
   ## Implementing a Custom Behavior
 
   To implement a custom behavior, create a module that implements the
-  `LiveStyle.ShorthandBehavior` behaviour:
+  `LiveStyle.ShorthandBehavior` behaviour. Property keys are CSS strings
+  (e.g., `"margin-top"`, `"background-color"`).
 
       defmodule MyCustomBehavior do
         @behaviour LiveStyle.ShorthandBehavior
 
         @impl true
-        def expand_declaration(key, value, opts) do
-          # Return list of {property, value} tuples
-          [{key, value}]
+        def expand_declaration(css_property, value, opts) do
+          # Return list of {css_property_string, value} tuples
+          [{css_property, value}]
         end
 
         @impl true
-        def expand_shorthand_conditions(key, css_property, conditions, opts) do
-          # Return list of {property, conditions_map} tuples
-          [{key, conditions}]
+        def expand_shorthand_conditions(css_property, conditions, opts) do
+          # Return list of {css_property_string, conditions_map} tuples
+          [{css_property, conditions}]
         end
       end
   """
 
-  @callback expand_declaration(atom(), any(), map()) :: [{atom(), any()}]
-  @callback expand_shorthand_conditions(atom(), String.t(), map(), map()) :: [{atom(), any()}]
+  @callback expand_declaration(String.t(), any(), map()) :: [{String.t(), any()}]
+  @callback expand_shorthand_conditions(String.t(), map(), map()) :: [{String.t(), any()}]
 
   @doc """
   Returns the configured behavior module and options.
@@ -82,17 +83,23 @@ defmodule LiveStyle.ShorthandBehavior do
 
   @doc """
   Expands a declaration using the configured behavior.
+
+  Takes a CSS property string (e.g., `"margin"`, `"background-color"`) and value.
+  Returns a list of `{css_property_string, value}` tuples.
   """
-  def expand_declaration(key, value, expansion_opts \\ nil) do
+  def expand_declaration(css_property, value, expansion_opts \\ nil) do
     expansion_opts = expansion_opts || opts()
-    backend_module().expand_declaration(key, value, expansion_opts)
+    backend_module().expand_declaration(css_property, value, expansion_opts)
   end
 
   @doc """
   Expands shorthand conditions using the configured behavior.
+
+  Takes a CSS property string and a conditions map.
+  Returns a list of `{css_property_string, conditions_map}` tuples.
   """
-  def expand_shorthand_conditions(key, css_property, conditions, expansion_opts \\ nil) do
+  def expand_shorthand_conditions(css_property, conditions, expansion_opts \\ nil) do
     expansion_opts = expansion_opts || opts()
-    backend_module().expand_shorthand_conditions(key, css_property, conditions, expansion_opts)
+    backend_module().expand_shorthand_conditions(css_property, conditions, expansion_opts)
   end
 end

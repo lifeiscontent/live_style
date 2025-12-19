@@ -72,7 +72,9 @@ defmodule Mix.Tasks.LiveStyle do
   end
 
   defp run_profile([profile | args]) do
-    case LiveStyle.Compiler.run(String.to_atom(profile), args) do
+    profile_atom = string_to_profile_atom(profile)
+
+    case LiveStyle.Compiler.run(profile_atom, args) do
       0 ->
         :ok
 
@@ -83,5 +85,22 @@ defmodule Mix.Tasks.LiveStyle do
 
   defp run_profile([]) do
     Mix.raise("`mix live_style` expects the profile as argument")
+  end
+
+  defp string_to_profile_atom(profile) do
+    String.to_existing_atom(profile)
+  rescue
+    ArgumentError ->
+      Mix.raise("""
+      Unknown LiveStyle profile: #{profile}
+
+      Make sure the profile is configured in your config files:
+
+          config :live_style,
+            #{profile}: [
+              output: "priv/static/assets/app.css",
+              cd: Path.expand("..", __DIR__)
+            ]
+      """)
   end
 end

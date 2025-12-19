@@ -17,8 +17,8 @@ defmodule LiveStyle.ShorthandBehavior.AcceptShorthands do
 
   ## Example
 
-      iex> AcceptShorthands.expand("margin", "10px")
-      [{:margin, "10px"}]
+      iex> AcceptShorthands.expand_declaration("margin", "10px", %{})
+      [{"margin", "10px"}]
 
   ## Data-Driven Expansions
 
@@ -36,30 +36,15 @@ defmodule LiveStyle.ShorthandBehavior.AcceptShorthands do
   @keep_shorthands_expansions Data.keep_shorthands_expansions()
 
   # ==========================================================================
-  # Public API
+  # Behavior Callbacks
   # ==========================================================================
 
-  @doc """
-  Expands a CSS property and value according to the AcceptShorthands behavior.
-
-  Returns a list of `{property_atom, value}` tuples. For shorthand properties,
-  returns the shorthand with its value (nil resets are filtered out).
-  For non-shorthand properties, returns the property unchanged.
-
-  ## Examples
-
-      iex> AcceptShorthands.expand("margin", "10px")
-      [{:margin, "10px"}]
-
-      iex> AcceptShorthands.expand("color", "red")
-      [{:color, "red"}]
-
-  """
-  def expand(css_property, value) when is_binary(css_property) do
+  @impl true
+  def expand_declaration(css_property, value, _opts) do
     case get_expansion(css_property) do
       nil ->
         # Not a shorthand, pass through
-        [{css_to_atom(css_property), value}]
+        [{css_property, value}]
 
       expansion ->
         # Apply expansion and filter out nils
@@ -69,21 +54,11 @@ defmodule LiveStyle.ShorthandBehavior.AcceptShorthands do
     end
   end
 
-  # ==========================================================================
-  # Behavior Callbacks
-  # ==========================================================================
-
   @impl true
-  def expand_declaration(key, value, _opts) do
-    css_property = to_css_property(key)
-    expand(css_property, value)
-  end
-
-  @impl true
-  def expand_shorthand_conditions(key, css_property, conditions, _opts) do
+  def expand_shorthand_conditions(css_property, conditions, _opts) do
     case get_expansion(css_property) do
       nil ->
-        [{key, conditions}]
+        [{css_property, conditions}]
 
       expansion ->
         expanded_props = get_expanded_property_names(expansion)
@@ -99,18 +74,9 @@ defmodule LiveStyle.ShorthandBehavior.AcceptShorthands do
   # Expansion Data
   # ==========================================================================
 
-  # Build expansion map at compile time: css_property -> [{atom, :value | :nil}, ...]
-  @expansions (for {func_name, props} <- @keep_shorthands_expansions, into: %{} do
-                 # Convert function name back to CSS property
-                 # e.g., :expand_margin_block -> "margin-block"
-                 css_prop =
-                   func_name
-                   |> Atom.to_string()
-                   |> String.replace_prefix("expand_", "")
-                   |> String.replace("_", "-")
-
-                 {css_prop, props}
-               end)
+  # Expansion map from keep_shorthands_expansions.txt
+  # Format: css_property -> [{css_property_string, :value | :nil}, ...]
+  @expansions @keep_shorthands_expansions
 
   # Add complex expansions that require runtime parsing
   @complex_expansions %{
@@ -124,18 +90,11 @@ defmodule LiveStyle.ShorthandBehavior.AcceptShorthands do
   end
 
   # Add aliases from shorthand_properties
-  for {property, expansion_fn} <- @shorthand_properties do
+  for {property, _expansion_fn} <- @shorthand_properties do
     # Skip if already defined above
     unless Map.has_key?(@expansions, property) do
-      # Find the canonical property this aliases to
-      canonical =
-        expansion_fn
-        |> Atom.to_string()
-        |> String.replace_prefix("expand_", "")
-        |> String.replace("_", "-")
-
-      if Map.has_key?(@expansions, canonical) do
-        defp get_expansion(unquote(property)), do: get_expansion(unquote(canonical))
+      if Map.has_key?(@expansions, property) do
+        defp get_expansion(unquote(property)), do: get_expansion(unquote(property))
       end
     end
   end
@@ -171,20 +130,20 @@ defmodule LiveStyle.ShorthandBehavior.AcceptShorthands do
         _ -> [nil, nil]
       end
 
-    [{:overscroll_behavior_x, x}, {:overscroll_behavior_y, y}]
+    [{"overscroll-behavior-x", x}, {"overscroll-behavior-y", y}]
   end
 
   defp apply_expansion({:complex, :contain_intrinsic_size}, nil) do
-    [{:contain_intrinsic_width, nil}, {:contain_intrinsic_height, nil}]
+    [{"contain-intrinsic-width", nil}, {"contain-intrinsic-height", nil}]
   end
 
   defp apply_expansion({:complex, :contain_intrinsic_size}, value) when is_binary(value) do
     {width, height} = parse_contain_intrinsic_values(value)
-    [{:contain_intrinsic_width, width}, {:contain_intrinsic_height, height}]
+    [{"contain-intrinsic-width", width}, {"contain-intrinsic-height", height}]
   end
 
   defp apply_expansion({:complex, :contain_intrinsic_size}, value) do
-    [{:contain_intrinsic_width, value}, {:contain_intrinsic_height, value}]
+    [{"contain-intrinsic-width", value}, {"contain-intrinsic-height", value}]
   end
 
   defp parse_contain_intrinsic_values(value) do
@@ -271,22 +230,4 @@ defmodule LiveStyle.ShorthandBehavior.AcceptShorthands do
 
   defp do_split_css_value(<<char::utf8, rest::binary>>, acc, current, depth),
     do: do_split_css_value(rest, acc, current <> <<char::utf8>>, depth)
-
-  # ==========================================================================
-  # Utility Functions
-  # ==========================================================================
-
-  defp css_to_atom(css_property) do
-    css_property
-    |> String.replace("-", "_")
-    |> String.to_atom()
-  end
-
-  defp to_css_property(key) when is_atom(key) do
-    key
-    |> Atom.to_string()
-    |> String.replace("_", "-")
-  end
-
-  defp to_css_property(key) when is_binary(key), do: key
 end

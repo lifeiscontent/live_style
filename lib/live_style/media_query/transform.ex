@@ -118,12 +118,21 @@ defmodule LiveStyle.MediaQuery.Transform do
       Map.has_key?(acc, old_key) ->
         replace_key(acc, old_key, new_key)
 
-      Map.has_key?(acc, String.to_atom(old_key)) ->
-        replace_key(acc, String.to_atom(old_key), new_key)
+      # Try to find atom key without creating new atoms
+      # Use String.to_existing_atom to avoid atom table exhaustion
+      (atom_key = safe_to_existing_atom(old_key)) && Map.has_key?(acc, atom_key) ->
+        replace_key(acc, atom_key, new_key)
 
       true ->
         acc
     end
+  end
+
+  # Safely convert string to existing atom, returns nil if atom doesn't exist
+  defp safe_to_existing_atom(string) do
+    String.to_existing_atom(string)
+  rescue
+    ArgumentError -> nil
   end
 
   defp replace_key(acc, old_key, new_key) do

@@ -227,7 +227,7 @@ defmodule LiveStyle.Config do
   defp valid_behavior_module?(module) do
     Code.ensure_loaded?(module) and
       function_exported?(module, :expand_declaration, 3) and
-      function_exported?(module, :expand_shorthand_conditions, 4)
+      function_exported?(module, :expand_shorthand_conditions, 3)
   end
 
   @doc """

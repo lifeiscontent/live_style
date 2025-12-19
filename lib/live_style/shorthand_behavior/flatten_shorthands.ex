@@ -16,12 +16,12 @@ defmodule LiveStyle.ShorthandBehavior.FlattenShorthands do
 
   ## Example
 
-      iex> FlattenShorthands.expand("margin", "10px 20px")
+      iex> FlattenShorthands.expand_declaration("margin", "10px 20px", %{})
       [
-        {:margin_top, "10px"},
-        {:margin_right, "20px"},
-        {:margin_bottom, "10px"},
-        {:margin_left, "20px"}
+        {"margin-top", "10px"},
+        {"margin-right", "20px"},
+        {"margin-bottom", "10px"},
+        {"margin-left", "20px"}
       ]
 
   ## Data-Driven Expansions
@@ -46,30 +46,15 @@ defmodule LiveStyle.ShorthandBehavior.FlattenShorthands do
   @expand_to_longhands_expansions Data.expand_to_longhands_expansions()
 
   # ==========================================================================
-  # Public API
+  # Behavior Callbacks
   # ==========================================================================
 
-  @doc """
-  Expands a CSS property and value according to the FlattenShorthands behavior.
-
-  Returns a list of `{property_atom, value}` tuples. For shorthand properties,
-  parses multi-value syntax and returns individual longhand properties.
-  For non-shorthand properties, returns the property unchanged.
-
-  ## Examples
-
-      iex> FlattenShorthands.expand("margin", "10px 20px")
-      [{:margin_top, "10px"}, {:margin_right, "20px"}, {:margin_bottom, "10px"}, {:margin_left, "20px"}]
-
-      iex> FlattenShorthands.expand("color", "red")
-      [{:color, "red"}]
-
-  """
-  def expand(css_property, value) when is_binary(css_property) do
+  @impl true
+  def expand_declaration(css_property, value, _opts) do
     case get_expansion(css_property) do
       nil ->
         # Not a shorthand, pass through
-        [{css_to_atom(css_property), value}]
+        [{css_property, value}]
 
       expansion ->
         # Apply expansion with value parsing
@@ -77,21 +62,11 @@ defmodule LiveStyle.ShorthandBehavior.FlattenShorthands do
     end
   end
 
-  # ==========================================================================
-  # Behavior Callbacks
-  # ==========================================================================
-
   @impl true
-  def expand_declaration(key, value, _opts) do
-    css_property = to_css_property(key)
-    expand(css_property, value)
-  end
-
-  @impl true
-  def expand_shorthand_conditions(key, css_property, conditions, _opts) do
+  def expand_shorthand_conditions(css_property, conditions, _opts) do
     case get_expansion(css_property) do
       nil ->
-        [{key, conditions}]
+        [{css_property, conditions}]
 
       expansion ->
         do_expand_conditions(expansion, css_property, conditions)
@@ -123,7 +98,7 @@ defmodule LiveStyle.ShorthandBehavior.FlattenShorthands do
   # ==========================================================================
 
   defp apply_expansion(:passthrough, css_property, value) do
-    [{css_to_atom(css_property), value}]
+    [{css_property, value}]
   end
 
   defp apply_expansion({:"4-value", longhands}, _css_property, value) when is_binary(value) do
@@ -149,7 +124,7 @@ defmodule LiveStyle.ShorthandBehavior.FlattenShorthands do
 
   defp apply_expansion({_pattern, _longhands}, css_property, value) do
     # Non-string values pass through
-    [{css_to_atom(css_property), value}]
+    [{css_property, value}]
   end
 
   # ==========================================================================
@@ -266,12 +241,12 @@ defmodule LiveStyle.ShorthandBehavior.FlattenShorthands do
       end)
 
     result = []
-    result = if type, do: [{:list_style_type, type <> important} | result], else: result
+    result = if type, do: [{"list-style-type", type <> important} | result], else: result
 
     result =
-      if position, do: [{:list_style_position, position <> important} | result], else: result
+      if position, do: [{"list-style-position", position <> important} | result], else: result
 
-    result = if image, do: [{:list_style_image, image <> important} | result], else: result
+    result = if image, do: [{"list-style-image", image <> important} | result], else: result
     Enum.reverse(result)
   end
 
@@ -295,22 +270,4 @@ defmodule LiveStyle.ShorthandBehavior.FlattenShorthands do
     merged = Enum.reduce(cond_maps, %{}, &Map.merge(&2, &1))
     {prop, merged}
   end
-
-  # ==========================================================================
-  # Utility Functions
-  # ==========================================================================
-
-  defp css_to_atom(css_property) do
-    css_property
-    |> String.replace("-", "_")
-    |> String.to_atom()
-  end
-
-  defp to_css_property(key) when is_atom(key) do
-    key
-    |> Atom.to_string()
-    |> String.replace("_", "-")
-  end
-
-  defp to_css_property(key) when is_binary(key), do: key
 end

@@ -12,7 +12,7 @@ defmodule LiveStyle.ShorthandBehavior.ForbidShorthands do
   ## Example
 
       iex> ForbidShorthands.expand("margin", "10px")
-      [{:margin, "10px"}]
+      [{"margin", "10px"}]
 
       iex> ForbidShorthands.expand("border", "1px solid black")
       ** (ArgumentError) 'border' is not supported...
@@ -28,43 +28,19 @@ defmodule LiveStyle.ShorthandBehavior.ForbidShorthands do
   @disallowed_shorthands_with_messages Data.disallowed_shorthands_with_messages()
 
   # ==========================================================================
-  # Public API
-  # ==========================================================================
-
-  @doc """
-  Expands a CSS property and value according to the ForbidShorthands behavior.
-
-  Raises `ArgumentError` for disallowed shorthand properties.
-  For allowed properties, returns the property unchanged.
-
-  ## Examples
-
-      iex> ForbidShorthands.expand("margin", "10px")
-      [{:margin, "10px"}]
-
-      iex> ForbidShorthands.expand("border", "1px solid black")
-      ** (ArgumentError) 'border' is not supported. Use border-width, border-style, and border-color instead.
-
-  """
-  def expand(css_property, value) when is_binary(css_property) do
-    forbid_if_disallowed!(css_property)
-    [{css_to_atom(css_property), value}]
-  end
-
-  # ==========================================================================
   # Behavior Callbacks
   # ==========================================================================
 
   @impl true
-  def expand_declaration(key, value, _opts) do
-    css_property = to_css_property(key)
-    expand(css_property, value)
+  def expand_declaration(css_property, value, _opts) do
+    forbid_if_disallowed!(css_property)
+    [{css_property, value}]
   end
 
   @impl true
-  def expand_shorthand_conditions(key, css_property, conditions, _opts) do
+  def expand_shorthand_conditions(css_property, conditions, _opts) do
     forbid_if_disallowed!(css_property)
-    [{key, conditions}]
+    [{css_property, conditions}]
   end
 
   # ==========================================================================
@@ -87,22 +63,4 @@ defmodule LiveStyle.ShorthandBehavior.ForbidShorthands do
 
   # Default: allowed
   defp forbid_if_disallowed!(_), do: :ok
-
-  # ==========================================================================
-  # Utility Functions
-  # ==========================================================================
-
-  defp css_to_atom(css_property) do
-    css_property
-    |> String.replace("-", "_")
-    |> String.to_atom()
-  end
-
-  defp to_css_property(key) when is_atom(key) do
-    key
-    |> Atom.to_string()
-    |> String.replace("_", "-")
-  end
-
-  defp to_css_property(key) when is_binary(key), do: key
 end

@@ -13,7 +13,7 @@ defmodule LiveStyle.Hash do
   """
 
   alias LiveStyle.Hash.Murmur
-  alias LiveStyle.Pseudo
+  alias LiveStyle.Pseudo.Sort, as: PseudoSort
 
   @seed 1
 
@@ -41,7 +41,7 @@ defmodule LiveStyle.Hash do
   @spec class_name(String.t(), String.t(), list(String.t()), list(String.t())) :: String.t()
   def class_name(property, value, pseudos, at_rules) do
     # Sort pseudos and at-rules (matching StyleX's sortPseudos and sortAtRules)
-    sorted_pseudos = Pseudo.sort(pseudos)
+    sorted_pseudos = PseudoSort.sort(pseudos)
     sorted_at_rules = sort_at_rules(at_rules)
 
     pseudo_hash_string = Enum.join(sorted_pseudos, "")
@@ -221,7 +221,7 @@ defmodule LiveStyle.Hash do
     pseudos =
       [pseudo_element, selector_suffix]
       |> Enum.reject(&(is_nil(&1) or &1 == ""))
-      |> Enum.flat_map(&Pseudo.split/1)
+      |> Enum.flat_map(&PseudoSort.split/1)
 
     at_rules =
       if at_rule && at_rule != "",

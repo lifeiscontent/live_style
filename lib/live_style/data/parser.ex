@@ -43,6 +43,14 @@ defmodule LiveStyle.Data.Parser do
   defp comment_or_empty?(<<>>), do: true
   defp comment_or_empty?(_), do: false
 
+  # Converts CSS kebab-case to Elixir snake_case atom
+  # Used for internal category names loaded from data files at compile time
+  defp css_to_atom(css_string) do
+    css_string
+    |> String.replace("-", "_")
+    |> String.to_atom()
+  end
+
   @doc """
   Parses property priorities from data file.
   Returns a map of CSS property names to category atoms.
@@ -260,21 +268,21 @@ defmodule LiveStyle.Data.Parser do
     |> read_data_lines()
     |> Enum.map(fn line ->
       [source_prop, expansions] = String.split(line, ";", parts: 2)
-      # Derive function name from source property
-      func_atom = to_expand_fn(String.trim(source_prop))
+      # Keep source property as CSS string
+      css_prop = String.trim(source_prop)
 
       props =
         expansions
         |> String.split(",")
         |> Enum.map(fn prop_def ->
           [prop, type] = String.split(String.trim(prop_def), ":")
-          # Convert kebab-case property to snake_case atom
-          prop_atom = css_to_atom(String.trim(prop))
-          {prop_atom, String.to_atom(String.trim(type))}
+          # Keep property as CSS string, parse type as atom (:value or :nil)
+          {String.trim(prop), String.to_atom(String.trim(type))}
         end)
 
-      {func_atom, props}
+      {css_prop, props}
     end)
+    |> Map.new()
   end
 
   @doc """
@@ -294,20 +302,14 @@ defmodule LiveStyle.Data.Parser do
       property = String.trim(property)
       pattern = String.to_atom(String.trim(pattern))
 
-      longhand_atoms =
+      # Keep longhands as CSS strings (e.g., "margin-top")
+      longhand_strings =
         longhands
         |> String.split(",")
-        |> Enum.map(&css_to_atom(String.trim(&1)))
+        |> Enum.map(&String.trim/1)
 
-      {property, {pattern, longhand_atoms}}
+      {property, {pattern, longhand_strings}}
     end)
     |> Map.new()
-  end
-
-  # Converts CSS kebab-case property name to Elixir snake_case atom
-  defp css_to_atom(css_property) do
-    css_property
-    |> String.replace("-", "_")
-    |> String.to_atom()
   end
 end
