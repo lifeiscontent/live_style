@@ -145,8 +145,7 @@ defmodule LiveStyle.Class do
     end
   end
 
-  @doc false
-  def process_declarations(declarations) do
+  defp process_declarations(declarations) do
     # Separate into: simple values, conditional values, and pseudo-element declarations
     {pseudo_decls, rest} =
       Enum.split_with(declarations, fn {prop, _value} ->
