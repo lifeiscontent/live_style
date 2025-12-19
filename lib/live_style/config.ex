@@ -125,6 +125,11 @@ defmodule LiveStyle.Config do
     Map.get(overrides, key)
   end
 
+  # Gets a config value with override support and a default fallback.
+  defp get_config(key, default) do
+    get_override(key) || Application.get_env(:live_style, key, default)
+  end
+
   @doc """
   Resets all per-process configuration overrides.
   """
@@ -261,8 +266,7 @@ defmodule LiveStyle.Config do
       config :live_style, debug_class_names: true
   """
   def debug_class_names? do
-    get_override(:debug_class_names) ||
-      Application.get_env(:live_style, :debug_class_names, @default_debug_class_names)
+    get_config(:debug_class_names, @default_debug_class_names)
   end
 
   @doc """
@@ -278,8 +282,7 @@ defmodule LiveStyle.Config do
         font_size_root_px: 16  # optional, default is 16
   """
   def font_size_px_to_rem? do
-    get_override(:font_size_px_to_rem) ||
-      Application.get_env(:live_style, :font_size_px_to_rem, @default_font_size_px_to_rem)
+    get_config(:font_size_px_to_rem, @default_font_size_px_to_rem)
   end
 
   @doc """
@@ -288,8 +291,7 @@ defmodule LiveStyle.Config do
   Default is 16 (browser default). Used when `font_size_px_to_rem` is enabled.
   """
   def font_size_root_px do
-    get_override(:font_size_root_px) ||
-      Application.get_env(:live_style, :font_size_root_px, @default_font_size_root_px)
+    get_config(:font_size_root_px, @default_font_size_root_px)
   end
 
   @doc """

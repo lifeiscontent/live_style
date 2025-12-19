@@ -220,10 +220,13 @@ defmodule LiveStyle.Value do
       String.contains?(val, "var(--")
   end
 
-  # Check if value has matching quotes
+  # Check if value has matching quotes (at least 2 of the same quote character)
   defp has_matching_quotes?(val) do
-    length(String.split(val, "\"")) - 1 >= 2 or
-      length(String.split(val, "'")) - 1 >= 2
+    count_char(val, ?") >= 2 or count_char(val, ?') >= 2
+  end
+
+  defp count_char(string, char) do
+    string |> :binary.matches(<<char>>) |> length()
   end
 
   defp quote_content_value(value) do

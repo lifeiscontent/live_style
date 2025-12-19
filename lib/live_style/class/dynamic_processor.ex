@@ -40,15 +40,13 @@ defmodule LiveStyle.Class.DynamicProcessor do
     # For dynamic rules, the CSS value is var(--x-prop)
     # This allows runtime values to be set via inline style
     atomic =
-      props
-      |> Enum.map(fn prop ->
+      Map.new(props, fn prop ->
         css_prop = Value.to_css_property(prop)
         css_var = "--x-#{css_prop}"
         css_value = "var(#{css_var})"
         class_name = Hash.atomic_class(css_prop, css_value, nil, nil, nil)
         {css_prop, %{class: class_name, value: css_value, var: css_var}}
       end)
-      |> Map.new()
 
     class_string =
       atomic

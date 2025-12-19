@@ -64,12 +64,10 @@ defmodule LiveStyle.Class.SimpleProcessor do
 
   # Process nil declarations - store special marker for style merging
   defp process_nil_declarations(nil_decls) do
-    nil_decls
-    |> Enum.map(fn {css_prop, _value} ->
-      # Store a special marker indicating this property should be unset
+    # Store a special marker indicating these properties should be unset
+    Map.new(nil_decls, fn {css_prop, _value} ->
       {css_prop, %{class: nil, null: true}}
     end)
-    |> Map.new()
   end
 
   # Process non-nil declarations
