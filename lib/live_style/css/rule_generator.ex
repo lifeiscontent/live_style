@@ -233,7 +233,10 @@ defmodule LiveStyle.CSS.RuleGenerator do
   end
 
   # Inner rule building
-  defp build_inner_rule(selector, prop, val, nil), do: "#{selector}{#{prop}:#{val}}"
+  defp build_inner_rule(selector, prop, val, nil) do
+    declarations = LiveStyle.Autoprefixer.prefix_css(prop, val)
+    "#{selector}{#{declarations}}"
+  end
 
   defp build_inner_rule(selector, prop, _val, values) when is_list(values) do
     declarations = process_fallback_values(values, prop)
@@ -267,7 +270,7 @@ defmodule LiveStyle.CSS.RuleGenerator do
     else
       values
       |> Enum.reverse()
-      |> Enum.map_join(";", fn val -> "#{property}:#{val}" end)
+      |> Enum.map_join(";", &LiveStyle.Autoprefixer.prefix_css(property, &1))
     end
   end
 
@@ -281,7 +284,7 @@ defmodule LiveStyle.CSS.RuleGenerator do
 
     final_output
     |> Enum.reverse()
-    |> Enum.map_join(";", fn val -> "#{property}:#{val}" end)
+    |> Enum.map_join(";", &LiveStyle.Autoprefixer.prefix_css(property, &1))
   end
 
   defp process_var_fallback_step(value, {out, nil}), do: {out, value}

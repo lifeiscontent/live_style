@@ -82,6 +82,7 @@ defmodule LiveStyle.Config do
   @default_use_priority_layers false
   @default_validate_properties true
   @default_unknown_property_level :warn
+  @default_autoprefixer true
 
   @config_key :live_style_config_overrides
 
@@ -129,7 +130,10 @@ defmodule LiveStyle.Config do
 
   # Gets a config value with override support and a default fallback.
   defp get_config(key, default) do
-    get_override(key) || Application.get_env(:live_style, key, default)
+    case get_override(key) do
+      nil -> Application.get_env(:live_style, key, default)
+      value -> value
+    end
   end
 
   @doc """
@@ -375,5 +379,19 @@ defmodule LiveStyle.Config do
   """
   def unknown_property_level do
     get_config(:unknown_property_level, @default_unknown_property_level)
+  end
+
+  @doc """
+  Returns whether autoprefixing is enabled.
+
+  When enabled, LiveStyle automatically adds vendor prefixes for CSS properties
+  that need them based on modern browser support (browserslist "defaults").
+
+  Default is `true`. Disable if you handle prefixing elsewhere:
+
+      config :live_style, autoprefixer: false
+  """
+  def autoprefixer? do
+    get_config(:autoprefixer, @default_autoprefixer)
   end
 end
