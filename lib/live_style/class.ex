@@ -49,23 +49,6 @@ defmodule LiveStyle.Class do
   def define(module, name, declarations) do
     key = Manifest.simple_key(module, name)
 
-    # In test environment, skip if rule already exists to avoid race conditions
-    # during parallel test module loading. In dev/prod, always update to ensure
-    # changes are reflected when files are recompiled.
-    if Mix.env() == :test do
-      manifest = LiveStyle.Storage.read()
-
-      if Manifest.get_rule(manifest, key) do
-        :ok
-      else
-        do_define(key, declarations, module)
-      end
-    else
-      do_define(key, declarations, module)
-    end
-  end
-
-  defp do_define(key, declarations, module) do
     # Resolve __include__ entries first
     resolved_declarations = Include.resolve(declarations, module)
 
@@ -79,8 +62,14 @@ defmodule LiveStyle.Class do
       dynamic: false
     }
 
+    # Only update if the entry has changed (or doesn't exist)
+    # This avoids unnecessary writes during test parallel loading while
+    # still updating when source code changes in development
     LiveStyle.Storage.update(fn manifest ->
-      Manifest.put_rule(manifest, key, entry)
+      case Manifest.get_rule(manifest, key) do
+        ^entry -> manifest
+        _ -> Manifest.put_rule(manifest, key, entry)
+      end
     end)
 
     :ok
@@ -106,21 +95,6 @@ defmodule LiveStyle.Class do
   def define_dynamic(module, name, all_props, param_names) do
     key = Manifest.simple_key(module, name)
 
-    # In test environment, skip if rule already exists to avoid race conditions
-    if Mix.env() == :test do
-      manifest = LiveStyle.Storage.read()
-
-      if Manifest.get_rule(manifest, key) do
-        :ok
-      else
-        do_define_dynamic(key, all_props, param_names)
-      end
-    else
-      do_define_dynamic(key, all_props, param_names)
-    end
-  end
-
-  defp do_define_dynamic(key, all_props, param_names) do
     # For dynamic rules, generate CSS classes that use var(--x-prop) references
     # The actual values are set at runtime via inline styles
     {atomic_classes, class_string} = process_dynamic_declarations(all_props)
@@ -133,8 +107,12 @@ defmodule LiveStyle.Class do
       dynamic: true
     }
 
+    # Only update if the entry has changed (or doesn't exist)
     LiveStyle.Storage.update(fn manifest ->
-      Manifest.put_rule(manifest, key, entry)
+      case Manifest.get_rule(manifest, key) do
+        ^entry -> manifest
+        _ -> Manifest.put_rule(manifest, key, entry)
+      end
     end)
 
     :ok

@@ -95,6 +95,10 @@ defmodule LiveStyle.Storage do
 
   @doc """
   Updates the manifest atomically using file locking.
+
+  The update function receives the current manifest and should return the
+  new manifest. If the returned manifest is identical to the input (same
+  reference), the write is skipped to avoid unnecessary I/O.
   """
   def update(fun, opts \\ []) do
     file_path = Keyword.get(opts, :path, path())
@@ -107,7 +111,11 @@ defmodule LiveStyle.Storage do
     with_lock(lock_path, fn ->
       manifest = read(path: file_path)
       new_manifest = fun.(manifest)
-      write(new_manifest, path: file_path)
+
+      # Skip write if manifest unchanged (same reference returned)
+      unless new_manifest === manifest do
+        write(new_manifest, path: file_path)
+      end
     end)
 
     :ok

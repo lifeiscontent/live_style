@@ -121,29 +121,20 @@ defmodule LiveStyle.PositionTry do
   def define(module, name, declarations, css_name) do
     key = Manifest.simple_key(module, name)
 
-    # In test environment, skip if already exists to avoid race conditions
-    if Mix.env() == :test do
-      manifest = LiveStyle.Storage.read()
-
-      unless Manifest.get_position_try(manifest, key) do
-        do_define_position_try(key, css_name, declarations)
-      end
-    else
-      do_define_position_try(key, css_name, declarations)
-    end
-
-    :ok
-  end
-
-  defp do_define_position_try(key, css_name, declarations) do
     entry = %{
       css_name: css_name,
       declarations: declarations
     }
 
+    # Only update if the entry has changed (or doesn't exist)
     LiveStyle.Storage.update(fn manifest ->
-      Manifest.put_position_try(manifest, key, entry)
+      case Manifest.get_position_try(manifest, key) do
+        ^entry -> manifest
+        _ -> Manifest.put_position_try(manifest, key, entry)
+      end
     end)
+
+    :ok
   end
 
   @doc """
@@ -154,16 +145,18 @@ defmodule LiveStyle.PositionTry do
   def define_anonymous(module, declarations, css_name) do
     key = "#{module}:__anon_position_try__:#{css_name}"
 
-    # In test environment, skip if already exists to avoid race conditions
-    if Mix.env() == :test do
-      manifest = LiveStyle.Storage.read()
+    entry = %{
+      css_name: css_name,
+      declarations: declarations
+    }
 
-      unless Manifest.get_position_try(manifest, key) do
-        do_define_position_try(key, css_name, declarations)
+    # Only update if the entry has changed (or doesn't exist)
+    LiveStyle.Storage.update(fn manifest ->
+      case Manifest.get_position_try(manifest, key) do
+        ^entry -> manifest
+        _ -> Manifest.put_position_try(manifest, key, entry)
       end
-    else
-      do_define_position_try(key, css_name, declarations)
-    end
+    end)
 
     :ok
   end
