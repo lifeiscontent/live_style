@@ -11,6 +11,10 @@ defmodule LiveStyle.Value do
 
   alias LiveStyle.Property
 
+  # Properties that need snake_case to dash-case conversion for their values
+  # e.g., :background_color -> "background-color" in transition-property
+  @snake_case_value_properties ["transition-property", "will-change"]
+
   # Compile regex patterns at module level (compiled once, reused)
   @whitespace_comma_regex ~r/\s*,\s*/
   @multiple_spaces_regex ~r/\s{2,}/
@@ -69,7 +73,7 @@ defmodule LiveStyle.Value do
       # For transition-property and will-change, convert snake_case strings to dash-case
       # e.g., "background_color" -> "background-color"
       # This is the Elixir idiom equivalent of StyleX's camelCase -> kebab-case
-      property in ["transition-property", "will-change"] ->
+      property in @snake_case_value_properties ->
         convert_snake_case_to_dash_case(normalized)
 
       true ->
@@ -98,7 +102,7 @@ defmodule LiveStyle.Value do
 
     # For transition-property and will-change, convert snake_case atoms to dash-case
     # e.g., :background_color -> "background-color"
-    if property in ["transition-property", "will-change"] do
+    if property in @snake_case_value_properties do
       convert_snake_case_to_dash_case(str)
     else
       str

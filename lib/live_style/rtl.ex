@@ -10,6 +10,10 @@ defmodule LiveStyle.RTL do
   @ltr_values Data.logical_value_to_ltr()
   @rtl_values Data.logical_value_to_rtl()
 
+  # Properties with logical values that need physical transformation
+  # NOTE: text-align is NOT included because browsers handle start/end natively
+  @logical_value_properties ["float", "clear"]
+
   # Generate function clauses for LTR property mapping
   for {logical, physical} <- @ltr_mappings do
     defp ltr_property(unquote(logical)), do: unquote(physical)
@@ -51,6 +55,8 @@ defmodule LiveStyle.RTL do
   end
 
   @doc false
+  @spec generate_ltr_rtl(String.t(), String.t(), String.t(), String.t(), String.t() | nil) ::
+          {String.t(), String.t(), String.t() | nil}
   def generate_ltr_rtl(css_property, css_value, class_name, selector_suffix, at_rule) do
     {ltr_prop, ltr_val} = generate_ltr(css_property, css_value)
     rtl_result = generate_rtl(css_property, css_value)
@@ -68,6 +74,7 @@ defmodule LiveStyle.RTL do
   end
 
   @doc false
+  @spec generate_ltr(String.t(), String.t()) :: {String.t(), String.t()}
   def generate_ltr(css_property, css_value) do
     # Check if property needs transformation using generated function
     case ltr_property(css_property) do
@@ -82,6 +89,7 @@ defmodule LiveStyle.RTL do
   end
 
   @doc false
+  @spec generate_rtl(String.t(), String.t()) :: {String.t(), String.t()} | nil
   def generate_rtl(css_property, css_value) do
     cond do
       # Property is a logical property that needs RTL override
@@ -107,8 +115,7 @@ defmodule LiveStyle.RTL do
   end
 
   # Transform logical values to physical for LTR
-  # NOTE: text-align is NOT included because browsers handle start/end natively
-  defp transform_value_ltr(property, value) when property in ["float", "clear"] do
+  defp transform_value_ltr(property, value) when property in @logical_value_properties do
     ltr_value(value)
   end
 
@@ -132,16 +139,14 @@ defmodule LiveStyle.RTL do
   end
 
   # Check if value needs RTL transformation
-  # NOTE: text-align is NOT included because browsers handle start/end natively
-  defp needs_value_rtl?(property, value) when property in ["float", "clear"] do
+  defp needs_value_rtl?(property, value) when property in @logical_value_properties do
     has_rtl_value?(value)
   end
 
   defp needs_value_rtl?(_property, _value), do: false
 
   # Transform logical values to physical for RTL
-  # NOTE: text-align is NOT included because browsers handle start/end natively
-  defp transform_value_rtl(property, value) when property in ["float", "clear"] do
+  defp transform_value_rtl(property, value) when property in @logical_value_properties do
     rtl_value(value)
   end
 

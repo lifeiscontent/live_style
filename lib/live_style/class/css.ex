@@ -116,6 +116,7 @@ defmodule LiveStyle.Class.CSS do
 
   # Check if selector_suffix is a contextual selector.
   # Contextual selectors include :where, :is, :has, or :not with complex content.
+  @spec contextual_selector?(String.t() | nil) :: boolean()
   defp contextual_selector?(nil), do: false
 
   defp contextual_selector?(suffix) when is_binary(suffix) do
