@@ -29,6 +29,7 @@ defmodule LiveStyle.CSS do
   Use `LiveStyle.Compiler.write_css/1` or the mix tasks to generate CSS files.
   """
 
+  alias LiveStyle.CSS.Vars, as: CSSVars
   alias LiveStyle.Manifest
   alias LiveStyle.RTL
 
@@ -73,8 +74,8 @@ defmodule LiveStyle.CSS do
   @spec generate(Manifest.t()) :: String.t()
   def generate(manifest) do
     [
-      generate_properties(manifest),
-      generate_vars(manifest),
+      CSSVars.generate_properties(manifest),
+      CSSVars.generate_vars(manifest),
       generate_keyframes(manifest),
       generate_position_try(manifest),
       generate_view_transitions(manifest),
@@ -87,34 +88,11 @@ defmodule LiveStyle.CSS do
 
   @doc """
   Writes CSS to a file if it has changed.
+
+  Delegates to `LiveStyle.CSS.Writer.write/2`.
   """
   @spec write(String.t(), keyword()) :: {:ok, :written | :unchanged} | {:error, term()}
-  def write(path, opts \\ []) do
-    manifest = LiveStyle.Storage.read()
-    css = generate(manifest)
-
-    # Add stats comment if requested
-    css =
-      if Keyword.get(opts, :stats, true) do
-        stats = collect_stats(manifest)
-        "/* LiveStyle: #{stats} */\n\n#{css}"
-      else
-        css
-      end
-
-    case File.read(path) do
-      {:ok, existing} when existing == css ->
-        {:ok, :unchanged}
-
-      _ ->
-        dir = Path.dirname(path)
-
-        with :ok <- File.mkdir_p(dir),
-             :ok <- File.write(path, css) do
-          {:ok, :written}
-        end
-    end
-  end
+  defdelegate write(path, opts \\ []), to: LiveStyle.CSS.Writer
 
   @doc """
   Converts a style map to an inline CSS string.
@@ -124,130 +102,6 @@ defmodule LiveStyle.CSS do
     style_map
     |> Enum.sort_by(fn {k, _} -> k end)
     |> Enum.map_join("; ", fn {var_name, value} -> "#{var_name}: #{value}" end)
-  end
-
-  defp collect_stats(manifest) do
-    vars_count = map_size(manifest.vars)
-    keyframes_count = map_size(manifest.keyframes)
-    classes_count = map_size(manifest.classes)
-    themes_count = map_size(manifest.themes)
-
-    "#{vars_count} vars, #{keyframes_count} keyframes, #{classes_count} classes, #{themes_count} themes"
-  end
-
-  defp generate_properties(manifest) do
-    manifest.vars
-    |> Enum.filter(fn {_key, entry} -> entry.type != nil end)
-    |> Enum.map_join("\n", fn {_key, entry} ->
-      %{css_name: css_name, type: type_info} = entry
-      %{syntax: syntax, initial: initial} = type_info
-      inherits = Map.get(type_info, :inherits, true)
-
-      # Extract default value for @property initial-value
-      # For conditional values, use the default
-      initial_value = extract_initial_value(initial)
-
-      # StyleX format: @property --var { syntax: "<type>"; inherits: true; initial-value: value }
-      # Single line, double quotes around syntax, no trailing semicolon
-      "@property #{css_name} { syntax: \"#{syntax}\"; inherits: #{inherits}; initial-value: #{initial_value} }"
-    end)
-  end
-
-  # Extract the initial value for @property rules
-  # For conditional values (maps), use the :default key
-  defp extract_initial_value(%{default: default}) when is_binary(default), do: default
-  defp extract_initial_value(%{"default" => default}) when is_binary(default), do: default
-  defp extract_initial_value(value) when is_binary(value), do: value
-  defp extract_initial_value(value) when is_number(value), do: to_string(value)
-
-  defp extract_initial_value(%{} = map) do
-    # Try to find :default or "default" key
-    case Map.get(map, :default) || Map.get(map, "default") do
-      nil -> map |> Map.values() |> List.first() |> to_string()
-      val when is_binary(val) -> val
-      val -> to_string(val)
-    end
-  end
-
-  defp extract_initial_value(value), do: to_string(value)
-
-  defp generate_vars(manifest) do
-    vars = manifest.vars
-
-    if map_size(vars) == 0 do
-      ""
-    else
-      # Collect all CSS variable rules with their at-rule wrappers
-      # Returns a list of {at_rules_list, css_name, value} tuples
-      var_rules =
-        vars
-        |> Enum.flat_map(fn {_key, entry} ->
-          %{css_name: css_name, value: value} = entry
-          flatten_var_value(css_name, value, [])
-        end)
-
-      # Group by at-rules to create CSS blocks
-      grouped =
-        var_rules
-        |> Enum.group_by(fn {at_rules, _name, _val} -> at_rules end)
-
-      # Generate CSS for each group
-      # StyleX format: ":root{--var:value;}" or "@media ...{:root{--var:value;}}"
-      grouped
-      |> Enum.sort_by(fn {at_rules, _} -> length(at_rules) end)
-      |> Enum.map_join("\n", &generate_var_group_css/1)
-    end
-  end
-
-  defp generate_var_group_css({at_rules, vars_list}) do
-    declarations =
-      vars_list
-      |> Enum.sort_by(fn {_, name, _} -> name end)
-      |> Enum.map_join("", fn {_, name, value} -> "#{name}:#{value};" end)
-
-    # Build the CSS rule with :root selector (no spaces - StyleX format)
-    inner = ":root{#{declarations}}"
-
-    # Wrap with at-rules (no spaces - StyleX format)
-    wrap_with_at_rules(inner, at_rules)
-  end
-
-  defp wrap_with_at_rules(inner, at_rules) do
-    Enum.reduce(at_rules, inner, fn at_rule, acc -> "#{at_rule}{#{acc}}" end)
-  end
-
-  # Flatten a variable value into a list of {at_rules, css_name, value} tuples
-  # Handles nested conditional values like:
-  # %{default: "blue", "@media ...": %{default: "lightblue", "@supports ...": "oklab(...)"}}
-  defp flatten_var_value(css_name, value, at_rules) when is_map(value) do
-    Enum.flat_map(value, fn {key, val} ->
-      flatten_var_entry(css_name, key, val, at_rules)
-    end)
-  end
-
-  defp flatten_var_value(css_name, value, at_rules) when is_binary(value) do
-    [{at_rules, css_name, value}]
-  end
-
-  defp flatten_var_value(css_name, value, at_rules) do
-    [{at_rules, css_name, to_string(value)}]
-  end
-
-  # Handle default key with simple value
-  defp flatten_var_entry(css_name, key, val, at_rules)
-       when key in [:default, "default"] and (is_binary(val) or is_number(val)) do
-    [{at_rules, css_name, to_string(val)}]
-  end
-
-  # Handle default key with nested map (shouldn't happen but handle gracefully)
-  defp flatten_var_entry(css_name, key, val, at_rules) when key in [:default, "default"] do
-    flatten_var_value(css_name, val, at_rules)
-  end
-
-  # Handle at-rule conditions
-  defp flatten_var_entry(css_name, key, val, at_rules) do
-    key_str = to_string(key)
-    flatten_var_value(css_name, val, at_rules ++ [key_str])
   end
 
   defp generate_keyframes(manifest) do

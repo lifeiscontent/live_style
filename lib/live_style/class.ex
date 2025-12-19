@@ -27,7 +27,9 @@ defmodule LiveStyle.Class do
       # => %{class_string: "x1234 x5678", atomic_classes: %{...}, ...}
   """
 
+  alias LiveStyle.Class.Conditional
   alias LiveStyle.Class.CSS, as: ClassCSS
+  alias LiveStyle.Class.Selector
   alias LiveStyle.{Hash, Include, Manifest, Priority, Value}
   alias LiveStyle.MediaQuery.Transform, as: MediaQueryTransform
   alias LiveStyle.ShorthandBehavior
@@ -187,66 +189,8 @@ defmodule LiveStyle.Class do
     {atomic, class_string}
   end
 
-  defp conditional_value?(value) when is_map(value) do
-    # A map is conditional if:
-    # - It has :default key OR
-    # - All keys are selector-like (start with : or @)
-    # But NOT if it contains CSS property keys (pseudo-element declarations)
-    has_default = Map.has_key?(value, :default) or Map.has_key?(value, "default")
-    has_css_props = Enum.any?(Map.keys(value), &css_property_key?/1)
-    all_selector_keys = Enum.all?(Map.keys(value), &selector_key?/1)
-
-    (has_default or all_selector_keys) and not has_css_props
-  end
-
-  defp conditional_value?(value) when is_list(value) do
-    # A list of tuples is conditional if:
-    # - It has a :default or "default" key OR
-    # - All keys are selector-like (start with : or @)
-    has_default =
-      Enum.any?(value, fn
-        {:default, _} -> true
-        {"default", _} -> true
-        _ -> false
-      end)
-
-    all_selector_keys =
-      Enum.all?(value, fn
-        {key, _} -> selector_key?(key)
-        _ -> false
-      end)
-
-    has_default or all_selector_keys
-  end
-
-  # Support tuple syntax: {":hover", "value"} as shorthand for %{":hover" => "value"}
-  defp conditional_value?({key, _value}) when is_binary(key) do
-    selector_key?(key)
-  end
-
-  defp conditional_value?({key, _value}) when is_atom(key) do
-    selector_key?(key)
-  end
-
-  defp conditional_value?(_), do: false
-
-  # Check if a key looks like a CSS selector (pseudo-class, pseudo-element, at-rule)
-  defp selector_key?(key) when is_atom(key) do
-    selector_key?(Atom.to_string(key))
-  end
-
-  defp selector_key?(<<":", _rest::binary>>), do: true
-  defp selector_key?(<<"@", _rest::binary>>), do: true
-  defp selector_key?(_), do: false
-
-  defp css_property_key?(key) when is_atom(key) do
-    key_str = Atom.to_string(key)
-    # CSS properties use snake_case or have common property names
-    String.contains?(key_str, "_") or
-      key in [:content, :display, :color, :opacity, :position, :width, :height]
-  end
-
-  defp css_property_key?(_), do: false
+  # Delegate conditional value detection to the Conditional module
+  defp conditional_value?(value), do: Conditional.conditional?(value)
 
   defp process_simple_declarations(declarations) do
     # Expand shorthand properties based on style resolution mode
@@ -407,146 +351,13 @@ defmodule LiveStyle.Class do
      }}
   end
 
-  # Recursively flatten nested conditional values into {selector, value} tuples
-  # Example: %{:default => "black", ":hover" => %{:default => "red", ":focus" => "blue"}}
-  # Flattens to: [{nil, "black"}, {":hover", "red"}, {":hover:focus", "blue"}]
-  defp flatten_conditional_value(value_map, parent_selector) when is_map(value_map) do
-    Enum.flat_map(value_map, fn {condition, value} ->
-      current_selector = combine_selectors(parent_selector, condition)
-
-      cond do
-        is_map(value) and conditional_value?(value) ->
-          # Nested conditional map - recurse
-          flatten_conditional_value(value, current_selector)
-
-        is_list(value) and conditional_value?(value) ->
-          # Nested conditional keyword list - convert to map and recurse
-          flatten_conditional_value(Map.new(value), current_selector)
-
-        true ->
-          # Leaf value
-          [{current_selector, value}]
-      end
-    end)
-  end
-
-  # Handle lists (keyword lists or tuple lists) by converting to map
-  defp flatten_conditional_value(value_list, parent_selector) when is_list(value_list) do
-    if conditional_value?(value_list) do
-      # Convert tuple list to map and recurse
-      flatten_conditional_value(Map.new(value_list), parent_selector)
-    else
-      [{parent_selector, value_list}]
-    end
-  end
-
-  # Handle tuple syntax: {":hover", "value"} as shorthand for single condition
-  defp flatten_conditional_value({selector, value}, parent_selector)
-       when is_binary(selector) or is_atom(selector) do
-    selector_str = to_string(selector)
-
-    if selector_key?(selector_str) do
-      current_selector = combine_selectors(parent_selector, selector_str)
-
-      # Check if the value itself is a nested conditional
-      if conditional_value?(value) do
-        # Recurse for nested conditionals like {":hover", {":active", "red"}}
-        flatten_conditional_value(value, current_selector)
-      else
-        [{current_selector, value}]
-      end
-    else
-      [{parent_selector, {selector, value}}]
-    end
-  end
-
+  # Delegate conditional value flattening to the Conditional module
   defp flatten_conditional_value(value, parent_selector) do
-    [{parent_selector, value}]
+    Conditional.flatten(value, parent_selector)
   end
 
-  # Combine parent and child selectors
-  defp combine_selectors(nil, key) when key in [:default, "default"], do: nil
-  defp combine_selectors(parent, key) when key in [:default, "default"], do: parent
-
-  defp combine_selectors(nil, condition) when is_atom(condition) do
-    to_string(condition)
-  end
-
-  defp combine_selectors(nil, condition) when is_binary(condition), do: condition
-
-  defp combine_selectors(parent, condition) when is_atom(condition) do
-    parent <> to_string(condition)
-  end
-
-  defp combine_selectors(parent, condition) when is_binary(condition) do
-    parent <> condition
-  end
-
-  # Parse a combined selector that may contain both an at-rule and a pseudo-class
-  # Examples:
-  # - ":hover" -> {":hover", nil}
-  # - "@media (x)" -> {nil, "@media (x)"}
-  # - "@media (x):hover" -> {":hover", "@media (x)"}
-  # - "@supports (x):focus:active" -> {":focus:active", "@supports (x)"}
-  defp parse_combined_selector(<<"@", _rest::binary>> = selector) do
-    # Find where the pseudo-class starts (first : not inside parentheses)
-    case find_pseudo_in_at_rule(selector) do
-      nil ->
-        # No pseudo-class, just at-rule
-        {nil, selector}
-
-      {at_rule, pseudo} ->
-        {pseudo, at_rule}
-    end
-  end
-
-  defp parse_combined_selector(selector) do
-    # Just a pseudo-class/selector suffix
-    {selector, nil}
-  end
-
-  # Find where the pseudo-class starts in an at-rule selector
-  # We need to skip over ALL parens to handle nested at-rules like:
-  # @media (min-width: 800px)@supports (color: oklch(0 0 0)):hover
-  defp find_pseudo_in_at_rule(selector) do
-    # Find the LAST closing paren - all at-rules must be before the pseudo-class
-    find_last_paren_and_pseudo(selector, byte_size(selector) - 1)
-  end
-
-  defp find_last_paren_and_pseudo(_selector, pos) when pos < 0, do: nil
-
-  defp find_last_paren_and_pseudo(selector, pos) do
-    char = :binary.part(selector, pos, 1)
-
-    if char == ")" do
-      check_after_paren(selector, pos)
-    else
-      # Not a paren, keep looking backward
-      find_last_paren_and_pseudo(selector, pos - 1)
-    end
-  end
-
-  defp check_after_paren(selector, pos) do
-    after_paren = binary_part(selector, pos + 1, byte_size(selector) - pos - 1)
-
-    case after_paren do
-      <<":", _::binary>> ->
-        at_rule = binary_part(selector, 0, pos + 1)
-        {at_rule, after_paren}
-
-      <<"@", _::binary>> ->
-        # Another at-rule follows, keep looking backward
-        find_last_paren_and_pseudo(selector, pos - 1)
-
-      "" ->
-        # End of string, no pseudo-class
-        nil
-
-      _ ->
-        # Something else, keep looking backward
-        find_last_paren_and_pseudo(selector, pos - 1)
-    end
-  end
+  # Delegate selector parsing to the Selector module
+  defp parse_combined_selector(selector), do: Selector.parse_combined(selector)
 
   # Process pseudo-element declarations like "::after": %{content: "''", display: "block"}
   # Also handles conditional values within pseudo-elements like "::before": [color: {:":hover", "blue"}]
