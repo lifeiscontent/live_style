@@ -105,19 +105,16 @@ defmodule Mix.Tasks.LiveStyle.Gen.Css do
     vt_count = map_size(manifest.view_transitions)
     pt_count = map_size(manifest.position_try)
 
-    parts =
-      [
-        {vars_count, "vars"},
-        {consts_count, "consts"},
-        {keyframes_count, "keyframes"},
-        {classes_count, "classes"},
-        {themes_count, "themes"},
-        {vt_count, "view transitions"},
-        {pt_count, "position-try"}
-      ]
-      |> Enum.filter(fn {count, _} -> count > 0 end)
-      |> Enum.map(fn {count, label} -> "#{count} #{label}" end)
-
-    Enum.join(parts, ", ")
+    [
+      {vars_count, "vars"},
+      {consts_count, "consts"},
+      {keyframes_count, "keyframes"},
+      {classes_count, "classes"},
+      {themes_count, "themes"},
+      {vt_count, "view transitions"},
+      {pt_count, "position-try"}
+    ]
+    |> Enum.filter(fn {count, _} -> count > 0 end)
+    |> Enum.map_join(", ", fn {count, label} -> "#{count} #{label}" end)
   end
 end
