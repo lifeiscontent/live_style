@@ -1,0 +1,34 @@
+# selector_expansions.txt
+# CSS selector expansions for vendor prefixing
+#
+# Format: standard_selector ; prefixed_variant1 ; prefixed_variant2 ; ...
+#
+# Each line defines a standard CSS selector and its vendor-prefixed variants.
+# The standard selector is included in the expansion list if it should appear
+# in the final output (for progressive enhancement).
+#
+# Based on autoprefixer's selector hacks:
+# https://github.com/postcss/autoprefixer/tree/main/lib/hacks
+
+# Pseudo-elements
+
+# Range input thumb - StyleX-specific abstraction (not in autoprefixer)
+# Note: ::thumb is NOT a standard selector, it's a convenience abstraction
+::thumb ; ::-webkit-slider-thumb ; ::-moz-range-thumb ; ::-ms-thumb
+
+# Placeholder text
+::placeholder ; ::-webkit-input-placeholder ; ::-moz-placeholder ; :-ms-input-placeholder ; ::placeholder
+
+# File input button
+::file-selector-button ; ::-webkit-file-upload-button ; ::file-selector-button
+
+# Pseudo-classes
+
+# Fullscreen mode
+:fullscreen ; :-webkit-full-screen ; :-moz-full-screen ; :fullscreen
+
+# Autofill state
+:autofill ; :-webkit-autofill ; :autofill
+
+# Placeholder shown state
+:placeholder-shown ; :-moz-placeholder-shown ; :placeholder-shown

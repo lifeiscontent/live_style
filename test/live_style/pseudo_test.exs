@@ -323,17 +323,17 @@ defmodule LiveStyle.PseudoTest do
       assert rule.atomic_classes["border-radius::thumb"] != nil
     end
 
-    test "expand_thumb_selector expands correctly" do
+    test "prefix_selector expands ::thumb correctly" do
       # Direct test of the helper function
-      expanded = LiveStyle.CSS.expand_thumb_selector(".x123::thumb")
+      expanded = LiveStyle.CSS.prefix_selector(".x123::thumb")
 
       assert expanded ==
                ".x123::-webkit-slider-thumb, .x123::-moz-range-thumb, .x123::-ms-thumb"
     end
 
-    test "expand_thumb_selector passes through non-thumb selectors" do
-      assert LiveStyle.CSS.expand_thumb_selector(".x123:hover") == ".x123:hover"
-      assert LiveStyle.CSS.expand_thumb_selector(".x123::before") == ".x123::before"
+    test "prefix_selector passes through non-prefixable selectors" do
+      assert LiveStyle.CSS.prefix_selector(".x123:hover") == ".x123:hover"
+      assert LiveStyle.CSS.prefix_selector(".x123::before") == ".x123::before"
     end
   end
 

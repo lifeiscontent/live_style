@@ -9,7 +9,7 @@ defmodule LiveStyle.CSS.RuleGenerator do
   - Priority-based layer grouping (optional)
   - Selector building with specificity bumping
   - Fallback value processing
-  - Vendor prefix expansion (e.g., `::thumb`)
+  - Selector prefixing (e.g., `::thumb`, `::placeholder`)
 
   ## Configuration
 
@@ -19,14 +19,7 @@ defmodule LiveStyle.CSS.RuleGenerator do
   """
 
   alias LiveStyle.RTL
-
-  # Vendor-prefixed variants for ::thumb pseudo-element
-  # StyleX expands ::thumb to these three selectors for cross-browser compatibility
-  @thumb_variants [
-    "::-webkit-slider-thumb",
-    "::-moz-range-thumb",
-    "::-ms-thumb"
-  ]
+  alias LiveStyle.Selector.Prefixer, as: SelectorPrefixer
 
   # Compiled regex patterns
   @rtl_class_selector_regex ~r/(\.x[a-f0-9]+)(\s*\{)/
@@ -48,33 +41,6 @@ defmodule LiveStyle.CSS.RuleGenerator do
       generate_with_priority_layers(all_classes)
     else
       generate_simple(all_classes, use_layers)
-    end
-  end
-
-  @doc """
-  Expands `::thumb` pseudo-element to vendor-prefixed variants.
-
-  StyleX converts `::thumb` to a comma-separated list of vendor-prefixed selectors:
-  - `::-webkit-slider-thumb` (Chrome, Safari, Edge)
-  - `::-moz-range-thumb` (Firefox)
-  - `::-ms-thumb` (IE/old Edge)
-
-  ## Examples
-
-      iex> expand_thumb_selector(".x123::thumb")
-      ".x123::-webkit-slider-thumb, .x123::-moz-range-thumb, .x123::-ms-thumb"
-
-      iex> expand_thumb_selector(".x123:hover")
-      ".x123:hover"
-  """
-  @spec expand_thumb_selector(String.t()) :: String.t()
-  def expand_thumb_selector(selector) do
-    if String.contains?(selector, "::thumb") do
-      Enum.map_join(@thumb_variants, ", ", fn variant ->
-        String.replace(selector, "::thumb", variant)
-      end)
-    else
-      selector
     end
   end
 
@@ -216,7 +182,7 @@ defmodule LiveStyle.CSS.RuleGenerator do
         build_base_selector(class_name, suffix)
       end
 
-    expand_thumb_selector(raw_selector)
+    SelectorPrefixer.prefix(raw_selector)
   end
 
   defp build_base_selector(class_name, nil), do: ".#{class_name}"

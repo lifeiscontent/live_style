@@ -323,4 +323,26 @@ defmodule LiveStyle.Data.Parser do
     end)
     |> Map.new()
   end
+
+  @doc """
+  Parses selector expansions from data file.
+  Returns a map of standard selectors to their vendor-prefixed variants.
+
+  Format: standard-selector ; variant-1 ; variant-2 ; ...
+
+  Used for cross-browser selector prefixing (e.g., ::placeholder, :fullscreen).
+  """
+  def selector_expansions do
+    "selector_expansions.txt"
+    |> read_data_lines()
+    |> Enum.map(fn line ->
+      [selector | variants] =
+        line
+        |> String.split(";")
+        |> Enum.map(&String.trim/1)
+
+      {selector, variants}
+    end)
+    |> Map.new()
+  end
 end

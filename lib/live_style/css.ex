@@ -64,10 +64,12 @@ defmodule LiveStyle.CSS do
   defdelegate write(path, opts \\ []), to: LiveStyle.CSS.Writer
 
   @doc """
-  Expands `::thumb` pseudo-element to vendor-prefixed variants.
+  Expands selectors to include vendor-prefixed variants.
 
-  Delegates to `LiveStyle.CSS.RuleGenerator.expand_thumb_selector/1`.
+  Delegates to `LiveStyle.Selector.Prefixer.prefix/1`.
+
+  See `LiveStyle.Selector.Prefixer` for the full list of supported selectors.
   """
-  @spec expand_thumb_selector(String.t()) :: String.t()
-  defdelegate expand_thumb_selector(selector), to: RuleGenerator
+  @spec prefix_selector(String.t()) :: String.t()
+  defdelegate prefix_selector(selector), to: LiveStyle.Selector.Prefixer, as: :prefix
 end

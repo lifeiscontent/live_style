@@ -82,6 +82,7 @@ defmodule LiveStyle.Config do
   @default_use_priority_layers false
   @default_validate_properties true
   @default_unknown_property_level :warn
+  @default_vendor_prefix_level :warn
   @default_prefixer nil
 
   @config_key :live_style_config_overrides
@@ -379,6 +380,24 @@ defmodule LiveStyle.Config do
   """
   def unknown_property_level do
     get_config(:unknown_property_level, @default_unknown_property_level)
+  end
+
+  @doc """
+  Returns the level of vendor prefix property handling.
+
+  When a vendor-prefixed property is used (e.g., `-webkit-mask-image`) and
+  the configured prefixer would add that prefix automatically for the
+  standard property (e.g., `mask-image`), this setting controls the behavior.
+
+  - `:warn` (default) - Log a warning suggesting to use the standard property
+  - `:ignore` - Silently allow vendor-prefixed properties
+
+  Example:
+
+      config :live_style, vendor_prefix_level: :ignore
+  """
+  def vendor_prefix_level do
+    get_config(:vendor_prefix_level, @default_vendor_prefix_level)
   end
 
   @doc """

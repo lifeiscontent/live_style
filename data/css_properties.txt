@@ -113,6 +113,14 @@ border-inline-start-width
 border-inline-style
 border-inline-width
 border-left
+border-start
+border-start-width
+border-start-color
+border-start-style
+border-end
+border-end-width
+border-end-color
+border-end-style
 border-left-clip
 border-left-color
 border-left-radius
@@ -389,6 +397,8 @@ margin-inline
 margin-inline-end
 margin-inline-start
 margin-left
+margin-start
+margin-end
 margin-right
 margin-top
 margin-trim
@@ -482,6 +492,8 @@ padding-inline
 padding-inline-end
 padding-inline-start
 padding-left
+padding-start
+padding-end
 padding-right
 padding-top
 page
