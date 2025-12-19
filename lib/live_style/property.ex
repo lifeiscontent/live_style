@@ -219,13 +219,11 @@ defmodule LiveStyle.Property do
   @spec unit_suffix(String.t() | nil) :: String.t()
   def unit_suffix(nil), do: ""
 
-  def unit_suffix(property) do
-    cond do
-      unitless?(property) -> ""
-      time?(property) -> "ms"
-      true -> "px"
-    end
-  end
+  def unit_suffix(property), do: determine_unit(unitless?(property), time?(property))
+
+  defp determine_unit(true, _time?), do: ""
+  defp determine_unit(false, true), do: "ms"
+  defp determine_unit(false, false), do: "px"
 
   @doc "Returns all position-try properties as a MapSet."
   def position_try_properties, do: @position_try_properties

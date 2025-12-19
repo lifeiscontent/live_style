@@ -127,14 +127,12 @@ defmodule LiveStyle.CSS.RuleGenerator do
 
   # Generate rules with simple @layer wrapper or no wrapper
   defp generate_simple(all_classes, use_layers) do
-    rules_css = generate_ltr_rtl_css(all_classes)
-
-    cond do
-      rules_css == "" -> ""
-      use_layers -> "@layer live_style {\n#{rules_css}\n}\n"
-      true -> rules_css <> "\n"
-    end
+    all_classes |> generate_ltr_rtl_css() |> wrap_rules(use_layers)
   end
+
+  defp wrap_rules("", _use_layers), do: ""
+  defp wrap_rules(rules_css, true), do: "@layer live_style {\n#{rules_css}\n}\n"
+  defp wrap_rules(rules_css, false), do: rules_css <> "\n"
 
   defp generate_ltr_rtl_css(classes) do
     {ltr_rules, rtl_rules} = generate_rules_for_classes(classes)
