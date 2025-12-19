@@ -88,6 +88,34 @@ defmodule LiveStyle.KeyframesTest do
   end
 
   # ============================================================================
+  # Comma-Separated Keyframe Keys (StyleX supports "0%, 100%" syntax)
+  # ============================================================================
+
+  defmodule CommaSeparatedKeyframes do
+    use LiveStyle
+
+    # StyleX supports comma-separated keyframe keys like "0%, 100%"
+    # See: packages/benchmarks/size/fixtures/lotsOfStyles.js
+    css_keyframes(:pulse_glow,
+      "0%, 100%": %{opacity: "1"},
+      "50%": %{opacity: "0.5"}
+    )
+
+    css_keyframes(:bounce_scale,
+      "0%, 100%": %{transform: "scale(1)"},
+      "50%": %{transform: "scale(1.2)"}
+    )
+
+    # Multiple comma-separated percentages
+    css_keyframes(:complex_animation,
+      "0%": %{opacity: "0"},
+      "25%, 75%": %{opacity: "0.5"},
+      "50%": %{opacity: "1"},
+      "100%": %{opacity: "0"}
+    )
+  end
+
+  # ============================================================================
   # Tests
   # ============================================================================
 
@@ -195,6 +223,75 @@ defmodule LiveStyle.KeyframesTest do
       assert LiveStyle.get_metadata(PercentageKeyframes, {:keyframes, :bounce}).priority == 0
       assert LiveStyle.get_metadata(InlineKeyframes, {:keyframes, :pulse}).priority == 0
       assert LiveStyle.get_metadata(MultipleProperties, {:keyframes, :slide_in}).priority == 0
+    end
+  end
+
+  describe "comma-separated keyframe keys" do
+    test "supports comma-separated keyframe keys like '0%, 100%'" do
+      # StyleX supports this syntax - see lotsOfStyles.js benchmark
+      keyframes = LiveStyle.get_metadata(CommaSeparatedKeyframes, {:keyframes, :pulse_glow})
+
+      # Should have the comma-separated key preserved in output
+      assert keyframes.ltr =~ "0%, 100%"
+      assert keyframes.ltr =~ "50%"
+      assert keyframes.ltr =~ "opacity"
+    end
+
+    test "frames are sorted by their first percentage value" do
+      keyframes = LiveStyle.get_metadata(CommaSeparatedKeyframes, {:keyframes, :pulse_glow})
+
+      # "0%, 100%" should come before "50%" because first value is 0
+      # Expected order: "0%, 100%" (sorts by 0), then "50%"
+      assert keyframes.ltr =~ ~r/0%, 100%\{.*\}50%\{/
+    end
+
+    test "complex animation with multiple comma-separated keys" do
+      keyframes =
+        LiveStyle.get_metadata(CommaSeparatedKeyframes, {:keyframes, :complex_animation})
+
+      # Should contain all frames
+      assert keyframes.ltr =~ "0%{"
+      assert keyframes.ltr =~ "25%, 75%"
+      assert keyframes.ltr =~ "50%{"
+      assert keyframes.ltr =~ "100%{"
+
+      # Frames should be sorted by first percentage: 0%, 25% (from "25%, 75%"), 50%, 100%
+      # Regex to verify order
+      assert keyframes.ltr =~ ~r/0%\{.*\}25%, 75%\{.*\}50%\{.*\}100%\{/
+    end
+  end
+
+  describe "frame_sort_order/1" do
+    test "handles from/to keywords" do
+      assert LiveStyle.Keyframes.frame_sort_order(:from) == 0
+      assert LiveStyle.Keyframes.frame_sort_order(:to) == 100
+      assert LiveStyle.Keyframes.frame_sort_order("from") == 0
+      assert LiveStyle.Keyframes.frame_sort_order("to") == 100
+    end
+
+    test "handles percentage strings" do
+      assert LiveStyle.Keyframes.frame_sort_order("0%") == 0
+      assert LiveStyle.Keyframes.frame_sort_order("25%") == 25
+      assert LiveStyle.Keyframes.frame_sort_order("50%") == 50
+      assert LiveStyle.Keyframes.frame_sort_order("100%") == 100
+    end
+
+    test "handles comma-separated percentages by using first value" do
+      assert LiveStyle.Keyframes.frame_sort_order("0%, 100%") == 0
+      assert LiveStyle.Keyframes.frame_sort_order("25%, 75%") == 25
+      assert LiveStyle.Keyframes.frame_sort_order("50%, 100%") == 50
+    end
+
+    test "handles percentage atoms" do
+      assert LiveStyle.Keyframes.frame_sort_order(:"0%") == 0
+      assert LiveStyle.Keyframes.frame_sort_order(:"50%") == 50
+      assert LiveStyle.Keyframes.frame_sort_order(:"100%") == 100
+    end
+
+    test "raises on invalid keys" do
+      assert_raise ArgumentError, ~r/Invalid keyframe key/, fn ->
+        LiveStyle.Keyframes.frame_sort_order("invalid")
+      end
     end
   end
 end

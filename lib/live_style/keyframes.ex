@@ -142,7 +142,14 @@ defmodule LiveStyle.Keyframes do
   def frame_sort_order("100%"), do: 100
 
   def frame_sort_order(key) when is_binary(key) do
-    case Integer.parse(String.trim_trailing(key, "%")) do
+    # Handle comma-separated keys like "0%, 100%" by taking the first value
+    first_key =
+      key
+      |> String.split(",")
+      |> hd()
+      |> String.trim()
+
+    case Integer.parse(String.trim_trailing(first_key, "%")) do
       {num, ""} -> num
       {num, "%"} -> num
       _ -> raise ArgumentError, invalid_frame_key_message(key)
