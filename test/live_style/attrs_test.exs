@@ -1,9 +1,9 @@
-defmodule LiveStyle.PropsTest do
+defmodule LiveStyle.AttrsTest do
   @moduledoc """
   Tests for style merging (css/css_class functions).
 
-  These tests mirror StyleX's transform-stylex-props-test.js to ensure
-  LiveStyle merges styles the same way StyleX does with stylex.props().
+  These tests verify that LiveStyle merges styles correctly,
+  mirroring StyleX's stylex.props() behavior.
   """
   use LiveStyle.TestCase, async: true
 
@@ -51,7 +51,7 @@ defmodule LiveStyle.PropsTest do
     test "applying single style returns correct class with correct metadata" do
       # StyleX: { color: "x1e2nbdu" } -> metadata: [x1e2nbdu, {ltr: ".x1e2nbdu{color:red}", rtl: null}, 3000]
       manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PropsTest.BasicStyles.red"]
+      rule = manifest.rules["LiveStyle.AttrsTest.BasicStyles.red"]
 
       # Check the atomic_class metadata
       color = rule.atomic_classes["color"]
@@ -79,8 +79,8 @@ defmodule LiveStyle.PropsTest do
       # StyleX: stylex.props(styles.primary, styles.secondary)
       # -> only secondary's color is applied (later wins)
       manifest = get_manifest()
-      primary_rule = manifest.rules["LiveStyle.PropsTest.ConflictingStyles.primary"]
-      secondary_rule = manifest.rules["LiveStyle.PropsTest.ConflictingStyles.secondary"]
+      primary_rule = manifest.rules["LiveStyle.AttrsTest.ConflictingStyles.primary"]
+      secondary_rule = manifest.rules["LiveStyle.AttrsTest.ConflictingStyles.secondary"]
 
       class = LiveStyle.get_css_class(ConflictingStyles, [:primary, :secondary])
       classes = String.split(class, " ")
@@ -100,7 +100,7 @@ defmodule LiveStyle.PropsTest do
     test "multiple style overrides - last wins" do
       # StyleX: stylex.props(styles.primary, styles.secondary, styles.warning)
       manifest = get_manifest()
-      warning_rule = manifest.rules["LiveStyle.PropsTest.ConflictingStyles.warning"]
+      warning_rule = manifest.rules["LiveStyle.AttrsTest.ConflictingStyles.warning"]
 
       class = LiveStyle.get_css_class(ConflictingStyles, [:primary, :secondary, :warning])
       classes = String.split(class, " ")

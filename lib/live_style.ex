@@ -504,14 +504,14 @@ defmodule LiveStyle do
       <div {css([:base, {:dynamic_opacity, "0.5"}])}>
       <div {css([:base, {:dynamic_size, ["100px", "200px"]}])}>
   """
-  defmacro css_class(name, props) when is_atom(name) and is_list(props) do
-    # Static rule - keyword list of declarations
+  defmacro css_class(name, declarations) when is_atom(name) and is_list(declarations) do
+    # Static class - keyword list of declarations
     # Defer evaluation to runtime within the module to access module attributes
     module = __CALLER__.module
 
     quote do
-      props_evaluated = unquote(props)
-      normalized = LiveStyle.normalize_to_map(props_evaluated)
+      declarations_evaluated = unquote(declarations)
+      normalized = LiveStyle.normalize_to_map(declarations_evaluated)
 
       LiveStyle.Class.define(
         unquote(module),
@@ -524,12 +524,12 @@ defmodule LiveStyle do
   end
 
   # Static class with map syntax - css_class(:name, %{...})
-  defmacro css_class(name, {:%{}, _, _} = props) when is_atom(name) do
+  defmacro css_class(name, {:%{}, _, _} = declarations) when is_atom(name) do
     module = __CALLER__.module
 
     quote do
-      props_evaluated = unquote(props)
-      normalized = LiveStyle.normalize_to_map(props_evaluated)
+      declarations_evaluated = unquote(declarations)
+      normalized = LiveStyle.normalize_to_map(declarations_evaluated)
 
       LiveStyle.Class.define(
         unquote(module),
