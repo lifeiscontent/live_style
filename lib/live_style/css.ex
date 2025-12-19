@@ -29,6 +29,8 @@ defmodule LiveStyle.CSS do
   Use `LiveStyle.Compiler.write_css/1` or the mix tasks to generate CSS files.
   """
 
+  alias LiveStyle.CSS.Keyframes, as: CSSKeyframes
+  alias LiveStyle.CSS.Themes, as: CSSThemes
   alias LiveStyle.CSS.Vars, as: CSSVars
   alias LiveStyle.Manifest
   alias LiveStyle.RTL
@@ -76,11 +78,11 @@ defmodule LiveStyle.CSS do
     [
       CSSVars.generate_properties(manifest),
       CSSVars.generate_vars(manifest),
-      generate_keyframes(manifest),
+      CSSKeyframes.generate(manifest),
       generate_position_try(manifest),
       generate_view_transitions(manifest),
       generate_rules(manifest),
-      generate_themes(manifest)
+      CSSThemes.generate(manifest)
     ]
     |> Enum.reject(&(&1 == ""))
     |> Enum.join("\n\n")
@@ -102,104 +104,6 @@ defmodule LiveStyle.CSS do
     style_map
     |> Enum.sort_by(fn {k, _} -> k end)
     |> Enum.map_join("; ", fn {var_name, value} -> "#{var_name}: #{value}" end)
-  end
-
-  defp generate_keyframes(manifest) do
-    manifest.keyframes
-    |> Enum.flat_map(fn {_key, entry} ->
-      %{css_name: css_name, frames: frames} = entry
-
-      # Generate LTR and RTL versions of each frame
-      {ltr_frames, rtl_frames} = transform_keyframes_for_rtl(frames)
-
-      ltr_css = build_keyframes_css(css_name, ltr_frames)
-      rtl_css = build_keyframes_css(css_name, rtl_frames)
-
-      # Only include RTL if it differs from LTR
-      if ltr_css == rtl_css do
-        [ltr_css]
-      else
-        [ltr_css, "html[dir=\"rtl\"]{#{rtl_css}}"]
-      end
-    end)
-    |> Enum.join("\n")
-  end
-
-  # Transform keyframe declarations through RTL module
-  defp transform_keyframes_for_rtl(frames) do
-    ltr_frames = Enum.map(frames, &transform_frame_ltr/1)
-    rtl_frames = Enum.map(frames, &transform_frame_rtl/1)
-    {ltr_frames, rtl_frames}
-  end
-
-  defp transform_frame_ltr({selector, declarations}) do
-    ltr_decls = Enum.map(declarations, &transform_decl_ltr/1)
-    {selector, ltr_decls}
-  end
-
-  defp transform_decl_ltr({prop, val}) do
-    css_prop = LiveStyle.Value.to_css_property(prop)
-    css_val = to_css_string(val)
-    LiveStyle.RTL.generate_ltr(css_prop, css_val)
-  end
-
-  defp transform_frame_rtl({selector, declarations}) do
-    rtl_decls = Enum.map(declarations, &transform_decl_rtl/1)
-    {selector, rtl_decls}
-  end
-
-  defp transform_decl_rtl({prop, val}) do
-    css_prop = LiveStyle.Value.to_css_property(prop)
-    css_val = to_css_string(val)
-
-    # Try to get RTL version, fall back to LTR if no RTL needed
-    LiveStyle.RTL.generate_rtl(css_prop, css_val) || LiveStyle.RTL.generate_ltr(css_prop, css_val)
-  end
-
-  defp to_css_string(val) when is_binary(val), do: val
-  defp to_css_string(val), do: to_string(val)
-
-  # Build keyframes CSS in minified StyleX format
-  # StyleX format: @keyframes name{from{color:red;}to{color:blue;}}
-  defp build_keyframes_css(css_name, frames) do
-    frame_css =
-      frames
-      |> Enum.sort_by(fn {selector, _} -> frame_sort_key(selector) end)
-      |> Enum.map_join("", fn {selector, declarations} ->
-        selector_str = if is_atom(selector), do: to_string(selector), else: selector
-        decl_str = format_keyframe_declarations(declarations)
-        "#{selector_str}{#{decl_str}}"
-      end)
-
-    "@keyframes #{css_name}{#{frame_css}}"
-  end
-
-  # Format keyframe declarations in minified format (prop:value;)
-  defp format_keyframe_declarations(declarations) do
-    declarations
-    |> Enum.map_join("", fn {prop, val} ->
-      # Unwrap var() from property names (for keyframes that animate CSS variables)
-      # e.g., "var(--v08108998)" -> "--v08108998"
-      css_prop = prop |> to_string() |> unwrap_var()
-      "#{css_prop}:#{val};"
-    end)
-  end
-
-  defp frame_sort_key(:from), do: {0, "from"}
-  defp frame_sort_key(:to), do: {100, "to"}
-  defp frame_sort_key("from"), do: {0, "from"}
-  defp frame_sort_key("to"), do: {100, "to"}
-
-  defp frame_sort_key(selector) when is_atom(selector) do
-    frame_sort_key(to_string(selector))
-  end
-
-  defp frame_sort_key(selector) when is_binary(selector) do
-    # Extract percentage for sorting: "50%" -> 50
-    case Integer.parse(String.replace(selector, "%", "")) do
-      {num, _} -> {num, selector}
-      :error -> {50, selector}
-    end
   end
 
   defp generate_position_try(manifest) do
@@ -575,97 +479,6 @@ defmodule LiveStyle.CSS do
     # Match the class selector in the RTL rule and append the suffix
     Regex.replace(~r/(\.x[a-f0-9]+)(\s*\{)/, rtl_css, "\\1#{selector_suffix}\\2")
   end
-
-  defp generate_themes(manifest) do
-    manifest.themes
-    |> Enum.flat_map(fn {_key, entry} ->
-      %{css_name: css_name, overrides: overrides} = entry
-
-      # Collect all rules: default, single-level conditional, and nested conditional
-      # Each rule is {conditions_list, name, value} where conditions_list is a list of @-rule strings
-      rules = collect_theme_rules(overrides, [])
-
-      # Group rules by their condition path
-      grouped =
-        rules
-        |> Enum.group_by(fn {conditions, _name, _value} -> conditions end)
-
-      # Generate CSS for each condition group
-      grouped
-      |> Enum.sort_by(fn {conditions, _} -> {length(conditions), conditions} end)
-      |> Enum.map(fn {conditions, vars_list} ->
-        generate_theme_condition_css(css_name, conditions, vars_list)
-      end)
-    end)
-    |> Enum.join("\n")
-  end
-
-  defp generate_theme_condition_css(css_name, conditions, vars_list) do
-    declarations =
-      vars_list
-      |> Enum.sort_by(fn {_, name, _} -> name end)
-      |> Enum.map_join("", fn {_, name, value} -> "#{name}:#{value};" end)
-
-    selector = ".#{css_name},.#{css_name}:root"
-    inner = "#{selector}{#{declarations}}"
-
-    wrap_with_conditions(inner, conditions)
-  end
-
-  defp wrap_with_conditions(inner, []), do: inner
-
-  defp wrap_with_conditions(inner, conditions) do
-    Enum.reduce(Enum.reverse(conditions), inner, fn condition, acc ->
-      "#{condition}{#{acc}}"
-    end)
-  end
-
-  # Recursively collect theme rules, tracking the condition path
-  defp collect_theme_rules(overrides, conditions_path) do
-    Enum.flat_map(overrides, fn {name, value} ->
-      collect_theme_value(name, value, conditions_path)
-    end)
-  end
-
-  defp collect_theme_value(name, value, conditions_path) when is_map(value) do
-    # Handle map values with :default and @-rule keys
-    Enum.flat_map(value, fn
-      {key, inner_value} when key in [:default, "default"] ->
-        # Default value at this level
-        if is_map(inner_value) do
-          # Nested default (unusual but possible)
-          collect_theme_value(name, inner_value, conditions_path)
-        else
-          [{conditions_path, name, to_string(inner_value)}]
-        end
-
-      {condition, inner_value} ->
-        # Conditional value - add to condition path
-        condition_str = to_string(condition)
-
-        if is_map(inner_value) do
-          # Nested conditionals
-          collect_theme_value(name, inner_value, conditions_path ++ [condition_str])
-        else
-          [{conditions_path ++ [condition_str], name, to_string(inner_value)}]
-        end
-    end)
-  end
-
-  defp collect_theme_value(name, value, conditions_path) when is_binary(value) do
-    [{conditions_path, name, value}]
-  end
-
-  defp collect_theme_value(name, value, conditions_path) do
-    [{conditions_path, name, to_string(value)}]
-  end
-
-  # Unwrap var(--name) to just --name for use as property names in keyframes
-  defp unwrap_var("var(" <> rest) do
-    String.trim_trailing(rest, ")")
-  end
-
-  defp unwrap_var(property), do: property
 
   # Extract property name, removing pseudo-element suffix if present
   # "color::placeholder" => "color"
