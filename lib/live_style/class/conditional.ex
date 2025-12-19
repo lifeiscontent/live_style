@@ -5,9 +5,10 @@ defmodule LiveStyle.Class.Conditional do
   @doc false
   @spec conditional?(term()) :: boolean()
   def conditional?(value) when is_map(value) do
-    has_default = Map.has_key?(value, :default) or Map.has_key?(value, "default")
-    has_css_props = Enum.any?(Map.keys(value), &css_property_key?/1)
-    all_selector_keys = Enum.all?(Map.keys(value), &selector_key?/1)
+    keys = Map.keys(value)
+    has_default = :default in keys or "default" in keys
+    has_css_props = Enum.any?(keys, &css_property_key?/1)
+    all_selector_keys = Enum.all?(keys, &selector_key?/1)
 
     (has_default or all_selector_keys) and not has_css_props
   end

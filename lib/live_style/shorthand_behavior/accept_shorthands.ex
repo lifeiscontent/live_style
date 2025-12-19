@@ -173,8 +173,7 @@ defmodule LiveStyle.ShorthandBehavior.AcceptShorthands do
   defp add_prop_condition(acc, _prop, _condition, nil), do: acc
 
   defp add_prop_condition(acc, prop, condition, val) do
-    prop_conditions = Map.get(acc, prop, %{})
-    Map.put(acc, prop, Map.put(prop_conditions, condition, val))
+    update_in(acc, [Access.key(prop, %{})], &Map.put(&1, condition, val))
   end
 
   # ==========================================================================

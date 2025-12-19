@@ -78,7 +78,7 @@ defmodule LiveStyle.Runtime do
         _ ->
           var_styles
           |> Enum.reverse()
-          |> Enum.reduce(%{}, fn map, acc -> Map.merge(acc, map) end)
+          |> Enum.reduce(%{}, &Map.merge(&2, &1))
           |> Enum.map_join("; ", fn {var_name, value} -> "#{var_name}: #{value}" end)
       end
 

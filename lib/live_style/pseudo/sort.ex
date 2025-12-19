@@ -43,32 +43,35 @@ defmodule LiveStyle.Pseudo.Sort do
   def sort(pseudos) do
     # StyleX's algorithm: pseudo-elements act as separators
     # Pseudo-classes between them are grouped and sorted
-    pseudos
-    |> Enum.reduce([], fn
-      <<"::", _rest::binary>> = pseudo, acc ->
-        # Pseudo-element: add directly to accumulator
-        acc ++ [pseudo]
+    #
+    # We build the list in reverse to avoid O(n²) appends, then reverse at the end.
+    # Groups are stored as {group_list, is_group?} tuples during processing.
+    {result, current_group} =
+      Enum.reduce(pseudos, {[], []}, fn
+        <<"::", _rest::binary>> = pseudo, {acc, group} ->
+          # Pseudo-element: flush current group (if any) and add element
+          acc = if group == [], do: acc, else: [group | acc]
+          {[pseudo | acc], []}
 
-      pseudo, acc ->
-        # Pseudo-class: add to the last group or create a new group
-        case List.last(acc) do
-          group when is_list(group) ->
-            # Add to existing group
-            List.replace_at(acc, -1, group ++ [pseudo])
+        pseudo, {acc, group} ->
+          # Pseudo-class: add to current group
+          {acc, [pseudo | group]}
+      end)
 
-          _ ->
-            # Create new group
-            acc ++ [[pseudo]]
-        end
-    end)
-    |> Enum.flat_map(fn item ->
-      if is_list(item) do
-        # Sort pseudo-class groups alphabetically
-        Enum.sort(item, &sort_comparator/2)
-      else
+    # Flush any remaining group
+    result = if current_group == [], do: result, else: [current_group | result]
+
+    # Reverse and process: sort groups, keep pseudo-elements as-is
+    result
+    |> Enum.reverse()
+    |> Enum.flat_map(fn
+      item when is_list(item) ->
+        # Sort pseudo-class groups alphabetically (reverse since we built reversed)
+        item |> Enum.reverse() |> Enum.sort(&sort_comparator/2)
+
+      item ->
         # Pseudo-elements stay as-is
         [item]
-      end
     end)
   end
 
@@ -119,17 +122,9 @@ defmodule LiveStyle.Pseudo.Sort do
     end
   end
 
-  @doc """
-  Splits a combined pseudo string into individual pseudos.
-
-  ## Examples
-
-      iex> LiveStyle.Pseudo.Sort.split(":hover:active")
-      [":hover", ":active"]
-
-      iex> LiveStyle.Pseudo.Sort.split("::before:hover")
-      ["::before", ":hover"]
-  """
+  @doc false
+  # Splits a combined pseudo string into individual pseudos.
+  # Internal function used by sort_combined/1.
   @spec split(String.t()) :: list(String.t())
   def split(combined) do
     # Handle pseudo-elements (::) vs pseudo-classes (:)
