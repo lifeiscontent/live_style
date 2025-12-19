@@ -16,6 +16,7 @@ defmodule LiveStyle.CSS.Keyframes do
       html[dir="rtl"]{@keyframes xabc123-B{from{margin-right:0;}to{margin-right:10px;}}}
   """
 
+  alias LiveStyle.Keyframes, as: KeyframesModule
   alias LiveStyle.Manifest
   alias LiveStyle.RTL
   alias LiveStyle.Value
@@ -112,21 +113,11 @@ defmodule LiveStyle.CSS.Keyframes do
 
   defp unwrap_var(property), do: property
 
-  # Sort keys for deterministic output
-  defp frame_sort_key(:from), do: {0, "from"}
-  defp frame_sort_key(:to), do: {100, "to"}
-  defp frame_sort_key("from"), do: {0, "from"}
-  defp frame_sort_key("to"), do: {100, "to"}
-
-  defp frame_sort_key(selector) when is_atom(selector) do
-    frame_sort_key(to_string(selector))
-  end
-
-  defp frame_sort_key(selector) when is_binary(selector) do
-    # Extract percentage for sorting: "50%" -> 50
-    case Integer.parse(String.replace(selector, "%", "")) do
-      {num, _} -> {num, selector}
-      :error -> {50, selector}
-    end
+  # Sort keys for deterministic output, using shared frame_sort_order.
+  # Returns tuple for stable sorting: {order, selector_string}
+  defp frame_sort_key(selector) do
+    selector_str = if is_atom(selector), do: to_string(selector), else: selector
+    order = KeyframesModule.frame_sort_order(selector)
+    {order, selector_str}
   end
 end

@@ -34,7 +34,7 @@ defmodule LiveStyle.Keyframes do
         animation: "\#{css_keyframes({MyApp.Tokens, :spin})} 1s linear infinite"
   """
 
-  alias LiveStyle.{Hash, Manifest, Value}
+  alias LiveStyle.{Hash, Manifest, Utils, Value}
 
   @doc """
   Defines a keyframes animation and stores it in the manifest.
@@ -60,7 +60,7 @@ defmodule LiveStyle.Keyframes do
         css_name
 
       nil ->
-        normalized_frames = normalize_frames(frames)
+        normalized_frames = Utils.normalize_to_map(frames)
         css_name = Hash.keyframes_name(normalized_frames)
 
         # Generate the StyleX-compatible metadata
@@ -115,7 +115,7 @@ defmodule LiveStyle.Keyframes do
   def generate_css(css_name, frames) do
     sorted_frames =
       frames
-      |> Enum.sort_by(fn {frame_key, _} -> frame_sort_key(frame_key) end)
+      |> Enum.sort_by(fn {frame_key, _} -> frame_sort_order(frame_key) end)
 
     frame_css =
       Enum.map_join(sorted_frames, "", fn {frame_key, props} ->
@@ -127,32 +127,32 @@ defmodule LiveStyle.Keyframes do
     "@keyframes #{css_name}{#{frame_css}}"
   end
 
-  defp normalize_frames(frames) when is_list(frames), do: Map.new(frames)
-  defp normalize_frames(frames) when is_map(frames), do: frames
+  @doc false
+  # Returns the sort order for a keyframe key (0 = from, 100 = to).
+  # Used by both Keyframes and CSS.Keyframes for consistent ordering.
+  @spec frame_sort_order(atom() | String.t()) :: integer()
+  def frame_sort_order(:from), do: 0
+  def frame_sort_order("from"), do: 0
+  def frame_sort_order("0%"), do: 0
+  def frame_sort_order(:to), do: 100
+  def frame_sort_order("to"), do: 100
+  def frame_sort_order("100%"), do: 100
 
-  # Sort key for frame ordering (0 = first, 100 = last)
-  defp frame_sort_key(:from), do: 0
-  defp frame_sort_key("from"), do: 0
-  defp frame_sort_key("0%"), do: 0
-  defp frame_sort_key(:to), do: 100
-  defp frame_sort_key("to"), do: 100
-  defp frame_sort_key("100%"), do: 100
+  def frame_sort_order(key) when is_atom(key) do
+    # Handle atom keys like :"50%" by converting to string
+    frame_sort_order(Atom.to_string(key))
+  end
 
-  defp frame_sort_key(key) when is_binary(key) do
-    # Parse percentage like "50%" -> 50
+  def frame_sort_order(key) when is_binary(key) do
     case Integer.parse(String.trim_trailing(key, "%")) do
-      {num, ""} ->
-        num
-
-      _ ->
-        raise ArgumentError,
-              "Invalid keyframe key: #{inspect(key)}. Expected 'from', 'to', or a percentage like '50%'"
+      {num, ""} -> num
+      {num, "%"} -> num
+      _ -> raise ArgumentError, invalid_frame_key_message(key)
     end
   end
 
-  defp frame_sort_key(key) do
-    raise ArgumentError,
-          "Invalid keyframe key: #{inspect(key)}. Expected atom (:from, :to) or string ('50%')"
+  defp invalid_frame_key_message(key) do
+    "Invalid keyframe key: #{inspect(key)}. Expected 'from', 'to', or a percentage like '50%'"
   end
 
   # Normalize frame key to string
