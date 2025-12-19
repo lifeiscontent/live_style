@@ -43,7 +43,7 @@ sample_styles = %{
       "@media (min-width: 768px)": "20px"
     }
   ],
-  # Complex realistic component
+  # Complex realistic component (no disallowed shorthands for forbid_shorthands mode)
   realistic: [
     display: "flex",
     align_items: "center",
@@ -57,7 +57,9 @@ sample_styles = %{
     font_weight: "500",
     gap: "8px",
     cursor: "pointer",
-    transition: "all 0.2s ease"
+    transition_property: "all",
+    transition_duration: "0.2s",
+    transition_timing_function: "ease"
   ]
 }
 
@@ -76,7 +78,7 @@ defmodule BenchHelper do
       quote do
         defmodule unquote(module_name) do
           use LiveStyle
-          css_rule(:bench_style, unquote(Macro.escape(styles)))
+          css_class(:bench_style, unquote(Macro.escape(styles)))
         end
       end
 
