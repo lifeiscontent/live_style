@@ -113,21 +113,16 @@ defmodule LiveStyle.ViewTransition do
   @spec define(module(), atom(), map() | keyword(), String.t()) :: :ok
   def define(module, name, styles, css_name) do
     key = Manifest.simple_key(module, name)
-    manifest = LiveStyle.Storage.read()
+    styles = normalize_to_map(styles)
 
-    # Skip if already exists (from pre-compilation)
-    unless Manifest.get_view_transition(manifest, key) do
-      styles = normalize_to_map(styles)
+    entry = %{
+      css_name: css_name,
+      styles: styles
+    }
 
-      entry = %{
-        css_name: css_name,
-        styles: styles
-      }
-
-      LiveStyle.Storage.update(fn manifest ->
-        Manifest.put_view_transition(manifest, key, entry)
-      end)
-    end
+    LiveStyle.Storage.update(fn manifest ->
+      Manifest.put_view_transition(manifest, key, entry)
+    end)
 
     :ok
   end

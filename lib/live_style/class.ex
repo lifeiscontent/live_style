@@ -49,32 +49,24 @@ defmodule LiveStyle.Class do
   def define(module, name, declarations) do
     key = Manifest.simple_key(module, name)
 
-    # Check if this rule already exists in the manifest (from pre-compilation)
-    # If so, skip the write to avoid race conditions during parallel test loading
-    manifest = LiveStyle.Storage.read()
+    # Resolve __include__ entries first
+    resolved_declarations = Include.resolve(declarations, module)
 
-    if Manifest.get_rule(manifest, key) do
-      :ok
-    else
-      # Resolve __include__ entries first
-      resolved_declarations = Include.resolve(declarations, module)
+    # Process declarations into atomic classes
+    {atomic_classes, class_string} = process_declarations(resolved_declarations)
 
-      # Process declarations into atomic classes
-      {atomic_classes, class_string} = process_declarations(resolved_declarations)
+    entry = %{
+      class_string: class_string,
+      atomic_classes: atomic_classes,
+      declarations: resolved_declarations,
+      dynamic: false
+    }
 
-      entry = %{
-        class_string: class_string,
-        atomic_classes: atomic_classes,
-        declarations: resolved_declarations,
-        dynamic: false
-      }
+    LiveStyle.Storage.update(fn manifest ->
+      Manifest.put_rule(manifest, key, entry)
+    end)
 
-      LiveStyle.Storage.update(fn manifest ->
-        Manifest.put_rule(manifest, key, entry)
-      end)
-
-      :ok
-    end
+    :ok
   end
 
   @doc """
@@ -97,30 +89,23 @@ defmodule LiveStyle.Class do
   def define_dynamic(module, name, all_props, param_names) do
     key = Manifest.simple_key(module, name)
 
-    # Check if this rule already exists in the manifest (from pre-compilation)
-    manifest = LiveStyle.Storage.read()
+    # For dynamic rules, generate CSS classes that use var(--x-prop) references
+    # The actual values are set at runtime via inline styles
+    {atomic_classes, class_string} = process_dynamic_declarations(all_props)
 
-    if Manifest.get_rule(manifest, key) do
-      :ok
-    else
-      # For dynamic rules, generate CSS classes that use var(--x-prop) references
-      # The actual values are set at runtime via inline styles
-      {atomic_classes, class_string} = process_dynamic_declarations(all_props)
+    entry = %{
+      class_string: class_string,
+      atomic_classes: atomic_classes,
+      all_props: all_props,
+      param_names: param_names,
+      dynamic: true
+    }
 
-      entry = %{
-        class_string: class_string,
-        atomic_classes: atomic_classes,
-        all_props: all_props,
-        param_names: param_names,
-        dynamic: true
-      }
+    LiveStyle.Storage.update(fn manifest ->
+      Manifest.put_rule(manifest, key, entry)
+    end)
 
-      LiveStyle.Storage.update(fn manifest ->
-        Manifest.put_rule(manifest, key, entry)
-      end)
-
-      :ok
-    end
+    :ok
   end
 
   @doc """

@@ -18,15 +18,10 @@ defmodule LiveStyle.Vars do
   @spec define(module(), atom(), map() | keyword()) :: :ok
   def define(module, namespace, vars) do
     vars = normalize_to_map(vars)
-    manifest = LiveStyle.Storage.read()
 
     Enum.each(vars, fn {name, value} ->
       key = Manifest.namespaced_key(module, namespace, name)
-
-      # Skip if already exists (from pre-compilation)
-      unless Manifest.get_var(manifest, key) do
-        define_var(module, namespace, name, key, value)
-      end
+      define_var(module, namespace, name, key, value)
     end)
 
     :ok

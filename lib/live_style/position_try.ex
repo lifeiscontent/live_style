@@ -120,19 +120,15 @@ defmodule LiveStyle.PositionTry do
   @spec define(module(), atom(), map(), String.t()) :: :ok
   def define(module, name, declarations, css_name) do
     key = Manifest.simple_key(module, name)
-    manifest = LiveStyle.Storage.read()
 
-    # Skip if already exists (from pre-compilation)
-    unless Manifest.get_position_try(manifest, key) do
-      entry = %{
-        css_name: css_name,
-        declarations: declarations
-      }
+    entry = %{
+      css_name: css_name,
+      declarations: declarations
+    }
 
-      LiveStyle.Storage.update(fn manifest ->
-        Manifest.put_position_try(manifest, key, entry)
-      end)
-    end
+    LiveStyle.Storage.update(fn manifest ->
+      Manifest.put_position_try(manifest, key, entry)
+    end)
 
     :ok
   end
@@ -144,19 +140,15 @@ defmodule LiveStyle.PositionTry do
   @spec define_anonymous(module(), map(), String.t()) :: :ok
   def define_anonymous(module, declarations, css_name) do
     key = "#{module}:__anon_position_try__:#{css_name}"
-    manifest = LiveStyle.Storage.read()
 
-    # Skip if already exists (from pre-compilation)
-    unless Manifest.get_position_try(manifest, key) do
-      entry = %{
-        css_name: css_name,
-        declarations: declarations
-      }
+    entry = %{
+      css_name: css_name,
+      declarations: declarations
+    }
 
-      LiveStyle.Storage.update(fn manifest ->
-        Manifest.put_position_try(manifest, key, entry)
-      end)
-    end
+    LiveStyle.Storage.update(fn manifest ->
+      Manifest.put_position_try(manifest, key, entry)
+    end)
 
     :ok
   end

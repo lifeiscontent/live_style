@@ -89,32 +89,27 @@ defmodule LiveStyle.Theme do
   def define(var_group_module, namespace, theme_name, overrides, css_name, theme_module \\ nil) do
     theme_module = theme_module || var_group_module
     key = Manifest.namespaced_key(theme_module, namespace, theme_name)
-    manifest = LiveStyle.Storage.read()
+    overrides = normalize_to_map(overrides)
 
-    # Skip if already exists (from pre-compilation)
-    unless Manifest.get_theme(manifest, key) do
-      overrides = normalize_to_map(overrides)
-
-      # Convert override keys to CSS var names using the var group's module and namespace
-      css_overrides =
-        overrides
-        |> Enum.map(fn {var_name, value} ->
-          css_var_name = Hash.var_name(var_group_module, namespace, var_name)
-          {css_var_name, value}
-        end)
-        |> Map.new()
-
-      entry = %{
-        css_name: css_name,
-        var_group_module: var_group_module,
-        var_group_namespace: namespace,
-        overrides: css_overrides
-      }
-
-      LiveStyle.Storage.update(fn manifest ->
-        Manifest.put_theme(manifest, key, entry)
+    # Convert override keys to CSS var names using the var group's module and namespace
+    css_overrides =
+      overrides
+      |> Enum.map(fn {var_name, value} ->
+        css_var_name = Hash.var_name(var_group_module, namespace, var_name)
+        {css_var_name, value}
       end)
-    end
+      |> Map.new()
+
+    entry = %{
+      css_name: css_name,
+      var_group_module: var_group_module,
+      var_group_namespace: namespace,
+      overrides: css_overrides
+    }
+
+    LiveStyle.Storage.update(fn manifest ->
+      Manifest.put_theme(manifest, key, entry)
+    end)
 
     :ok
   end

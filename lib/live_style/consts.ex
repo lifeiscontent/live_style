@@ -29,15 +29,10 @@ defmodule LiveStyle.Consts do
   @spec define(module(), atom(), map() | keyword()) :: :ok
   def define(module, namespace, consts) do
     consts = normalize_to_map(consts)
-    manifest = LiveStyle.Storage.read()
 
     Enum.each(consts, fn {name, value} ->
       key = Manifest.namespaced_key(module, namespace, name)
-
-      # Skip if already exists (from pre-compilation)
-      unless Manifest.get_const(manifest, key) do
-        define_const(key, value)
-      end
+      define_const(key, value)
     end)
 
     :ok
