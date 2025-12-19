@@ -23,10 +23,6 @@ defmodule LiveStyle.Hash do
     LiveStyle.Config.class_name_prefix()
   end
 
-  # ===========================================================================
-  # Public API - StyleX compatible
-  # ===========================================================================
-
   @doc """
   Generates a CSS class name from property, value, pseudos, and at-rules.
 
@@ -112,23 +108,21 @@ defmodule LiveStyle.Hash do
   defp construct_keyframes_string(frames) do
     frames
     |> Enum.sort_by(fn {k, _} -> to_string(k) end)
-    |> Enum.map(fn {frame_key, declarations} ->
+    |> Enum.map_join("", fn {frame_key, declarations} ->
       # StyleX validation: keyframe values must be objects (keyword lists or maps)
       validate_keyframe_declarations!(frame_key, declarations)
 
       decls_string =
         declarations
         |> Enum.sort_by(fn {k, _} -> to_string(k) end)
-        |> Enum.map(fn {prop, value} ->
+        |> Enum.map_join("", fn {prop, value} ->
           # Convert property to kebab-case if needed (e.g., :background_color -> "background-color")
           prop_str = LiveStyle.Value.to_css_property(prop)
           "#{prop_str}:#{value};"
         end)
-        |> Enum.join("")
 
       "#{frame_key}{#{decls_string}}"
     end)
-    |> Enum.join("")
   end
 
   # StyleX validation: keyframe values must be objects (keyword lists or maps)
@@ -197,28 +191,23 @@ defmodule LiveStyle.Hash do
   end
 
   @doc """
-  Legacy: Generates a view-transition name based on module and name.
-  """
-  @spec view_transition_name(module(), atom()) :: String.t()
-  def view_transition_name(module, name) do
-    input = "view_transition:#{inspect(module)}.#{name}"
-    class_prefix() <> create_hash(input)
-  end
+  Generates an atomic class name for a CSS property/value pair.
 
-  # ===========================================================================
-  # Convenience Functions
-  # ===========================================================================
+  ## Parameters
 
-  @doc """
-  Generates a class name from legacy-style parameters.
-
-  This is a convenience wrapper around `class_name/4` that accepts the old
-  parameter format with separate pseudo_element, selector_suffix, and at_rule.
+    * `property` - CSS property name (e.g., "color")
+    * `value` - CSS value (e.g., "red")
+    * `pseudo_element` - Pseudo-element selector (e.g., "::before") or nil
+    * `selector_suffix` - Pseudo-class selector (e.g., ":hover") or nil
+    * `at_rule` - At-rule wrapper (e.g., "@media (min-width: 800px)") or nil
 
   ## Examples
 
-      iex> LiveStyle.Hash.atomic_class("color", "red", ":hover", nil, nil)
-      "x123456"
+      iex> LiveStyle.Hash.atomic_class("color", "red", nil, nil, nil)
+      "x1abc234"
+
+      iex> LiveStyle.Hash.atomic_class("color", "blue", nil, ":hover", nil)
+      "x2def567"
   """
   @spec atomic_class(
           String.t(),
@@ -232,8 +221,7 @@ defmodule LiveStyle.Hash do
     # e.g., ":hover:active" -> [":hover", ":active"]
     pseudos =
       [pseudo_element, selector_suffix]
-      |> Enum.reject(&is_nil/1)
-      |> Enum.reject(&(&1 == ""))
+      |> Enum.reject(&(is_nil(&1) or &1 == ""))
       |> Enum.flat_map(&split_pseudos/1)
 
     at_rules =
@@ -252,10 +240,6 @@ defmodule LiveStyle.Hash do
     input = "#{inspect(module)}:#{style_name}:#{prop}:#{idx}"
     "--x" <> create_hash(input) <> "-#{idx}"
   end
-
-  # ===========================================================================
-  # MurmurHash2 Implementation (matches StyleX)
-  # ===========================================================================
 
   @doc """
   Creates a hash string using MurmurHash2, encoded in base36.
@@ -377,14 +361,6 @@ defmodule LiveStyle.Hash do
 
     low_mult + high_shifted
   end
-
-  # ===========================================================================
-  # Helper Functions
-  # ===========================================================================
-
-  # ===========================================================================
-  # Pseudo/At-Rule Sorting (matches StyleX's sortPseudos/sortAtRules)
-  # ===========================================================================
 
   @doc """
   Sorts pseudos matching StyleX's sortPseudos behavior exactly.

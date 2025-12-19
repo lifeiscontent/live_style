@@ -1,128 +1,186 @@
 defmodule LiveStyle.Storage do
   @moduledoc """
-  Storage backend for LiveStyle manifest.
+  File-based storage for the LiveStyle manifest.
 
-  Provides a unified interface for reading and writing the compile-time manifest,
-  with support for different storage backends (File for production, Memory for tests).
+  The manifest stores all CSS rules, variables, keyframes, and other definitions
+  that are collected at compile time and used to generate CSS.
 
   ## Configuration
 
-  Configure the storage backend in your config:
+  Configure the manifest path in your config:
 
-      # Default - file storage with default path
       config :live_style,
-        storage: LiveStyle.Storage.File
+        manifest_path: "_build/live_style_manifest.etf"
 
-      # File storage with custom path
-      config :live_style,
-        storage: {LiveStyle.Storage.File, path: "custom/manifest.etf"}
+  The default path is `"_build/live_style_manifest.etf"`.
 
-      # Memory storage (for tests)
-      config :live_style,
-        storage: LiveStyle.Storage.Memory
+  ## Per-Process Path Override
 
-  ## Per-Process Backend Override
+  For test isolation, you can override the manifest path on a per-process basis:
 
-  For test isolation, you can override the backend on a per-process basis:
-
-      LiveStyle.Storage.set_backend(LiveStyle.Storage.Memory)
+      LiveStyle.Storage.set_path("/tmp/test_manifest.etf")
       # ... run tests ...
-      LiveStyle.Storage.clear_backend()
+      LiveStyle.Storage.clear_path()
 
   This allows tests to run in parallel with `async: true` without conflicts.
   """
 
-  @backend_key :live_style_storage_backend
+  @default_path "_build/live_style_manifest.etf"
+  @lock_timeout 30_000
+  @path_key :live_style_manifest_path
 
   @doc """
-  Sets the storage backend for the current process.
+  Sets the manifest path for the current process.
 
   This is primarily used for test isolation, allowing each test to use
-  an in-memory backend without affecting other tests.
-
-  Can be specified as:
-  - A module: `LiveStyle.Storage.Memory`
-  - A tuple: `{LiveStyle.Storage.File, path: "custom/path.etf"}`
+  a separate manifest file without affecting other tests.
   """
-  def set_backend(backend) do
-    Process.put(@backend_key, backend)
+  def set_path(path) when is_binary(path) do
+    Process.put(@path_key, path)
     :ok
   end
 
   @doc """
-  Clears the per-process backend override, reverting to the default backend.
+  Clears the per-process path override, reverting to the default path.
   """
-  def clear_backend do
-    Process.delete(@backend_key)
+  def clear_path do
+    Process.delete(@path_key)
     :ok
   end
 
   @doc """
-  Returns the appropriate storage backend module and options.
+  Returns the current manifest path.
 
-  If a per-process override is set (via `set_backend/1`), that is returned.
-  Otherwise, returns the configured backend from application config.
-
-  Returns a tuple of `{module, opts}`.
+  If a per-process override is set (via `set_path/1`), that is returned.
+  Otherwise, returns the configured path from application config, or the default.
   """
-  def backend do
-    case Process.get(@backend_key) do
-      nil ->
-        LiveStyle.Config.storage()
+  def path do
+    Process.get(@path_key) ||
+      Application.get_env(:live_style, :manifest_path, @default_path)
+  end
 
-      {module, opts} when is_atom(module) and is_list(opts) ->
-        {module, opts}
+  @doc """
+  Reads the manifest from file.
+  """
+  def read(opts \\ []) do
+    file_path = Keyword.get(opts, :path, path())
 
-      module when is_atom(module) ->
-        {module, []}
+    if File.exists?(file_path) do
+      case File.read(file_path) do
+        {:ok, binary} ->
+          try do
+            manifest = :erlang.binary_to_term(binary)
+            LiveStyle.Manifest.ensure_keys(manifest)
+          rescue
+            _ -> LiveStyle.Manifest.empty()
+          end
+
+        _ ->
+          LiveStyle.Manifest.empty()
+      end
+    else
+      LiveStyle.Manifest.empty()
     end
   end
 
   @doc """
-  Reads the current manifest, ensuring all required keys exist.
+  Writes the manifest to file.
   """
-  def read do
-    {module, opts} = backend()
-    manifest = module.read(opts)
-    LiveStyle.Manifest.ensure_keys(manifest)
+  def write(manifest, opts \\ []) do
+    file_path = Keyword.get(opts, :path, path())
+    file_path |> Path.dirname() |> File.mkdir_p!()
+    File.write!(file_path, :erlang.term_to_binary(manifest))
+    :ok
   end
 
   @doc """
-  Writes the manifest.
+  Updates the manifest atomically using file locking.
   """
-  def write(manifest) do
-    {module, opts} = backend()
-    module.write(manifest, opts)
-  end
+  def update(fun, opts \\ []) do
+    file_path = Keyword.get(opts, :path, path())
+    lock_path = file_path <> ".lock"
 
-  @doc """
-  Updates the manifest with a function.
-  """
-  def update(fun) do
-    {module, opts} = backend()
-    module.update(fun, opts)
+    # Ensure directory exists
+    file_path |> Path.dirname() |> File.mkdir_p!()
+
+    # Use file-based locking to prevent race conditions
+    with_lock(lock_path, fn ->
+      manifest = read(path: file_path)
+      new_manifest = fun.(manifest)
+      write(new_manifest, path: file_path)
+    end)
+
+    :ok
   end
 
   @doc """
   Clears the manifest.
   """
-  def clear do
-    {module, opts} = backend()
-    module.clear(opts)
+  def clear(opts \\ []) do
+    file_path = Keyword.get(opts, :path, path())
+
+    if File.exists?(file_path) do
+      File.rm!(file_path)
+    end
+
+    # Write empty manifest to ensure it exists
+    write(LiveStyle.Manifest.empty(), path: file_path)
+    :ok
   end
 
   @doc """
   Checks if the manifest has any styles.
   """
   def has_styles?(manifest) do
-    has_vars = map_size(manifest[:var_groups] || %{}) > 0
-    has_keyframes = map_size(manifest[:keyframes] || %{}) > 0
-    has_rules = map_size(manifest[:rules] || %{}) > 0
-    has_properties = map_size(manifest[:properties] || %{}) > 0
-    has_position_try = map_size(manifest[:position_try] || %{}) > 0
-    has_view_transitions = length(manifest[:view_transition_css] || []) > 0
+    has_map_entries?(manifest, :var_groups) or
+      has_map_entries?(manifest, :keyframes) or
+      has_map_entries?(manifest, :rules) or
+      has_map_entries?(manifest, :properties) or
+      has_map_entries?(manifest, :position_try) or
+      has_list_entries?(manifest, :view_transition_css)
+  end
 
-    has_vars or has_keyframes or has_rules or has_properties or has_position_try or
-      has_view_transitions
+  defp has_map_entries?(manifest, key) do
+    map_size(manifest[key] || %{}) > 0
+  end
+
+  defp has_list_entries?(manifest, key) do
+    not Enum.empty?(manifest[key] || [])
+  end
+
+  # Simple file-based locking using mkdir (atomic on most filesystems)
+  defp with_lock(lock_path, fun) do
+    acquire_lock(lock_path, @lock_timeout)
+
+    try do
+      fun.()
+    after
+      release_lock(lock_path)
+    end
+  end
+
+  defp acquire_lock(lock_path, timeout) when timeout > 0 do
+    case File.mkdir(lock_path) do
+      :ok ->
+        :ok
+
+      {:error, :eexist} ->
+        # Lock exists, wait and retry
+        Process.sleep(10)
+        acquire_lock(lock_path, timeout - 10)
+
+      {:error, reason} ->
+        raise "Failed to acquire lock at #{lock_path}: #{inspect(reason)}"
+    end
+  end
+
+  defp acquire_lock(lock_path, _timeout) do
+    # Timeout reached - force remove stale lock and try once more
+    File.rm_rf(lock_path)
+    File.mkdir!(lock_path)
+  end
+
+  defp release_lock(lock_path) do
+    File.rm_rf(lock_path)
   end
 end

@@ -17,12 +17,8 @@ defmodule LiveStyle.Config do
 
   There are several global configurations for the LiveStyle application:
 
-    * `:storage` - the storage backend for compile-time manifest
-      (default: `LiveStyle.Storage.File`)
-
-      Can be specified as:
-      - A module: `LiveStyle.Storage.File`
-      - A tuple with options: `{LiveStyle.Storage.File, path: "custom/path.etf"}`
+    * `:manifest_path` - path where the manifest file is stored
+      (default: `"_build/live_style_manifest.etf"`)
 
     * `:shorthand_strategy` - the shorthand expansion strategy
       (default: `LiveStyle.Shorthand.Strategy.KeepShorthands`)
@@ -45,7 +41,7 @@ defmodule LiveStyle.Config do
       (default: 16)
 
     * `:use_css_layers` - wrap CSS output in `@layer` blocks for specificity
-      (default: true). When false, uses `:not(#\#)` selector hack instead
+      (default: true). When false, uses `:not(#\\#)` selector hack instead
       (matching StyleX's default behavior)
 
     * `:use_priority_layers` - when `use_css_layers` is true, groups CSS rules
@@ -62,9 +58,9 @@ defmodule LiveStyle.Config do
           cd: Path.expand("..", __DIR__)
         ]
 
-      # Custom storage path
+      # Custom manifest path
       config :live_style,
-        storage: {LiveStyle.Storage.File, path: "custom/manifest.etf"}
+        manifest_path: "custom/manifest.etf"
 
       # config/dev.exs
       config :live_style,
@@ -86,10 +82,6 @@ defmodule LiveStyle.Config do
   @default_use_priority_layers false
 
   @config_key :live_style_config_overrides
-
-  # ===========================================================================
-  # Profile Configuration
-  # ===========================================================================
 
   @doc """
   Returns the configuration for the given profile.
@@ -113,10 +105,6 @@ defmodule LiveStyle.Config do
             ]
       """
   end
-
-  # ===========================================================================
-  # Per-Process Overrides
-  # ===========================================================================
 
   @doc """
   Sets a per-process configuration override.
@@ -157,10 +145,6 @@ defmodule LiveStyle.Config do
     :ok
   end
 
-  # ===========================================================================
-  # Global Configuration
-  # ===========================================================================
-
   @doc """
   Returns the configured output path for CSS.
 
@@ -173,45 +157,6 @@ defmodule LiveStyle.Config do
         nil -> "priv/static/assets/live.css"
         config -> Keyword.get(config, :output, "priv/static/assets/live.css")
       end
-  end
-
-  @doc """
-  Returns the configured storage backend and options.
-
-  Returns a tuple of `{module, opts}` where opts is a keyword list.
-
-  ## Examples
-
-      # Default
-      storage() #=> {LiveStyle.Storage.File, []}
-
-      # With custom path
-      storage() #=> {LiveStyle.Storage.File, [path: "custom/path.etf"]}
-
-      # Memory backend
-      storage() #=> {LiveStyle.Storage.Memory, []}
-  """
-  def storage do
-    value =
-      get_override(:storage) ||
-        Application.get_env(:live_style, :storage, LiveStyle.Storage.File)
-
-    case value do
-      {module, opts} when is_atom(module) and is_list(opts) ->
-        {module, opts}
-
-      module when is_atom(module) ->
-        {module, []}
-
-      other ->
-        raise ArgumentError, """
-        Invalid storage configuration: #{inspect(other)}
-
-        Valid formats are:
-        - A module: LiveStyle.Storage.File
-        - A tuple: {LiveStyle.Storage.File, path: "custom/path.etf"}
-        """
-    end
   end
 
   @doc """

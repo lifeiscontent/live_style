@@ -149,17 +149,15 @@ defmodule LiveStyle.RTL do
 
   # Transform background-position logical values to physical for LTR
   defp flip_background_position_ltr(value) do
-    words = String.split(value, " ")
-
-    words
-    |> Enum.map(fn
+    value
+    |> String.split(" ")
+    |> Enum.map_join(" ", fn
       "start" -> "left"
       "inline-start" -> "left"
       "end" -> "right"
       "inline-end" -> "right"
       other -> other
     end)
-    |> Enum.join(" ")
   end
 
   # Check if value needs RTL transformation
@@ -184,15 +182,13 @@ defmodule LiveStyle.RTL do
 
     if Enum.any?(words, &(&1 in ["start", "end", "inline-start", "inline-end"])) do
       flipped =
-        words
-        |> Enum.map(fn
+        Enum.map_join(words, " ", fn
           "start" -> "right"
           "inline-start" -> "right"
           "end" -> "left"
           "inline-end" -> "left"
           other -> other
         end)
-        |> Enum.join(" ")
 
       {"background-position", flipped}
     else

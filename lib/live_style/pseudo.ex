@@ -37,10 +37,6 @@ defmodule LiveStyle.Pseudo do
 
   alias LiveStyle.Data
 
-  # ===========================================================================
-  # Load data at compile time
-  # ===========================================================================
-
   @pseudo_class_priorities Data.pseudo_priorities()
 
   # Pseudo-element base priority (StyleX constant)
@@ -51,10 +47,6 @@ defmodule LiveStyle.Pseudo do
   @pseudo_class_scan_regex ~r/:[a-z-]+(?:\([^)]*\))?/i
   @pseudo_base_regex ~r/^(:[a-z-]+)/
   @pseudo_extract_regex ~r/:(hover|focus|active|checked|focus-within|focus-visible)/
-
-  # ===========================================================================
-  # Pseudo-Class Priority Lookup (compile-time generated)
-  # ===========================================================================
 
   @doc """
   Returns the priority of a single pseudo-class.
@@ -82,10 +74,6 @@ defmodule LiveStyle.Pseudo do
   # Default priority for unknown pseudo-classes
   def priority(_), do: 40
 
-  # ===========================================================================
-  # Pseudo-Element Priority
-  # ===========================================================================
-
   @doc """
   Returns the base priority added for pseudo-elements.
 
@@ -96,10 +84,6 @@ defmodule LiveStyle.Pseudo do
   """
   @spec element_priority() :: integer()
   def element_priority, do: @pseudo_element_priority
-
-  # ===========================================================================
-  # Combined Priority Calculation
-  # ===========================================================================
 
   @doc """
   Calculate the total priority for a selector suffix.
@@ -142,10 +126,6 @@ defmodule LiveStyle.Pseudo do
   def calculate_priority(selector) when is_binary(selector) do
     extract_from_complex(selector)
   end
-
-  # ===========================================================================
-  # Private Helpers
-  # ===========================================================================
 
   # Handle pseudo-elements with optional pseudo-classes (e.g., ::before:hover)
   defp calculate_element_priority(selector) do
@@ -198,19 +178,11 @@ defmodule LiveStyle.Pseudo do
     end
   end
 
-  # ===========================================================================
-  # Accessors for data (useful for introspection/tests)
-  # ===========================================================================
-
   @doc "Returns all pseudo-class priorities as a map."
   def priorities, do: @pseudo_class_priorities
 
   @doc "Returns the pseudo-element split regex pattern."
   def element_split_regex, do: @pseudo_element_split_regex
-
-  # ===========================================================================
-  # Predicate Functions
-  # ===========================================================================
 
   @doc """
   Checks if the given selector is a pseudo-element (starts with ::).

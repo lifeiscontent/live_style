@@ -56,27 +56,8 @@ defmodule LiveStyle.Runtime do
       |> List.flatten()
       |> Enum.reject(&(&1 == nil or &1 == false))
       |> Enum.reduce({%{}, []}, fn ref, {props_acc, vars_acc} ->
-        case resolve_ref_with_props(module, ref, property_classes_map) do
-          {:static, prop_classes} ->
-            # Merge properties - handle :__null__ values
-            merged =
-              Enum.reduce(prop_classes, props_acc, fn
-                {prop, :__null__}, acc -> Map.delete(acc, prop)
-                {prop, class}, acc -> Map.put(acc, prop, class)
-              end)
-
-            {merged, vars_acc}
-
-          {:dynamic, class_string, var_map} ->
-            # Dynamic rules don't participate in property-based merging
-            # They add their class directly and provide CSS variables
-            # Mark dynamic classes with a special property key
-            dyn_key = "__dynamic_#{:erlang.unique_integer([:positive])}__"
-            {Map.put(props_acc, dyn_key, class_string), [var_map | vars_acc]}
-
-          :skip ->
-            {props_acc, vars_acc}
-        end
+        resolve_ref_with_props(module, ref, property_classes_map)
+        |> merge_resolved_ref(props_acc, vars_acc)
       end)
 
     # Build class string from merged properties
@@ -98,12 +79,30 @@ defmodule LiveStyle.Runtime do
           var_styles
           |> Enum.reverse()
           |> Enum.reduce(%{}, fn map, acc -> Map.merge(acc, map) end)
-          |> Enum.map(fn {var_name, value} -> "#{var_name}: #{value}" end)
-          |> Enum.join("; ")
+          |> Enum.map_join("; ", fn {var_name, value} -> "#{var_name}: #{value}" end)
       end
 
     %LiveStyle.Attrs{class: class_string, style: style_string}
   end
+
+  # Merge a resolved reference into the accumulator
+  defp merge_resolved_ref({:static, prop_classes}, props_acc, vars_acc) do
+    merged = Enum.reduce(prop_classes, props_acc, &merge_prop_class/2)
+    {merged, vars_acc}
+  end
+
+  defp merge_resolved_ref({:dynamic, class_string, var_map}, props_acc, vars_acc) do
+    # Dynamic rules don't participate in property-based merging
+    # They add their class directly and provide CSS variables
+    dyn_key = "__dynamic_#{:erlang.unique_integer([:positive])}__"
+    {Map.put(props_acc, dyn_key, class_string), [var_map | vars_acc]}
+  end
+
+  defp merge_resolved_ref(:skip, props_acc, vars_acc), do: {props_acc, vars_acc}
+
+  # Merge a single property class - handle :__null__ values
+  defp merge_prop_class({prop, :__null__}, acc), do: Map.delete(acc, prop)
+  defp merge_prop_class({prop, class}, acc), do: Map.put(acc, prop, class)
 
   @doc """
   Process a dynamic rule at runtime.
@@ -160,10 +159,6 @@ defmodule LiveStyle.Runtime do
 
     {class_string, var_map}
   end
-
-  # ===========================================================================
-  # Private Functions
-  # ===========================================================================
 
   # Merge classes from a ref into the accumulator, with later properties overriding earlier
   # StyleX behavior: :__null__ sentinel value indicates property should be removed

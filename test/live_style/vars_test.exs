@@ -220,7 +220,7 @@ defmodule LiveStyle.VarsTest do
       # StyleX output for nested @-rules:
       # 1. ":root{--xwx8imx:blue;}" - default
       # 2. "@media (prefers-color-scheme: dark){:root{--xwx8imx:lightblue;}}" - @media default
-      # 3. "@supports (color: oklab(0 0 0)){@media (prefers-color-scheme: dark){:root{--xwx8imx:oklab(0.7 -0.3 -0.4);}}}"
+      # 3. "@supports ...{@media ...{:root{--xwx8imx:oklab(0.7 -0.3 -0.4);}}}"
       #    Note: @supports wraps @media (innermost at-rule becomes outermost wrapper)
       css = generate_css()
 

@@ -46,10 +46,6 @@ defmodule LiveStyle.Priority do
     "@container" => 300
   }
 
-  # ===========================================================================
-  # Main Priority Calculation
-  # ===========================================================================
-
   @doc """
   Calculate the priority for a CSS rule.
 
@@ -79,10 +75,6 @@ defmodule LiveStyle.Priority do
     property_priority + pseudo_priority + at_rule_priority
   end
 
-  # ===========================================================================
-  # Property Priority
-  # ===========================================================================
-
   @doc """
   Get the base priority for a CSS property.
 
@@ -100,10 +92,6 @@ defmodule LiveStyle.Priority do
   defp category_to_priority(:longhand_logical), do: 3000
   defp category_to_priority(:longhand_physical), do: 4000
 
-  # ===========================================================================
-  # Pseudo Priority
-  # ===========================================================================
-
   @doc """
   Get the priority addition for a pseudo-class or pseudo-element.
 
@@ -113,10 +101,6 @@ defmodule LiveStyle.Priority do
   """
   @spec get_pseudo_priority(String.t() | nil) :: integer()
   def get_pseudo_priority(selector_suffix), do: Pseudo.calculate_priority(selector_suffix)
-
-  # ===========================================================================
-  # At-Rule Priority
-  # ===========================================================================
 
   @doc """
   Get the priority addition for an at-rule.
@@ -129,10 +113,6 @@ defmodule LiveStyle.Priority do
   def get_at_rule_priority(<<"@media", _rest::binary>>), do: 200
   def get_at_rule_priority(<<"@container", _rest::binary>>), do: 300
   def get_at_rule_priority(_), do: 0
-
-  # ===========================================================================
-  # Accessors for constants (useful for tests)
-  # ===========================================================================
 
   @doc """
   Returns the pseudo-class priorities map.

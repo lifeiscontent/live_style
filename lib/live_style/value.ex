@@ -246,7 +246,7 @@ defmodule LiveStyle.Value do
     # Handle comma-separated values (e.g., "opacity, background_color")
     value
     |> String.split(",")
-    |> Enum.map(fn part ->
+    |> Enum.map_join(",", fn part ->
       part = String.trim(part)
 
       # Don't convert custom properties
@@ -255,7 +255,6 @@ defmodule LiveStyle.Value do
         _ -> String.replace(part, "_", "-")
       end
     end)
-    |> Enum.join(",")
   end
 
   # Normalize whitespace (matching StyleX's whitespace.js)

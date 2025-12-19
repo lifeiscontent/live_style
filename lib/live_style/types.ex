@@ -5,7 +5,7 @@ defmodule LiveStyle.Types do
   These functions wrap variable values to declare their CSS type, enabling
   features like animating gradients or capturing computed values.
 
-  When a typed variable is defined with `defvars`, LiveStyle generates a
+  When a typed variable is defined with `css_vars`, LiveStyle generates a
   CSS `@property` rule that registers the variable's type with the browser.
 
   ## Example
@@ -14,14 +14,12 @@ defmodule LiveStyle.Types do
         use LiveStyle.Tokens
         import LiveStyle.Types
 
-        defvars(:color, %{
+        css_vars :color,
           primary: color("black"),
-          accent: color({default: "blue", "@media (prefers-color-scheme: dark)": "lightblue"})
-        })
+          accent: color(%{default: "blue", "@media (prefers-color-scheme: dark)": "lightblue"})
 
-        defvars(:animation, %{
+        css_vars :animation,
           angle: angle("0deg")
-        })
       end
 
   This generates:
@@ -54,37 +52,34 @@ defmodule LiveStyle.Types do
 
   Normally gradients cannot be animated. With typed angle variables, you can:
 
-      defvars(:anim, %{
+      css_vars :anim,
         angle: angle("0deg")
-      })
 
       # In a component:
-      keyframes :rotate, %{
-        from: %{var(:anim_angle) => "0deg"},
-        to: %{var(:anim_angle) => "360deg"}
-      }
+      css_keyframes :rotate,
+        from: %{css_var(:anim_angle) => "0deg"},
+        to: %{css_var(:anim_angle) => "360deg"}
 
-      style :gradient, %{
-        background_image: "conic-gradient(from \#{var(:anim_angle)}, red, blue)",
-        animation: "rotate 10s linear infinite"
-      }
+      css_rule :gradient,
+        background_image: "conic-gradient(from \#{css_var({MyApp.Tokens, :anim, :angle})}, red, blue)",
+        animation: "\#{css_keyframes(:rotate)} 10s linear infinite"
 
   ### Simulating round()
 
   Integer types discard fractional values:
 
-      defvars(:layout, %{
+      css_vars :layout,
         columns: integer(3)
-      })
 
       # Math.floor: calc(16 / 9) -> 1
       # Math.round: calc((16 / 9) + 0.5) -> 2
   """
 
   @type typed_value :: %{
-          __type__: atom(),
+          optional(:inherits) => boolean(),
+          __type__: :typed_var,
           syntax: String.t(),
-          value: String.t() | map()
+          value: term()
         }
 
   # Type definitions: {function_name, css_syntax, doc_examples}

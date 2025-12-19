@@ -95,10 +95,6 @@ defmodule LiveStyle.Manifest do
     |> Map.merge(manifest)
   end
 
-  # ===========================================================================
-  # Key Generation
-  # ===========================================================================
-
   @doc """
   Generates a manifest key for a namespaced artifact (vars, consts).
 
@@ -124,10 +120,6 @@ defmodule LiveStyle.Manifest do
   def simple_key(module, name) do
     "#{inspect(module)}.#{name}"
   end
-
-  # ===========================================================================
-  # Generated Put/Get Functions
-  # ===========================================================================
 
   # Generate put_* and get_* functions for each section
   for {name, key, description} <- @sections do

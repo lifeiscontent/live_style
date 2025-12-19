@@ -17,10 +17,6 @@ defmodule LiveStyle.Shorthand do
   @shorthand_expansions Data.shorthand_expansions()
   @simple_expansions Data.simple_expansions()
 
-  # ===========================================================================
-  # Generate simple expansion functions from data file
-  # ===========================================================================
-
   # These are simple mappings like:
   #   expand_margin_block_start(value) -> [{:margin_top, value}]
   #   expand_gap(value) -> [{:gap, value}, {:row_gap, nil}, {:column_gap, nil}]
@@ -57,135 +53,126 @@ defmodule LiveStyle.Shorthand do
 
   def shorthand_expansions, do: @shorthand_expansions
 
-  def get_longhand_properties(css_property) do
-    case css_property do
-      "margin" ->
-        [:margin_top, :margin_right, :margin_bottom, :margin_left]
+  def get_longhand_properties("margin"),
+    do: [:margin_top, :margin_right, :margin_bottom, :margin_left]
 
-      "padding" ->
-        [:padding_top, :padding_right, :padding_bottom, :padding_left]
+  def get_longhand_properties("padding"),
+    do: [:padding_top, :padding_right, :padding_bottom, :padding_left]
 
-      "gap" ->
-        [:row_gap, :column_gap]
+  def get_longhand_properties("gap"), do: [:row_gap, :column_gap]
+  def get_longhand_properties("overflow"), do: [:overflow_x, :overflow_y]
 
-      "overflow" ->
-        [:overflow_x, :overflow_y]
-
-      "border-radius" ->
-        [
-          :border_top_left_radius,
-          :border_top_right_radius,
-          :border_bottom_right_radius,
-          :border_bottom_left_radius
-        ]
-
-      "border-width" ->
-        [:border_top_width, :border_right_width, :border_bottom_width, :border_left_width]
-
-      "border-style" ->
-        [:border_top_style, :border_right_style, :border_bottom_style, :border_left_style]
-
-      "border-color" ->
-        [:border_top_color, :border_right_color, :border_bottom_color, :border_left_color]
-
-      "inset" ->
-        [:top, :right, :bottom, :left]
-
-      "margin-block" ->
-        [:margin_top, :margin_bottom]
-
-      "margin-inline" ->
-        [:margin_left, :margin_right]
-
-      "padding-block" ->
-        [:padding_top, :padding_bottom]
-
-      "padding-inline" ->
-        [:padding_left, :padding_right]
-
-      "list-style" ->
-        [:list_style_type, :list_style_position, :list_style_image]
-
-      _ ->
-        []
-    end
+  def get_longhand_properties("border-radius") do
+    [
+      :border_top_left_radius,
+      :border_top_right_radius,
+      :border_bottom_right_radius,
+      :border_bottom_left_radius
+    ]
   end
+
+  def get_longhand_properties("border-width"),
+    do: [:border_top_width, :border_right_width, :border_bottom_width, :border_left_width]
+
+  def get_longhand_properties("border-style"),
+    do: [:border_top_style, :border_right_style, :border_bottom_style, :border_left_style]
+
+  def get_longhand_properties("border-color"),
+    do: [:border_top_color, :border_right_color, :border_bottom_color, :border_left_color]
+
+  def get_longhand_properties("inset"), do: [:top, :right, :bottom, :left]
+  def get_longhand_properties("margin-block"), do: [:margin_top, :margin_bottom]
+  def get_longhand_properties("margin-inline"), do: [:margin_left, :margin_right]
+  def get_longhand_properties("padding-block"), do: [:padding_top, :padding_bottom]
+  def get_longhand_properties("padding-inline"), do: [:padding_left, :padding_right]
+
+  def get_longhand_properties("list-style"),
+    do: [:list_style_type, :list_style_position, :list_style_image]
+
+  def get_longhand_properties(_), do: []
 
   def expand_to_longhands(css_property, value) when is_binary(value) do
-    {clean_value, important} =
-      if String.ends_with?(value, "!important") do
-        {String.trim(String.replace(value, "!important", "")), " !important"}
-      else
-        {value, ""}
-      end
+    {clean_value, important} = extract_important(value)
+    do_expand_to_longhands(css_property, value, clean_value, important)
+  end
 
-    case css_property do
-      "margin" ->
-        expand_4_value_shorthand(
-          clean_value,
-          [:margin_top, :margin_right, :margin_bottom, :margin_left],
-          important
-        )
-
-      "padding" ->
-        expand_4_value_shorthand(
-          clean_value,
-          [:padding_top, :padding_right, :padding_bottom, :padding_left],
-          important
-        )
-
-      "gap" ->
-        expand_2_value_shorthand(clean_value, [:row_gap, :column_gap], important)
-
-      "overflow" ->
-        expand_2_value_shorthand(clean_value, [:overflow_x, :overflow_y], important)
-
-      "border-radius" ->
-        expand_border_radius_to_longhands(clean_value, important)
-
-      "border-width" ->
-        expand_4_value_shorthand(
-          clean_value,
-          [:border_top_width, :border_right_width, :border_bottom_width, :border_left_width],
-          important
-        )
-
-      "border-style" ->
-        expand_4_value_shorthand(
-          clean_value,
-          [:border_top_style, :border_right_style, :border_bottom_style, :border_left_style],
-          important
-        )
-
-      "border-color" ->
-        expand_4_value_shorthand(
-          clean_value,
-          [:border_top_color, :border_right_color, :border_bottom_color, :border_left_color],
-          important
-        )
-
-      "inset" ->
-        expand_4_value_shorthand(clean_value, [:top, :right, :bottom, :left], important)
-
-      "margin-block" ->
-        expand_2_value_shorthand(clean_value, [:margin_top, :margin_bottom], important)
-
-      "margin-inline" ->
-        expand_2_value_shorthand(clean_value, [:margin_left, :margin_right], important)
-
-      "padding-block" ->
-        expand_2_value_shorthand(clean_value, [:padding_top, :padding_bottom], important)
-
-      "padding-inline" ->
-        expand_2_value_shorthand(clean_value, [:padding_left, :padding_right], important)
-
-      "list-style" ->
-        expand_list_style_to_longhands(clean_value, important)
-
-      _ ->
-        [{String.to_atom(String.replace(css_property, "-", "_")), value}]
+  defp extract_important(value) do
+    if String.ends_with?(value, "!important") do
+      {String.trim(String.replace(value, "!important", "")), " !important"}
+    else
+      {value, ""}
     end
   end
+
+  defp do_expand_to_longhands("margin", _value, clean_value, important) do
+    expand_4_value_shorthand(
+      clean_value,
+      [:margin_top, :margin_right, :margin_bottom, :margin_left],
+      important
+    )
+  end
+
+  defp do_expand_to_longhands("padding", _value, clean_value, important) do
+    expand_4_value_shorthand(
+      clean_value,
+      [:padding_top, :padding_right, :padding_bottom, :padding_left],
+      important
+    )
+  end
+
+  defp do_expand_to_longhands("gap", _value, clean_value, important),
+    do: expand_2_value_shorthand(clean_value, [:row_gap, :column_gap], important)
+
+  defp do_expand_to_longhands("overflow", _value, clean_value, important),
+    do: expand_2_value_shorthand(clean_value, [:overflow_x, :overflow_y], important)
+
+  defp do_expand_to_longhands("border-radius", _value, clean_value, important),
+    do: expand_border_radius_to_longhands(clean_value, important)
+
+  defp do_expand_to_longhands("border-width", _value, clean_value, important) do
+    expand_4_value_shorthand(
+      clean_value,
+      [:border_top_width, :border_right_width, :border_bottom_width, :border_left_width],
+      important
+    )
+  end
+
+  defp do_expand_to_longhands("border-style", _value, clean_value, important) do
+    expand_4_value_shorthand(
+      clean_value,
+      [:border_top_style, :border_right_style, :border_bottom_style, :border_left_style],
+      important
+    )
+  end
+
+  defp do_expand_to_longhands("border-color", _value, clean_value, important) do
+    expand_4_value_shorthand(
+      clean_value,
+      [:border_top_color, :border_right_color, :border_bottom_color, :border_left_color],
+      important
+    )
+  end
+
+  defp do_expand_to_longhands("inset", _value, clean_value, important),
+    do: expand_4_value_shorthand(clean_value, [:top, :right, :bottom, :left], important)
+
+  defp do_expand_to_longhands("margin-block", _value, clean_value, important),
+    do: expand_2_value_shorthand(clean_value, [:margin_top, :margin_bottom], important)
+
+  defp do_expand_to_longhands("margin-inline", _value, clean_value, important),
+    do: expand_2_value_shorthand(clean_value, [:margin_left, :margin_right], important)
+
+  defp do_expand_to_longhands("padding-block", _value, clean_value, important),
+    do: expand_2_value_shorthand(clean_value, [:padding_top, :padding_bottom], important)
+
+  defp do_expand_to_longhands("padding-inline", _value, clean_value, important),
+    do: expand_2_value_shorthand(clean_value, [:padding_left, :padding_right], important)
+
+  defp do_expand_to_longhands("list-style", _value, clean_value, important),
+    do: expand_list_style_to_longhands(clean_value, important)
+
+  defp do_expand_to_longhands(css_property, value, _clean_value, _important),
+    do: [{String.to_atom(String.replace(css_property, "-", "_")), value}]
 
   def split_css_value(value) when is_binary(value) do
     trimmed = String.trim(value)
@@ -1187,21 +1174,28 @@ defmodule LiveStyle.Shorthand do
     ]
 
     if String.contains?(value, "/") do
-      [h_part, v_part] = String.split(value, "/", parts: 2) |> Enum.map(&String.trim/1)
-      h_values = split_shorthand_value(h_part)
-      v_values = split_shorthand_value(v_part)
-      h4 = expand_to_4(h_values)
-      v4 = expand_to_4(v_values)
-
-      Enum.zip(props, Enum.zip(h4, v4))
-      |> Enum.map(fn {prop, {h, v}} ->
-        combined = if h == v, do: h, else: "#{h} #{v}"
-        {prop, combined <> important}
-      end)
+      expand_border_radius_with_slash(value, props, important)
     else
       expand_4_value_shorthand(value, props, important)
     end
   end
+
+  defp expand_border_radius_with_slash(value, props, important) do
+    [h_part, v_part] = String.split(value, "/", parts: 2) |> Enum.map(&String.trim/1)
+    h_values = split_shorthand_value(h_part)
+    v_values = split_shorthand_value(v_part)
+    h4 = expand_to_4(h_values)
+    v4 = expand_to_4(v_values)
+
+    Enum.zip(props, Enum.zip(h4, v4))
+    |> Enum.map(fn {prop, {h, v}} ->
+      combined = combine_radius_values(h, v)
+      {prop, combined <> important}
+    end)
+  end
+
+  defp combine_radius_values(h, h), do: h
+  defp combine_radius_values(h, v), do: "#{h} #{v}"
 
   defp expand_to_4([v]), do: [v, v, v, v]
   defp expand_to_4([v, h]), do: [v, h, v, h]

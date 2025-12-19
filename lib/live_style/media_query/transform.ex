@@ -107,27 +107,31 @@ defmodule LiveStyle.MediaQuery.Transform do
 
     # Apply transformations to the value map
     Enum.reduce(transformations, value_map, fn {old_key, new_key}, acc ->
-      if old_key != new_key and Map.has_key?(acc, old_key) do
-        value = Map.get(acc, old_key)
-
-        acc
-        |> Map.delete(old_key)
-        |> Map.put(new_key, value)
-      else
-        # Try atom key
-        old_key_atom = String.to_atom(old_key)
-
-        if Map.has_key?(acc, old_key_atom) do
-          value = Map.get(acc, old_key_atom)
-
-          acc
-          |> Map.delete(old_key_atom)
-          |> Map.put(new_key, value)
-        else
-          acc
-        end
-      end
+      apply_transformation(acc, old_key, new_key)
     end)
+  end
+
+  defp apply_transformation(acc, old_key, old_key), do: acc
+
+  defp apply_transformation(acc, old_key, new_key) do
+    cond do
+      Map.has_key?(acc, old_key) ->
+        replace_key(acc, old_key, new_key)
+
+      Map.has_key?(acc, String.to_atom(old_key)) ->
+        replace_key(acc, String.to_atom(old_key), new_key)
+
+      true ->
+        acc
+    end
+  end
+
+  defp replace_key(acc, old_key, new_key) do
+    value = Map.get(acc, old_key)
+
+    acc
+    |> Map.delete(old_key)
+    |> Map.put(new_key, value)
   end
 
   defp parse_media_query(query) do

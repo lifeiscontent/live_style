@@ -100,23 +100,32 @@ defmodule LiveStyle.Data.Parser do
   def logical_properties do
     "logical_properties.txt"
     |> read_data_lines()
-    |> Enum.reduce({%{}, %{}}, fn line, {ltr_acc, rtl_acc} ->
-      case String.split(line, ";", parts: 3) do
-        [logical, ltr, rtl] ->
-          logical = String.trim(logical)
-          ltr_val = String.trim(ltr)
-          rtl_val = String.trim(rtl)
-
-          ltr_acc = if ltr_val != "", do: Map.put(ltr_acc, logical, ltr_val), else: ltr_acc
-          rtl_acc = if rtl_val != "", do: Map.put(rtl_acc, logical, rtl_val), else: rtl_acc
-
-          {ltr_acc, rtl_acc}
-
-        _ ->
-          {ltr_acc, rtl_acc}
-      end
-    end)
+    |> Enum.reduce({%{}, %{}}, &parse_logical_property_line/2)
   end
+
+  defp parse_logical_property_line(line, {ltr_acc, rtl_acc}) do
+    case String.split(line, ";", parts: 3) do
+      [logical, ltr, rtl] ->
+        build_logical_property_maps(logical, ltr, rtl, ltr_acc, rtl_acc)
+
+      _ ->
+        {ltr_acc, rtl_acc}
+    end
+  end
+
+  defp build_logical_property_maps(logical, ltr, rtl, ltr_acc, rtl_acc) do
+    logical = String.trim(logical)
+    ltr_val = String.trim(ltr)
+    rtl_val = String.trim(rtl)
+
+    ltr_acc = add_non_empty(ltr_acc, logical, ltr_val)
+    rtl_acc = add_non_empty(rtl_acc, logical, rtl_val)
+
+    {ltr_acc, rtl_acc}
+  end
+
+  defp add_non_empty(acc, _key, ""), do: acc
+  defp add_non_empty(acc, key, val), do: Map.put(acc, key, val)
 
   @doc """
   Parses logical values mappings from data file.

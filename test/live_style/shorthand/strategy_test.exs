@@ -9,7 +9,7 @@ defmodule LiveStyle.Shorthand.StrategyTest do
   use LiveStyle.TestCase, async: true
 
   alias LiveStyle.Shorthand.Strategy
-  alias LiveStyle.Shorthand.Strategy.{KeepShorthands, ExpandToLonghands, RejectShorthands}
+  alias LiveStyle.Shorthand.Strategy.{ExpandToLonghands, KeepShorthands, RejectShorthands}
 
   # Common options passed to strategy functions
   @opts Strategy.opts()

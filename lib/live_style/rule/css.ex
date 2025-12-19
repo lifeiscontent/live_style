@@ -69,12 +69,10 @@ defmodule LiveStyle.Rule.CSS do
     # Order preserved: first value is the preferred one, subsequent values are fallbacks
     # CSS applies in order, so last declaration wins if supported
     decls =
-      values
-      |> Enum.map(fn val ->
+      Enum.map_join(values, ";", fn val ->
         {ltr_prop, ltr_val} = RTL.generate_ltr(property, val)
         "#{ltr_prop}:#{ltr_val}"
       end)
-      |> Enum.join(";")
 
     selector = build_selector(class_name, selector_suffix, at_rule)
     ltr_css = "#{selector}{#{decls}}"

@@ -177,7 +177,7 @@ defmodule LiveStyle.StyleXParityTest do
 
   # ============================================================================
   # Test: "media queries"
-  # StyleX Input: { backgroundColor: { default: 'red', '@media (min-width: 1000px)': 'blue', '@media (min-width: 2000px)': 'purple' } }
+  # StyleX Input: { backgroundColor: { default: 'red', '@media ...': 'blue', '@media ...': 'purple' } }
   # ============================================================================
 
   defmodule MediaQueries do
@@ -194,7 +194,7 @@ defmodule LiveStyle.StyleXParityTest do
 
   # ============================================================================
   # Test: "supports queries"
-  # StyleX Input: { backgroundColor: { default: 'red', '@supports (hover: hover)': 'blue', '@supports not (hover: hover)': 'purple' } }
+  # StyleX Input: { backgroundColor: { default: 'red', '@supports ...': 'blue', '@supports not ...': 'purple' } }
   # ============================================================================
 
   defmodule SupportsQueries do
@@ -211,7 +211,7 @@ defmodule LiveStyle.StyleXParityTest do
 
   # ============================================================================
   # Test: "media query with pseudo-classes"
-  # StyleX Input: { fontSize: { default: '1rem', '@media (min-width: 800px)': { default: '2rem', ':hover': '2.2rem' } } }
+  # StyleX Input: { fontSize: { default: '1rem', '@media ...': { default: '2rem', ':hover': '2.2rem' } } }
   # ============================================================================
 
   defmodule MediaQueryWithPseudo do
@@ -426,7 +426,7 @@ defmodule LiveStyle.StyleXParityTest do
     end
   end
 
-  describe "StyleX test: '\"::before\" and \"::after\"'" do
+  describe ~s(StyleX test: "::before" and "::after") do
     test "exact output match" do
       # Expected StyleX output:
       # ["x16oeupf", {ltr: ".x16oeupf::before{color:red}", rtl: null}, 8000]
@@ -490,7 +490,7 @@ defmodule LiveStyle.StyleXParityTest do
     test "exact output match" do
       # Expected StyleX output:
       # ["xrkmrrc", {ltr: ".xrkmrrc{background-color:red}", rtl: null}, 3000]
-      # ["xw6up8c", {ltr: "@media (min-width: 1000px) and (max-width: 1999.99px){.xw6up8c.xw6up8c{background-color:blue}}", rtl: null}, 3200]
+      # ["xw6up8c", {ltr: "@media ...{.xw6up8c.xw6up8c{background-color:blue}}", rtl: null}, 3200]
       # ["x1ssfqz5", {ltr: "@media (min-width: 2000px){.x1ssfqz5.x1ssfqz5{background-color:purple}}", rtl: null}, 3200]
 
       manifest = get_manifest()
@@ -588,7 +588,7 @@ defmodule LiveStyle.StyleXParityTest do
 
   # ============================================================================
   # Test: "viewTransitionClass basic object"
-  # StyleX Input: { group: {transitionProperty: 'none'}, imagePair: {borderRadius: 16}, old: {animationDuration: '0.5s'}, new: {animationTimingFunction: 'ease-out'} }
+  # StyleX Input: { group: {transitionProperty: 'none'}, imagePair: {borderRadius: 16}, ... }
   # ============================================================================
 
   defmodule ViewTransitionBasic do
@@ -605,7 +605,7 @@ defmodule LiveStyle.StyleXParityTest do
   describe "StyleX test: 'viewTransitionClass basic object'" do
     test "exact output match" do
       # Expected StyleX output:
-      # ["xchu1hv", {ltr: "::view-transition-group(*.xchu1hv){transition-property:none;}::view-transition-image-pair(*.xchu1hv){border-radius:16px;}::view-transition-old(*.xchu1hv){animation-duration:.5s;}::view-transition-new(*.xchu1hv){animation-timing-function:ease-out;}", rtl: null}, 1]
+      # ["xchu1hv", {ltr: "::view-transition-group(*.xchu1hv){...}...", rtl: null}, 1]
 
       manifest = get_manifest()
 
@@ -618,7 +618,7 @@ defmodule LiveStyle.StyleXParityTest do
 
   # ============================================================================
   # Test: "viewTransitionClass using keyframes"
-  # StyleX Input: { old: {animationName: fadeOut, animationDuration: '1s'}, new: {animationName: fadeIn, animationDuration: '1s'} }
+  # StyleX Input: { old: {animationName: fadeOut, ...}, new: {animationName: fadeIn, ...} }
   # ============================================================================
 
   defmodule ViewTransitionWithKeyframes do
@@ -688,7 +688,7 @@ defmodule LiveStyle.StyleXParityTest do
   describe "StyleX test: 'positionTry basic object'" do
     test "exact output match" do
       # Expected StyleX output:
-      # ["--xhs37kq", {ltr: "@position-try --xhs37kq {height:height;height:100px;left:left;left:0;position-anchor:position-anchor;position-anchor:--anchor;top:top;top:0;width:width;width:100px;}", rtl: ...}, 0]
+      # ["--xhs37kq", {ltr: "@position-try --xhs37kq {...}", rtl: ...}, 0]
 
       manifest = get_manifest()
       position_try = manifest.position_try["LiveStyle.StyleXParityTest.PositionTryBasic.test"]

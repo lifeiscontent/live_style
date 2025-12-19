@@ -21,11 +21,10 @@ defmodule LiveStyle.Rule do
       # => %{class_string: "x1234 x5678", ...}
   """
 
-  alias LiveStyle.{Hash, Include, Manifest, Value}
-
-  # ===========================================================================
-  # Public API
-  # ===========================================================================
+  alias LiveStyle.{Hash, Include, Manifest, Priority, Value}
+  alias LiveStyle.MediaQuery.Transform, as: MediaQueryTransform
+  alias LiveStyle.Rule.CSS, as: RuleCSS
+  alias LiveStyle.Shorthand.Strategy, as: ShorthandStrategy
 
   @doc """
   Defines a static style rule.
@@ -44,24 +43,32 @@ defmodule LiveStyle.Rule do
   def define(module, name, declarations) do
     key = Manifest.simple_key(module, name)
 
-    # Resolve __include__ entries first
-    resolved_declarations = Include.resolve(declarations, module)
+    # Check if this rule already exists in the manifest (from pre-compilation)
+    # If so, skip the write to avoid race conditions during parallel test loading
+    manifest = LiveStyle.Storage.read()
 
-    # Process declarations into atomic classes
-    {atomic_classes, class_string} = process_declarations(resolved_declarations)
+    if Manifest.get_rule(manifest, key) do
+      :ok
+    else
+      # Resolve __include__ entries first
+      resolved_declarations = Include.resolve(declarations, module)
 
-    entry = %{
-      class_string: class_string,
-      atomic_classes: atomic_classes,
-      declarations: resolved_declarations,
-      dynamic: false
-    }
+      # Process declarations into atomic classes
+      {atomic_classes, class_string} = process_declarations(resolved_declarations)
 
-    LiveStyle.Storage.update(fn manifest ->
-      Manifest.put_rule(manifest, key, entry)
-    end)
+      entry = %{
+        class_string: class_string,
+        atomic_classes: atomic_classes,
+        declarations: resolved_declarations,
+        dynamic: false
+      }
 
-    :ok
+      LiveStyle.Storage.update(fn manifest ->
+        Manifest.put_rule(manifest, key, entry)
+      end)
+
+      :ok
+    end
   end
 
   @doc """
@@ -84,23 +91,30 @@ defmodule LiveStyle.Rule do
   def define_dynamic(module, name, all_props, param_names) do
     key = Manifest.simple_key(module, name)
 
-    # For dynamic rules, generate CSS classes that use var(--x-prop) references
-    # The actual values are set at runtime via inline styles
-    {atomic_classes, class_string} = process_dynamic_declarations(all_props)
+    # Check if this rule already exists in the manifest (from pre-compilation)
+    manifest = LiveStyle.Storage.read()
 
-    entry = %{
-      class_string: class_string,
-      atomic_classes: atomic_classes,
-      all_props: all_props,
-      param_names: param_names,
-      dynamic: true
-    }
+    if Manifest.get_rule(manifest, key) do
+      :ok
+    else
+      # For dynamic rules, generate CSS classes that use var(--x-prop) references
+      # The actual values are set at runtime via inline styles
+      {atomic_classes, class_string} = process_dynamic_declarations(all_props)
 
-    LiveStyle.Storage.update(fn manifest ->
-      Manifest.put_rule(manifest, key, entry)
-    end)
+      entry = %{
+        class_string: class_string,
+        atomic_classes: atomic_classes,
+        all_props: all_props,
+        param_names: param_names,
+        dynamic: true
+      }
 
-    :ok
+      LiveStyle.Storage.update(fn manifest ->
+        Manifest.put_rule(manifest, key, entry)
+      end)
+
+      :ok
+    end
   end
 
   @doc """
@@ -130,10 +144,6 @@ defmodule LiveStyle.Rule do
         entry
     end
   end
-
-  # ===========================================================================
-  # Declaration Processing
-  # ===========================================================================
 
   @doc false
   def process_declarations(declarations) do
@@ -175,10 +185,6 @@ defmodule LiveStyle.Rule do
 
     {atomic, class_string}
   end
-
-  # ===========================================================================
-  # Conditional Value Detection
-  # ===========================================================================
 
   defp conditional_value?(value) when is_map(value) do
     # A map is conditional if:
@@ -241,16 +247,12 @@ defmodule LiveStyle.Rule do
 
   defp css_property_key?(_), do: false
 
-  # ===========================================================================
-  # Simple Declaration Processing
-  # ===========================================================================
-
   defp process_simple_declarations(declarations) do
     # Expand shorthand properties based on style resolution mode
     expanded =
       declarations
       |> Enum.flat_map(fn {prop, value} ->
-        LiveStyle.Shorthand.Strategy.expand_declaration(prop, value)
+        ShorthandStrategy.expand_declaration(prop, value)
       end)
 
     # Separate nil values from non-nil values
@@ -294,9 +296,9 @@ defmodule LiveStyle.Rule do
 
             # Generate StyleX-compatible metadata
             {ltr_css, rtl_css} =
-              LiveStyle.Rule.CSS.generate_metadata(class_name, css_prop, css_value, nil, nil)
+              RuleCSS.generate_metadata(class_name, css_prop, css_value, nil, nil)
 
-            priority = LiveStyle.Priority.calculate(css_prop, nil, nil)
+            priority = Priority.calculate(css_prop, nil, nil)
 
             {css_prop,
              %{
@@ -330,111 +332,79 @@ defmodule LiveStyle.Rule do
     LiveStyle.Fallback.process_first_that_works(css_prop, values)
   end
 
-  # ===========================================================================
-  # Conditional Declaration Processing
-  # ===========================================================================
-
   defp process_conditional_declarations(declarations) do
     declarations
     |> Enum.flat_map(fn {prop, value_map} ->
       css_prop = Value.to_css_property(prop)
 
       # Use style resolution for conditional properties
-      LiveStyle.Shorthand.Strategy.expand_shorthand_conditions(prop, css_prop, value_map)
+      ShorthandStrategy.expand_shorthand_conditions(prop, css_prop, value_map)
     end)
-    |> Enum.flat_map(fn {prop, value_map} ->
-      props = [prop]
-
-      Enum.flat_map(props, fn actual_prop ->
-        css_prop = Value.to_css_property(actual_prop)
-
-        # Apply StyleX's "last media query wins" transformation
-        transformed_value_map = LiveStyle.MediaQuery.Transform.transform(value_map)
-
-        # Flatten nested conditional maps into a list of {selector, value} tuples
-        flattened = flatten_conditional_value(transformed_value_map, nil)
-
-        # Process each flattened condition
-        classes =
-          flattened
-          |> Enum.reject(fn {_selector, v} -> is_nil(v) end)
-          |> Enum.map(fn {selector, css_value} ->
-            # Use Value.to_css to apply StyleX normalizations
-            css_value_str = Value.to_css(css_value, css_prop)
-
-            case selector do
-              nil ->
-                # Default value - no selector suffix
-                class_name = Hash.atomic_class(css_prop, css_value_str, nil, nil, nil)
-
-                # Generate StyleX-compatible metadata
-                {ltr_css, rtl_css} =
-                  LiveStyle.Rule.CSS.generate_metadata(
-                    class_name,
-                    css_prop,
-                    css_value_str,
-                    nil,
-                    nil
-                  )
-
-                priority = LiveStyle.Priority.calculate(css_prop, nil, nil)
-
-                {:default,
-                 %{
-                   class: class_name,
-                   value: css_value_str,
-                   selector_suffix: nil,
-                   ltr: ltr_css,
-                   rtl: rtl_css,
-                   priority: priority
-                 }}
-
-              selector ->
-                # Determine if this is an at-rule, a selector suffix, or both
-                # Possible formats:
-                # - ":hover" -> pseudo-class only
-                # - "@media (x)" -> at-rule only
-                # - "@media (x):hover" -> at-rule + pseudo-class
-                {selector_suffix, at_rule} = parse_combined_selector(selector)
-
-                class_name =
-                  Hash.atomic_class(css_prop, css_value_str, nil, selector_suffix, at_rule)
-
-                # Generate StyleX-compatible metadata
-                {ltr_css, rtl_css} =
-                  LiveStyle.Rule.CSS.generate_metadata(
-                    class_name,
-                    css_prop,
-                    css_value_str,
-                    selector_suffix,
-                    at_rule
-                  )
-
-                priority = LiveStyle.Priority.calculate(css_prop, selector_suffix, at_rule)
-
-                {selector,
-                 %{
-                   class: class_name,
-                   value: css_value_str,
-                   selector_suffix: selector_suffix,
-                   at_rule: at_rule,
-                   ltr: ltr_css,
-                   rtl: rtl_css,
-                   priority: priority
-                 }}
-            end
-          end)
-          |> Map.new()
-
-        [{css_prop, %{classes: classes}}]
-      end)
-    end)
+    |> Enum.flat_map(&process_expanded_conditional/1)
     |> Map.new()
   end
 
-  # ===========================================================================
-  # Conditional Value Flattening
-  # ===========================================================================
+  defp process_expanded_conditional({prop, value_map}) do
+    css_prop = Value.to_css_property(prop)
+
+    # Apply StyleX's "last media query wins" transformation
+    transformed_value_map = MediaQueryTransform.transform(value_map)
+
+    # Flatten nested conditional maps into a list of {selector, value} tuples
+    flattened = flatten_conditional_value(transformed_value_map, nil)
+
+    # Process each flattened condition
+    classes =
+      flattened
+      |> Enum.reject(fn {_selector, v} -> is_nil(v) end)
+      |> Enum.map(fn {selector, css_value} ->
+        build_conditional_class_entry(css_prop, selector, css_value)
+      end)
+      |> Map.new()
+
+    [{css_prop, %{classes: classes}}]
+  end
+
+  # Build a class entry for conditional styles (with selector or at-rule)
+  defp build_conditional_class_entry(css_prop, nil, css_value) do
+    # Default value - no selector suffix
+    css_value_str = Value.to_css(css_value, css_prop)
+    class_name = Hash.atomic_class(css_prop, css_value_str, nil, nil, nil)
+    {ltr_css, rtl_css} = RuleCSS.generate_metadata(class_name, css_prop, css_value_str, nil, nil)
+    priority = Priority.calculate(css_prop, nil, nil)
+
+    {:default,
+     %{
+       class: class_name,
+       value: css_value_str,
+       selector_suffix: nil,
+       ltr: ltr_css,
+       rtl: rtl_css,
+       priority: priority
+     }}
+  end
+
+  defp build_conditional_class_entry(css_prop, selector, css_value) do
+    css_value_str = Value.to_css(css_value, css_prop)
+    {selector_suffix, at_rule} = parse_combined_selector(selector)
+    class_name = Hash.atomic_class(css_prop, css_value_str, nil, selector_suffix, at_rule)
+
+    {ltr_css, rtl_css} =
+      RuleCSS.generate_metadata(class_name, css_prop, css_value_str, selector_suffix, at_rule)
+
+    priority = Priority.calculate(css_prop, selector_suffix, at_rule)
+
+    {selector,
+     %{
+       class: class_name,
+       value: css_value_str,
+       selector_suffix: selector_suffix,
+       at_rule: at_rule,
+       ltr: ltr_css,
+       rtl: rtl_css,
+       priority: priority
+     }}
+  end
 
   # Recursively flatten nested conditional values into {selector, value} tuples
   # Example: %{:default => "black", ":hover" => %{:default => "red", ":focus" => "blue"}}
@@ -493,10 +463,6 @@ defmodule LiveStyle.Rule do
     [{parent_selector, value}]
   end
 
-  # ===========================================================================
-  # Selector Combining
-  # ===========================================================================
-
   # Combine parent and child selectors
   defp combine_selectors(nil, key) when key in [:default, "default"], do: nil
   defp combine_selectors(parent, key) when key in [:default, "default"], do: parent
@@ -514,10 +480,6 @@ defmodule LiveStyle.Rule do
   defp combine_selectors(parent, condition) when is_binary(condition) do
     parent <> condition
   end
-
-  # ===========================================================================
-  # Selector Parsing
-  # ===========================================================================
 
   # Parse a combined selector that may contain both an at-rule and a pseudo-class
   # Examples:
@@ -555,120 +517,94 @@ defmodule LiveStyle.Rule do
   defp find_last_paren_and_pseudo(selector, pos) do
     char = :binary.part(selector, pos, 1)
 
-    cond do
-      char == ")" ->
-        # Found closing paren, check if there's a : after it
-        after_paren = binary_part(selector, pos + 1, byte_size(selector) - pos - 1)
-
-        case after_paren do
-          <<":", _::binary>> ->
-            at_rule = binary_part(selector, 0, pos + 1)
-            {at_rule, after_paren}
-
-          <<"@", _::binary>> ->
-            # Another at-rule follows, keep looking backward
-            find_last_paren_and_pseudo(selector, pos - 1)
-
-          "" ->
-            # End of string, no pseudo-class
-            nil
-
-          _ ->
-            # Something else, keep looking backward
-            find_last_paren_and_pseudo(selector, pos - 1)
-        end
-
-      true ->
-        # Not a paren, keep looking backward
-        find_last_paren_and_pseudo(selector, pos - 1)
+    if char == ")" do
+      check_after_paren(selector, pos)
+    else
+      # Not a paren, keep looking backward
+      find_last_paren_and_pseudo(selector, pos - 1)
     end
   end
 
-  # ===========================================================================
-  # Pseudo-Element Processing
-  # ===========================================================================
+  defp check_after_paren(selector, pos) do
+    after_paren = binary_part(selector, pos + 1, byte_size(selector) - pos - 1)
+
+    case after_paren do
+      <<":", _::binary>> ->
+        at_rule = binary_part(selector, 0, pos + 1)
+        {at_rule, after_paren}
+
+      <<"@", _::binary>> ->
+        # Another at-rule follows, keep looking backward
+        find_last_paren_and_pseudo(selector, pos - 1)
+
+      "" ->
+        # End of string, no pseudo-class
+        nil
+
+      _ ->
+        # Something else, keep looking backward
+        find_last_paren_and_pseudo(selector, pos - 1)
+    end
+  end
 
   # Process pseudo-element declarations like "::after": %{content: "''", display: "block"}
   # Also handles conditional values within pseudo-elements like "::before": [color: {:":hover", "blue"}]
   defp process_pseudo_element_declarations(declarations) do
     declarations
     |> Enum.flat_map(fn {pseudo_element, props_map} ->
-      pseudo_str = to_string(pseudo_element)
-
-      props_map
-      |> Enum.flat_map(fn {prop, value} ->
-        css_prop = Value.to_css_property(prop)
-
-        # Check if value is conditional (has pseudo-class or at-rule)
-        if conditional_value?(value) do
-          # Flatten conditional values and process each
-          flatten_conditional_value(value, nil)
-          |> Enum.map(fn {selector, css_val} ->
-            css_value = Value.to_css(css_val, css_prop)
-
-            # Combine pseudo-element with pseudo-class: "::before:hover"
-            full_selector =
-              if selector do
-                pseudo_str <> selector
-              else
-                pseudo_str
-              end
-
-            class_name = Hash.atomic_class(css_prop, css_value, full_selector, nil, nil)
-
-            # Generate StyleX-compatible metadata
-            {ltr_css, rtl_css} =
-              LiveStyle.Rule.CSS.generate_metadata(
-                class_name,
-                css_prop,
-                css_value,
-                full_selector,
-                nil
-              )
-
-            priority = LiveStyle.Priority.calculate(css_prop, full_selector, nil)
-
-            {"#{css_prop}#{full_selector}",
-             %{
-               class: class_name,
-               value: css_value,
-               pseudo_element: full_selector,
-               ltr: ltr_css,
-               rtl: rtl_css,
-               priority: priority
-             }}
-          end)
-        else
-          css_value = Value.to_css(value, css_prop)
-          # Use pseudo_element (e.g., "::after") as the pseudo_element parameter
-          class_name = Hash.atomic_class(css_prop, css_value, pseudo_str, nil, nil)
-
-          # Generate StyleX-compatible metadata
-          {ltr_css, rtl_css} =
-            LiveStyle.Rule.CSS.generate_metadata(class_name, css_prop, css_value, pseudo_str, nil)
-
-          priority = LiveStyle.Priority.calculate(css_prop, pseudo_str, nil)
-
-          [
-            {"#{css_prop}#{pseudo_str}",
-             %{
-               class: class_name,
-               value: css_value,
-               pseudo_element: pseudo_str,
-               ltr: ltr_css,
-               rtl: rtl_css,
-               priority: priority
-             }}
-          ]
-        end
-      end)
+      process_pseudo_props(to_string(pseudo_element), props_map)
     end)
     |> Map.new()
   end
 
-  # ===========================================================================
-  # Dynamic Declaration Processing
-  # ===========================================================================
+  defp process_pseudo_props(pseudo_str, props_map) do
+    Enum.flat_map(props_map, fn {prop, value} ->
+      process_pseudo_prop(pseudo_str, prop, value)
+    end)
+  end
+
+  defp process_pseudo_prop(pseudo_str, prop, value) do
+    css_prop = Value.to_css_property(prop)
+
+    if conditional_value?(value) do
+      process_conditional_pseudo_prop(pseudo_str, css_prop, value)
+    else
+      process_simple_pseudo_prop(pseudo_str, css_prop, value)
+    end
+  end
+
+  defp process_conditional_pseudo_prop(pseudo_str, css_prop, value) do
+    value
+    |> flatten_conditional_value(nil)
+    |> Enum.map(fn {selector, css_val} ->
+      full_selector = build_full_selector(pseudo_str, selector)
+      build_pseudo_class_entry(css_prop, css_val, full_selector)
+    end)
+  end
+
+  defp process_simple_pseudo_prop(pseudo_str, css_prop, value) do
+    [build_pseudo_class_entry(css_prop, value, pseudo_str)]
+  end
+
+  defp build_full_selector(pseudo_str, nil), do: pseudo_str
+  defp build_full_selector(pseudo_str, selector), do: pseudo_str <> selector
+
+  defp build_pseudo_class_entry(css_prop, value, selector) do
+    css_value = Value.to_css(value, css_prop)
+    class_name = Hash.atomic_class(css_prop, css_value, selector, nil, nil)
+    {ltr_css, rtl_css} = RuleCSS.generate_metadata(class_name, css_prop, css_value, selector, nil)
+    priority = Priority.calculate(css_prop, selector, nil)
+
+    {"#{css_prop}#{selector}",
+     %{
+       class: class_name,
+       value: css_value,
+       pseudo_element: selector,
+       ltr: ltr_css,
+       rtl: rtl_css,
+       priority: priority
+     }}
+  end
 
   defp process_dynamic_declarations(props) do
     # For dynamic rules, the CSS value is var(--x-prop)
@@ -687,8 +623,7 @@ defmodule LiveStyle.Rule do
     class_string =
       atomic
       |> Map.values()
-      |> Enum.map(& &1.class)
-      |> Enum.join(" ")
+      |> Enum.map_join(" ", & &1.class)
 
     {atomic, class_string}
   end

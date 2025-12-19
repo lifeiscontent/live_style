@@ -36,20 +36,12 @@ defmodule LiveStyle.Property do
 
   alias LiveStyle.Data
 
-  # ===========================================================================
-  # Load data at compile time
-  # ===========================================================================
-
   @property_priorities Data.property_priorities()
   @unitless_properties Data.unitless_properties()
   @time_properties Data.time_properties()
   @position_try_properties Data.position_try_properties()
   @rtl_value_properties Data.rtl_value_properties()
   @disallowed_shorthands Data.disallowed_shorthands()
-
-  # ===========================================================================
-  # Property Category Lookup (compile-time generated)
-  # ===========================================================================
 
   @doc """
   Returns the category of a CSS property.
@@ -90,10 +82,6 @@ defmodule LiveStyle.Property do
   # Default to longhand_logical for unlisted properties
   def category(_), do: :longhand_logical
 
-  # ===========================================================================
-  # Unitless Property Check (compile-time generated)
-  # ===========================================================================
-
   @doc """
   Returns true if the property should not have a unit appended to numeric values.
 
@@ -122,10 +110,6 @@ defmodule LiveStyle.Property do
 
   def unitless?(_), do: false
 
-  # ===========================================================================
-  # Time Property Check (compile-time generated)
-  # ===========================================================================
-
   @doc """
   Returns true if the property uses time units (ms/s) for numeric values.
 
@@ -149,10 +133,6 @@ defmodule LiveStyle.Property do
 
   def time?(_), do: false
 
-  # ===========================================================================
-  # Position-Try Property Check (compile-time generated)
-  # ===========================================================================
-
   @doc """
   Returns true if the property is allowed in @position-try rules.
 
@@ -175,10 +155,6 @@ defmodule LiveStyle.Property do
   end
 
   def position_try?(_), do: false
-
-  # ===========================================================================
-  # RTL Value Property Check (compile-time generated)
-  # ===========================================================================
 
   @doc """
   Returns true if the property needs value flipping in RTL mode.
@@ -206,10 +182,6 @@ defmodule LiveStyle.Property do
 
   def rtl_value?(_), do: false
 
-  # ===========================================================================
-  # Disallowed Shorthand Check (compile-time generated)
-  # ===========================================================================
-
   @doc """
   Returns true if the property is a disallowed shorthand in strict mode.
 
@@ -229,10 +201,6 @@ defmodule LiveStyle.Property do
   end
 
   def disallowed_shorthand?(_), do: false
-
-  # ===========================================================================
-  # Unit Suffix Helper
-  # ===========================================================================
 
   @doc """
   Returns the appropriate unit suffix for a numeric value of this property.
@@ -258,10 +226,6 @@ defmodule LiveStyle.Property do
       true -> "px"
     end
   end
-
-  # ===========================================================================
-  # Accessors for data (useful for introspection/tests)
-  # ===========================================================================
 
   @doc "Returns all property priorities as a map."
   def priorities, do: @property_priorities

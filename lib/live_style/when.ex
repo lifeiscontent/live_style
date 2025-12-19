@@ -19,7 +19,7 @@ defmodule LiveStyle.When do
   ## Example
 
       defmodule MyComponent do
-        use LiveStyle
+        use LiveStyle.Sheet
         alias LiveStyle.When
         alias LiveStyle.Marker
 

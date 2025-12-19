@@ -29,9 +29,9 @@ defmodule Mix.Tasks.Compile.LiveStyle do
 
   @impl true
   def run(_args) do
-    LiveStyle.validate_var_references!()
+    LiveStyle.Compiler.validate_var_references!()
 
-    case LiveStyle.write_css(log: &log_write/1) do
+    case LiveStyle.Compiler.write_css(log: &log_write/1) do
       :ok -> {:ok, []}
       {:error, reason} -> {:error, [reason]}
     end
@@ -50,31 +50,13 @@ defmodule Mix.Tasks.Compile.LiveStyle do
 
   @impl true
   def manifests do
-    case get_manifest_path() do
-      nil -> []
-      path -> [path]
-    end
+    [LiveStyle.Storage.path()]
   end
 
   @impl true
   def clean do
-    case get_manifest_path() do
-      nil -> :ok
-      path -> File.rm(path)
-    end
-
-    File.rm(LiveStyle.output_path())
+    File.rm(LiveStyle.Storage.path())
+    File.rm(LiveStyle.Config.output_path())
     :ok
-  end
-
-  # Gets the manifest path from storage config (only for File storage)
-  defp get_manifest_path do
-    {storage_module, storage_opts} = LiveStyle.storage()
-
-    if storage_module == LiveStyle.Storage.File do
-      Keyword.get(storage_opts, :path, "_build/live_style_manifest.etf")
-    else
-      nil
-    end
   end
 end

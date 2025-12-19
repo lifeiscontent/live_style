@@ -28,10 +28,6 @@ defmodule LiveStyle.Shorthand.Strategy do
   @callback expand_declaration(atom(), any(), map()) :: [{atom(), any()}]
   @callback expand_shorthand_conditions(atom(), String.t(), map(), map()) :: [{atom(), any()}]
 
-  # ===========================================================================
-  # Backend Dispatch
-  # ===========================================================================
-
   @doc """
   Returns the configured strategy module and options.
 
@@ -79,10 +75,6 @@ defmodule LiveStyle.Shorthand.Strategy do
     backend_module().expand_shorthand_conditions(key, css_property, conditions, expansion_opts)
   end
 
-  # ===========================================================================
-  # Shared Helpers (used by strategy implementations)
-  # ===========================================================================
-
   @doc false
   def get_expansion_fn(css_property, opts) do
     shorthand_expansions = opts[:shorthand_expansions] || %{}
@@ -99,16 +91,21 @@ defmodule LiveStyle.Shorthand.Strategy do
   def expand_conditions_map(conditions, expansion_fn) do
     Enum.reduce(conditions, %{}, fn {condition, value}, acc ->
       expanded = apply(LiveStyle.Shorthand, expansion_fn, [value])
-
-      Enum.reduce(expanded, acc, fn {prop, val}, inner_acc ->
-        if is_nil(val) do
-          inner_acc
-        else
-          prop_conditions = Map.get(inner_acc, prop, %{})
-          Map.put(inner_acc, prop, Map.put(prop_conditions, condition, val))
-        end
-      end)
+      merge_expanded_condition(expanded, condition, acc)
     end)
+  end
+
+  defp merge_expanded_condition(expanded, condition, acc) do
+    Enum.reduce(expanded, acc, fn {prop, val}, inner_acc ->
+      add_prop_condition(inner_acc, prop, condition, val)
+    end)
+  end
+
+  defp add_prop_condition(acc, _prop, _condition, nil), do: acc
+
+  defp add_prop_condition(acc, prop, condition, val) do
+    prop_conditions = Map.get(acc, prop, %{})
+    Map.put(acc, prop, Map.put(prop_conditions, condition, val))
   end
 
   @doc false

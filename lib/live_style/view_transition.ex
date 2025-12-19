@@ -52,17 +52,22 @@ defmodule LiveStyle.ViewTransition do
   """
   @spec define(module(), atom(), map() | keyword(), String.t()) :: :ok
   def define(module, name, styles, css_name) do
-    styles = normalize_to_map(styles)
     key = Manifest.simple_key(module, name)
+    manifest = LiveStyle.Storage.read()
 
-    entry = %{
-      css_name: css_name,
-      styles: styles
-    }
+    # Skip if already exists (from pre-compilation)
+    unless Manifest.get_view_transition(manifest, key) do
+      styles = normalize_to_map(styles)
 
-    LiveStyle.Storage.update(fn manifest ->
-      Manifest.put_view_transition(manifest, key, entry)
-    end)
+      entry = %{
+        css_name: css_name,
+        styles: styles
+      }
+
+      LiveStyle.Storage.update(fn manifest ->
+        Manifest.put_view_transition(manifest, key, entry)
+      end)
+    end
 
     :ok
   end
@@ -128,8 +133,7 @@ defmodule LiveStyle.ViewTransition do
     # Convert to list preserving order (keyword list stays as-is, map gets converted)
     style_list = if is_list(styles), do: styles, else: Enum.to_list(styles)
 
-    style_list
-    |> Enum.map(fn {pseudo_key, declarations} ->
+    Enum.map_join(style_list, "", fn {pseudo_key, declarations} ->
       # Normalize pseudo key to CSS format (image_pair -> image-pair)
       css_pseudo =
         pseudo_key
@@ -146,20 +150,17 @@ defmodule LiveStyle.ViewTransition do
       # Generate style string in StyleX format: "property:value;"
       # IMPORTANT: Preserve the original property order, do NOT sort
       decl_str =
-        decl_list
-        |> Enum.map(fn {prop, value} ->
+        Enum.map_join(decl_list, "", fn {prop, value} ->
           css_prop = Value.to_css_property(prop)
           # Apply value normalization (numbers get px, timings normalized, leading zeros removed)
           css_value = Value.to_css(value, css_prop)
           "#{css_prop}:#{css_value};"
         end)
-        |> Enum.join("")
 
       # StyleX format: "::view-transition-{pseudo}:{styles};"
       # Note the trailing ; after styles - this creates ";;" between pseudos
       "::view-transition-#{css_pseudo}:#{decl_str};"
     end)
-    |> Enum.join("")
   end
 
   # Normalize keyword list or map to map

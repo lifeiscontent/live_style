@@ -1,24 +1,32 @@
 defmodule LiveStyle.MixProject do
   use Mix.Project
 
-  @version "0.4.1"
+  @version "0.5.0"
   @source_url "https://github.com/lifeiscontent/live_style"
 
   def project do
     [
       app: :live_style,
       version: @version,
-      elixir: "~> 1.14",
+      elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       package: package(),
       docs: docs(),
       dialyzer: dialyzer(),
+      aliases: aliases(),
       name: "LiveStyle",
       description: "Atomic CSS-in-Elixir for Phoenix LiveView, inspired by StyleX",
       source_url: @source_url,
       homepage_url: @source_url
+    ]
+  end
+
+  defp aliases do
+    [
+      # Pre-compile test files to ensure LiveStyle modules are in the manifest
+      test: ["live_style.setup_tests", "test"]
     ]
   end
 
@@ -65,7 +73,7 @@ defmodule LiveStyle.MixProject do
   defp dialyzer do
     [
       plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
-      plt_add_apps: [:mix]
+      plt_add_apps: [:mix, :ex_unit]
     ]
   end
 end

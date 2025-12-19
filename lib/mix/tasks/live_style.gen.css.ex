@@ -50,7 +50,7 @@ defmodule Mix.Tasks.LiveStyle.Gen.Css do
         aliases: [o: :output]
       )
 
-    output_path = Keyword.get_lazy(opts, :output, &LiveStyle.output_path/0)
+    output_path = Keyword.get_lazy(opts, :output, &LiveStyle.Config.output_path/0)
 
     # Clear storage and recompile
     LiveStyle.Storage.clear()

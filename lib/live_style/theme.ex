@@ -4,6 +4,79 @@ defmodule LiveStyle.Theme do
 
   Similar to StyleX's `createTheme`, this module handles creating themes
   that override CSS variables defined with `css_vars`.
+
+  ## How Themes Work
+
+  Themes generate a CSS class that overrides CSS variable values. When applied
+  to an element, all descendants inherit the overridden values.
+
+  ```css
+  /* Generated theme class */
+  .xabc123 {
+    --text-primary: var(--colors-gray-50);
+    --fill-page: var(--colors-gray-900);
+  }
+  ```
+
+  ## Recommended Pattern
+
+  Use a two-layer architecture for theming:
+
+  1. **`:colors`** - Raw color palette (not themed)
+  2. **`:semantic`** - Semantic tokens referencing colors (themed)
+
+      defmodule MyApp.Tokens do
+        use LiveStyle.Tokens
+
+        # Raw colors - the palette
+        css_vars :colors,
+          white: "#ffffff",
+          gray_900: "#111827",
+          gray_50: "#f9fafb",
+          indigo_500: "#6366f1"
+
+        # Semantic tokens - what components use
+        css_vars :semantic,
+          text_primary: css_var({:colors, :gray_900}),
+          fill_page: css_var({:colors, :white})
+
+        # Dark theme swaps which colors semantics point to
+        css_theme :semantic, :dark,
+          text_primary: css_var({:colors, :gray_50}),
+          fill_page: css_var({:colors, :gray_900})
+      end
+
+  ## Applying Themes
+
+  Use `css_theme/1` to get the theme class name:
+
+      # Apply to a container
+      <div class={css_theme({MyApp.Tokens, :semantic, :dark})}>
+        <!-- Children use dark theme -->
+      </div>
+
+      # Conditional theming
+      <div class={@dark_mode && css_theme({MyApp.Tokens, :semantic, :dark})}>
+        ...
+      </div>
+
+  ## Theme Scope
+
+  Themes are scoped to their container and all descendants. This enables:
+
+  - **Page-level themes**: Apply to `<html>` element
+  - **Section themes**: Different themes for different page sections
+  - **Component themes**: Override theme for specific components
+
+      # Page-level theme on <html>
+      <html class={@dark_mode && css_theme({MyApp.Tokens, :semantic, :dark})}>
+        ...
+      </html>
+
+      # Section-level theme override
+      <div class={css_theme({MyApp.Tokens, :semantic, :dark})}>
+        <p>I'm dark themed</p>
+      </div>
   """
 
   alias LiveStyle.Hash
@@ -14,29 +87,34 @@ defmodule LiveStyle.Theme do
   """
   @spec define(module(), atom(), atom(), map() | keyword(), String.t(), module() | nil) :: :ok
   def define(var_group_module, namespace, theme_name, overrides, css_name, theme_module \\ nil) do
-    overrides = normalize_to_map(overrides)
     theme_module = theme_module || var_group_module
     key = Manifest.namespaced_key(theme_module, namespace, theme_name)
+    manifest = LiveStyle.Storage.read()
 
-    # Convert override keys to CSS var names using the var group's module and namespace
-    css_overrides =
-      overrides
-      |> Enum.map(fn {var_name, value} ->
-        css_var_name = Hash.var_name(var_group_module, namespace, var_name)
-        {css_var_name, value}
+    # Skip if already exists (from pre-compilation)
+    unless Manifest.get_theme(manifest, key) do
+      overrides = normalize_to_map(overrides)
+
+      # Convert override keys to CSS var names using the var group's module and namespace
+      css_overrides =
+        overrides
+        |> Enum.map(fn {var_name, value} ->
+          css_var_name = Hash.var_name(var_group_module, namespace, var_name)
+          {css_var_name, value}
+        end)
+        |> Map.new()
+
+      entry = %{
+        css_name: css_name,
+        var_group_module: var_group_module,
+        var_group_namespace: namespace,
+        overrides: css_overrides
+      }
+
+      LiveStyle.Storage.update(fn manifest ->
+        Manifest.put_theme(manifest, key, entry)
       end)
-      |> Map.new()
-
-    entry = %{
-      css_name: css_name,
-      var_group_module: var_group_module,
-      var_group_namespace: namespace,
-      overrides: css_overrides
-    }
-
-    LiveStyle.Storage.update(fn manifest ->
-      Manifest.put_theme(manifest, key, entry)
-    end)
+    end
 
     :ok
   end

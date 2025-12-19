@@ -103,8 +103,8 @@ defmodule LiveStyle.PositionTryTest do
       # Browser handles RTL automatically for these
       css = generate_css()
 
-      assert css =~ "inset-inline-start" or css =~ "inset-inline-start"
-      assert css =~ "margin-inline-end" or css =~ "margin-inline-end"
+      assert css =~ "inset-inline-start"
+      assert css =~ "margin-inline-end"
     end
 
     test "no RTL override for logical properties" do

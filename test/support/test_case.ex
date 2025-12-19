@@ -3,7 +3,7 @@ defmodule LiveStyle.TestCase do
   Base test case for LiveStyle tests.
 
   This module provides a consistent test environment with:
-  - In-memory storage backend (default) for test isolation
+  - File-based storage with unique tmp paths for test isolation
   - Access to the manifest via `get_manifest/0`
   - CSS generation via `generate_css/0`
   - Hash computation helpers
@@ -24,22 +24,12 @@ defmodule LiveStyle.TestCase do
   ## Options
 
   - `:async` - Whether tests can run in parallel (default: true)
-  - `:storage` - Storage backend (default: `LiveStyle.Storage.Memory`)
   - `:shorthand_strategy` - Shorthand expansion strategy (atom, module, or `{module, opts}` tuple)
   - `:class_name_prefix` - Prefix for generated class names
   - `:debug_class_names` - Include property names in class names
   - `:font_size_px_to_rem` - Convert font-size px values to rem
   - `:font_size_root_px` - Root font size for px to rem conversion
   - `:use_css_layers` - Wrap CSS output in @layer blocks
-
-  ## Example with File Storage
-
-      defmodule FileStorageTest do
-        # Must be async: false when using file storage
-        use LiveStyle.TestCase, async: false, storage: LiveStyle.Storage.File
-
-        # Tests that specifically need to test file storage behavior
-      end
   """
 
   use ExUnit.CaseTemplate
@@ -53,73 +43,33 @@ defmodule LiveStyle.TestCase do
     :use_css_layers
   ]
 
-  @manifest_key {__MODULE__, :compiled_manifest}
-
   using opts do
     config_opts = Keyword.take(opts, @config_keys)
-    storage = Keyword.get(opts, :storage, LiveStyle.Storage.Memory)
 
     quote do
       import LiveStyle.TestCase.Helpers
 
       setup do
-        LiveStyle.TestCase.setup_test(
-          unquote(Macro.escape(config_opts)),
-          unquote(Macro.escape(storage))
-        )
+        LiveStyle.TestCase.setup_test(unquote(Macro.escape(config_opts)))
       end
     end
-  end
-
-  @doc """
-  Returns the manifest that was compiled when the test suite started.
-
-  This is cached in :persistent_term for efficient concurrent access.
-  The first call reads from file storage and caches it.
-  """
-  def compiled_manifest do
-    # Try to get from cache first (fast path)
-    case :persistent_term.get(@manifest_key, :not_found) do
-      :not_found ->
-        # Need to initialize - use a global lock to prevent race conditions
-        init_compiled_manifest()
-
-      manifest ->
-        manifest
-    end
-  end
-
-  defp init_compiled_manifest do
-    # Use :global.trans to ensure only one process initializes the cache
-    :global.trans({@manifest_key, self()}, fn ->
-      # Double-check inside the lock
-      case :persistent_term.get(@manifest_key, :not_found) do
-        :not_found ->
-          manifest = LiveStyle.Storage.File.read()
-          :persistent_term.put(@manifest_key, manifest)
-          manifest
-
-        manifest ->
-          manifest
-      end
-    end)
   end
 
   @doc false
-  def setup_test(config_opts, storage) do
-    # Set the storage backend for this test process
-    LiveStyle.Storage.set_backend(storage)
+  def setup_test(config_opts) do
+    # Generate a unique tmp path for this test process
+    unique_id = :erlang.unique_integer([:positive, :monotonic])
+    tmp_path = Path.join(System.tmp_dir!(), "live_style_test_#{unique_id}_manifest.etf")
 
-    # If using memory backend, populate it with the compiled manifest
-    storage_module =
-      case storage do
-        {module, _opts} -> module
-        module -> module
-      end
+    # Read the manifest from the default storage BEFORE setting the test path.
+    # This ensures we get all compiled test modules.
+    manifest = LiveStyle.Storage.read()
 
-    if storage_module == LiveStyle.Storage.Memory do
-      LiveStyle.Storage.Memory.write(compiled_manifest())
-    end
+    # Set the storage path for this test process
+    LiveStyle.Storage.set_path(tmp_path)
+
+    # Write the manifest to the test's tmp file
+    LiveStyle.Storage.write(manifest)
 
     # Apply any config overrides for this test
     for {key, value} <- config_opts do
@@ -128,7 +78,10 @@ defmodule LiveStyle.TestCase do
 
     # Cleanup on test exit
     ExUnit.Callbacks.on_exit(fn ->
-      LiveStyle.Storage.clear_backend()
+      # Clean up the tmp file
+      File.rm(tmp_path)
+      File.rm(tmp_path <> ".lock")
+      LiveStyle.Storage.clear_path()
       LiveStyle.Config.reset_all()
     end)
 

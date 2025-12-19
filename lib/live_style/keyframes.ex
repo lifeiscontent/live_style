@@ -24,26 +24,35 @@ defmodule LiveStyle.Keyframes do
   """
   @spec define(module(), atom(), map() | keyword()) :: String.t()
   def define(module, name, frames) do
-    normalized_frames = normalize_frames(frames)
-    css_name = Hash.keyframes_name(normalized_frames)
     key = Manifest.simple_key(module, name)
+    manifest = LiveStyle.Storage.read()
 
-    # Generate the StyleX-compatible metadata
-    ltr = generate_css(css_name, normalized_frames)
+    # Return existing if already defined (from pre-compilation)
+    case Manifest.get_keyframes(manifest, key) do
+      %{css_name: css_name} ->
+        css_name
 
-    entry = %{
-      css_name: css_name,
-      frames: normalized_frames,
-      ltr: ltr,
-      rtl: nil,
-      priority: 0
-    }
+      nil ->
+        normalized_frames = normalize_frames(frames)
+        css_name = Hash.keyframes_name(normalized_frames)
 
-    LiveStyle.Storage.update(fn manifest ->
-      Manifest.put_keyframes(manifest, key, entry)
-    end)
+        # Generate the StyleX-compatible metadata
+        ltr = generate_css(css_name, normalized_frames)
 
-    css_name
+        entry = %{
+          css_name: css_name,
+          frames: normalized_frames,
+          ltr: ltr,
+          rtl: nil,
+          priority: 0
+        }
+
+        LiveStyle.Storage.update(fn manifest ->
+          Manifest.put_keyframes(manifest, key, entry)
+        end)
+
+        css_name
+    end
   end
 
   @doc """
@@ -90,10 +99,6 @@ defmodule LiveStyle.Keyframes do
 
     "@keyframes #{css_name}{#{frame_css}}"
   end
-
-  # ===========================================================================
-  # Private Helpers
-  # ===========================================================================
 
   defp normalize_frames(frames) when is_list(frames), do: Map.new(frames)
   defp normalize_frames(frames) when is_map(frames), do: frames

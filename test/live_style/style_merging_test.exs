@@ -297,7 +297,7 @@ defmodule LiveStyle.StyleMergingTest do
         |> Enum.reject(&(&1 == ""))
 
       # Should have classes from padding_start_only
-      assert length(classes) >= 1
+      assert not Enum.empty?(classes)
     end
 
     test "longhands then shorthand - shorthand overrides some but keeps explicit longhands" do
@@ -349,7 +349,7 @@ defmodule LiveStyle.StyleMergingTest do
         |> Enum.reject(&(&1 == ""))
 
       # Should have classes for padding_end and the new padding
-      assert length(classes) >= 1
+      assert not Enum.empty?(classes)
     end
   end
 

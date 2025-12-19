@@ -44,11 +44,9 @@ defmodule LiveStyle.CSS do
   def expand_thumb_selector(selector) do
     if String.contains?(selector, "::thumb") do
       # Replace ::thumb with each vendor prefix and join with commas
-      @thumb_variants
-      |> Enum.map(fn variant ->
+      Enum.map_join(@thumb_variants, ", ", fn variant ->
         String.replace(selector, "::thumb", variant)
       end)
-      |> Enum.join(", ")
     else
       selector
     end
@@ -122,14 +120,10 @@ defmodule LiveStyle.CSS do
     "#{vars_count} vars, #{keyframes_count} keyframes, #{rules_count} rules, #{themes_count} themes"
   end
 
-  # ===========================================================================
-  # @property rules for typed variables
-  # ===========================================================================
-
   defp generate_properties(manifest) do
     manifest.vars
     |> Enum.filter(fn {_key, entry} -> entry.type != nil end)
-    |> Enum.map(fn {_key, entry} ->
+    |> Enum.map_join("\n", fn {_key, entry} ->
       %{css_name: css_name, type: type_info} = entry
       %{syntax: syntax, initial: initial} = type_info
       inherits = Map.get(type_info, :inherits, true)
@@ -142,7 +136,6 @@ defmodule LiveStyle.CSS do
       # Single line, double quotes around syntax, no trailing semicolon
       "@property #{css_name} { syntax: \"#{syntax}\"; inherits: #{inherits}; initial-value: #{initial_value} }"
     end)
-    |> Enum.join("\n")
   end
 
   # Extract the initial value for @property rules
@@ -162,10 +155,6 @@ defmodule LiveStyle.CSS do
   end
 
   defp extract_initial_value(value), do: to_string(value)
-
-  # ===========================================================================
-  # CSS Variables (:root)
-  # ===========================================================================
 
   defp generate_vars(manifest) do
     vars = manifest.vars
@@ -191,53 +180,33 @@ defmodule LiveStyle.CSS do
       # StyleX format: ":root{--var:value;}" or "@media ...{:root{--var:value;}}"
       grouped
       |> Enum.sort_by(fn {at_rules, _} -> length(at_rules) end)
-      |> Enum.map(fn {at_rules, vars_list} ->
-        declarations =
-          vars_list
-          |> Enum.sort_by(fn {_, name, _} -> name end)
-          |> Enum.map(fn {_, name, value} -> "#{name}:#{value};" end)
-          |> Enum.join("")
-
-        # Build the CSS rule with :root selector (no spaces - StyleX format)
-        inner = ":root{#{declarations}}"
-
-        # Wrap with at-rules (no spaces - StyleX format)
-        # StyleX nests innermost @-rule as outermost wrapper
-        at_rules
-        |> Enum.reduce(inner, fn at_rule, acc ->
-          "#{at_rule}{#{acc}}"
-        end)
-      end)
-      |> Enum.join("\n")
+      |> Enum.map_join("\n", &generate_var_group_css/1)
     end
+  end
+
+  defp generate_var_group_css({at_rules, vars_list}) do
+    declarations =
+      vars_list
+      |> Enum.sort_by(fn {_, name, _} -> name end)
+      |> Enum.map_join("", fn {_, name, value} -> "#{name}:#{value};" end)
+
+    # Build the CSS rule with :root selector (no spaces - StyleX format)
+    inner = ":root{#{declarations}}"
+
+    # Wrap with at-rules (no spaces - StyleX format)
+    wrap_with_at_rules(inner, at_rules)
+  end
+
+  defp wrap_with_at_rules(inner, at_rules) do
+    Enum.reduce(at_rules, inner, fn at_rule, acc -> "#{at_rule}{#{acc}}" end)
   end
 
   # Flatten a variable value into a list of {at_rules, css_name, value} tuples
   # Handles nested conditional values like:
   # %{default: "blue", "@media ...": %{default: "lightblue", "@supports ...": "oklab(...)"}}
   defp flatten_var_value(css_name, value, at_rules) when is_map(value) do
-    value
-    |> Enum.flat_map(fn {key, val} ->
-      key_str = to_string(key)
-
-      cond do
-        key in [:default, "default"] ->
-          # Default value at this level
-          if is_binary(val) or is_number(val) do
-            [{at_rules, css_name, to_string(val)}]
-          else
-            # Nested map in default - shouldn't happen but handle gracefully
-            flatten_var_value(css_name, val, at_rules)
-          end
-
-        match?(<<"@", _rest::binary>>, key_str) ->
-          # At-rule condition - add to the at_rules stack
-          flatten_var_value(css_name, val, at_rules ++ [key_str])
-
-        true ->
-          # Other keys (like pseudo-classes) - treat as at-rule for now
-          flatten_var_value(css_name, val, at_rules ++ [key_str])
-      end
+    Enum.flat_map(value, fn {key, val} ->
+      flatten_var_entry(css_name, key, val, at_rules)
     end)
   end
 
@@ -249,9 +218,22 @@ defmodule LiveStyle.CSS do
     [{at_rules, css_name, to_string(value)}]
   end
 
-  # ===========================================================================
-  # @keyframes
-  # ===========================================================================
+  # Handle default key with simple value
+  defp flatten_var_entry(css_name, key, val, at_rules)
+       when key in [:default, "default"] and (is_binary(val) or is_number(val)) do
+    [{at_rules, css_name, to_string(val)}]
+  end
+
+  # Handle default key with nested map (shouldn't happen but handle gracefully)
+  defp flatten_var_entry(css_name, key, val, at_rules) when key in [:default, "default"] do
+    flatten_var_value(css_name, val, at_rules)
+  end
+
+  # Handle at-rule conditions
+  defp flatten_var_entry(css_name, key, val, at_rules) do
+    key_str = to_string(key)
+    flatten_var_value(css_name, val, at_rules ++ [key_str])
+  end
 
   defp generate_keyframes(manifest) do
     manifest.keyframes
@@ -276,46 +258,37 @@ defmodule LiveStyle.CSS do
 
   # Transform keyframe declarations through RTL module
   defp transform_keyframes_for_rtl(frames) do
-    ltr_frames =
-      frames
-      |> Enum.map(fn {selector, declarations} ->
-        ltr_decls =
-          declarations
-          |> Enum.map(fn {prop, val} ->
-            css_prop = LiveStyle.Value.to_css_property(prop)
-            css_val = if is_binary(val), do: val, else: to_string(val)
-            {ltr_prop, ltr_val} = LiveStyle.RTL.generate_ltr(css_prop, css_val)
-            {ltr_prop, ltr_val}
-          end)
-
-        {selector, ltr_decls}
-      end)
-
-    rtl_frames =
-      frames
-      |> Enum.map(fn {selector, declarations} ->
-        rtl_decls =
-          declarations
-          |> Enum.map(fn {prop, val} ->
-            css_prop = LiveStyle.Value.to_css_property(prop)
-            css_val = if is_binary(val), do: val, else: to_string(val)
-
-            # Try to get RTL version, fall back to LTR if no RTL needed
-            case LiveStyle.RTL.generate_rtl(css_prop, css_val) do
-              nil ->
-                {ltr_prop, ltr_val} = LiveStyle.RTL.generate_ltr(css_prop, css_val)
-                {ltr_prop, ltr_val}
-
-              {rtl_prop, rtl_val} ->
-                {rtl_prop, rtl_val}
-            end
-          end)
-
-        {selector, rtl_decls}
-      end)
-
+    ltr_frames = Enum.map(frames, &transform_frame_ltr/1)
+    rtl_frames = Enum.map(frames, &transform_frame_rtl/1)
     {ltr_frames, rtl_frames}
   end
+
+  defp transform_frame_ltr({selector, declarations}) do
+    ltr_decls = Enum.map(declarations, &transform_decl_ltr/1)
+    {selector, ltr_decls}
+  end
+
+  defp transform_decl_ltr({prop, val}) do
+    css_prop = LiveStyle.Value.to_css_property(prop)
+    css_val = to_css_string(val)
+    LiveStyle.RTL.generate_ltr(css_prop, css_val)
+  end
+
+  defp transform_frame_rtl({selector, declarations}) do
+    rtl_decls = Enum.map(declarations, &transform_decl_rtl/1)
+    {selector, rtl_decls}
+  end
+
+  defp transform_decl_rtl({prop, val}) do
+    css_prop = LiveStyle.Value.to_css_property(prop)
+    css_val = to_css_string(val)
+
+    # Try to get RTL version, fall back to LTR if no RTL needed
+    LiveStyle.RTL.generate_rtl(css_prop, css_val) || LiveStyle.RTL.generate_ltr(css_prop, css_val)
+  end
+
+  defp to_css_string(val) when is_binary(val), do: val
+  defp to_css_string(val), do: to_string(val)
 
   # Build keyframes CSS in minified StyleX format
   # StyleX format: @keyframes name{from{color:red;}to{color:blue;}}
@@ -360,10 +333,6 @@ defmodule LiveStyle.CSS do
     end
   end
 
-  # ===========================================================================
-  # @position-try
-  # ===========================================================================
-
   defp generate_position_try(manifest) do
     manifest.position_try
     |> Enum.flat_map(fn {_key, entry} ->
@@ -400,10 +369,6 @@ defmodule LiveStyle.CSS do
     ["@position-try #{css_name}{#{decl_str}}"]
   end
 
-  # ===========================================================================
-  # View Transitions
-  # ===========================================================================
-
   # Map view transition keys (snake_case atoms) to CSS pseudo-elements
   @pseudo_element_map %{
     group: "view-transition-group",
@@ -423,13 +388,11 @@ defmodule LiveStyle.CSS do
   # Generate view transitions in minified StyleX format
   # StyleX format: ::view-transition-old(*.name){animation-duration:.5s;}::view-transition-new(*.name){...}
   defp generate_view_transitions(manifest) do
-    manifest.view_transitions
-    |> Enum.map(fn {_key, entry} ->
+    Enum.map_join(manifest.view_transitions, "\n", fn {_key, entry} ->
       %{css_name: css_name, styles: styles} = entry
 
       # All pseudo-elements for one view transition on a single line
-      styles
-      |> Enum.map_join("", fn {pseudo_key, declarations} ->
+      Enum.map_join(styles, "", fn {pseudo_key, declarations} ->
         # Normalize string keys to atoms
         normalized_key = Map.get(@string_to_atom_keys, pseudo_key, pseudo_key)
         pseudo_element = Map.get(@pseudo_element_map, normalized_key, to_string(pseudo_key))
@@ -438,7 +401,6 @@ defmodule LiveStyle.CSS do
         "#{selector}{#{decl_str}}"
       end)
     end)
-    |> Enum.join("\n")
   end
 
   # Format declarations in minified format (prop:value;)
@@ -452,57 +414,13 @@ defmodule LiveStyle.CSS do
     end)
   end
 
-  # ===========================================================================
-  # Style Rules (Atomic Classes)
-  # ===========================================================================
-
   defp generate_rules(manifest) do
     # Collect all unique atomic classes (both simple and conditional)
     # Format: {class_name, property, value, selector_suffix, pseudo_element, fallback_values, at_rule, priority}
     all_classes =
       manifest.rules
       |> Enum.flat_map(fn {_key, entry} ->
-        %{atomic_classes: atomic_classes} = entry
-
-        Enum.flat_map(atomic_classes, fn
-          # Skip null entries (StyleX behavior: nil values don't generate CSS)
-          {_property, %{null: true}} ->
-            []
-
-          # Simple atomic class (may have pseudo_element or fallback_values)
-          {property, %{class: class_name, value: value} = data}
-          when not is_map_key(data, :classes) ->
-            selector_suffix = Map.get(data, :selector_suffix)
-            pseudo_element = Map.get(data, :pseudo_element)
-            fallback_values = Map.get(data, :fallback_values)
-            at_rule = Map.get(data, :at_rule)
-            priority = Map.get(data, :priority, 3000)
-            # Extract property name without pseudo-element suffix
-            actual_property = extract_property_name(property)
-
-            [
-              {class_name, actual_property, value, selector_suffix, pseudo_element,
-               fallback_values, at_rule, priority}
-            ]
-
-          # Conditional atomic class with multiple variants
-          {property, %{classes: classes}} ->
-            Enum.map(classes, fn {_condition,
-                                  %{
-                                    class: class_name,
-                                    value: value
-                                  } = data} ->
-              selector_suffix = Map.get(data, :selector_suffix)
-              pseudo_element = Map.get(data, :pseudo_element)
-              fallback_values = Map.get(data, :fallback_values)
-              at_rule = Map.get(data, :at_rule)
-              priority = Map.get(data, :priority, 3000)
-              actual_property = extract_property_name(property)
-
-              {class_name, actual_property, value, selector_suffix, pseudo_element,
-               fallback_values, at_rule, priority}
-            end)
-        end)
+        Enum.flat_map(entry.atomic_classes, &extract_class_tuples/1)
       end)
       |> Enum.uniq_by(fn {class_name, _, _, _, _, _, _, _} -> class_name end)
       |> Enum.sort_by(fn {_class_name, property, _value, _selector_suffix, _pseudo_element,
@@ -541,8 +459,7 @@ defmodule LiveStyle.CSS do
       layer_names =
         grouped
         |> Enum.with_index(1)
-        |> Enum.map(fn {_, index} -> "priority#{index}" end)
-        |> Enum.join(", ")
+        |> Enum.map_join(", ", fn {_, index} -> "priority#{index}" end)
 
       header = "@layer #{layer_names};\n"
 
@@ -550,25 +467,28 @@ defmodule LiveStyle.CSS do
       layer_css =
         grouped
         |> Enum.with_index(1)
-        |> Enum.map(fn {{_level, classes}, index} ->
-          {ltr_rules, rtl_rules} = generate_rules_for_classes(classes)
-
-          ltr_css = ltr_rules |> Enum.reverse() |> Enum.join("\n")
-          rtl_css = rtl_rules |> Enum.reverse() |> Enum.join("\n")
-
-          rules_css =
-            case rtl_css do
-              "" -> ltr_css
-              _ -> ltr_css <> "\n\n/* RTL Overrides */\n" <> rtl_css
-            end
-
-          "@layer priority#{index}{\n#{rules_css}\n}"
-        end)
-        |> Enum.join("\n")
+        |> Enum.map_join("\n", &generate_priority_layer/1)
 
       header <> layer_css <> "\n"
     end
   end
+
+  defp generate_priority_layer({{_level, classes}, index}) do
+    rules_css = generate_ltr_rtl_css(classes)
+    "@layer priority#{index}{\n#{rules_css}\n}"
+  end
+
+  defp generate_ltr_rtl_css(classes) do
+    {ltr_rules, rtl_rules} = generate_rules_for_classes(classes)
+    ltr_css = ltr_rules |> Enum.reverse() |> Enum.join("\n")
+    rtl_css = rtl_rules |> Enum.reverse() |> Enum.join("\n")
+    combine_ltr_rtl_css(ltr_css, rtl_css)
+  end
+
+  defp combine_ltr_rtl_css(ltr_css, ""), do: ltr_css
+
+  defp combine_ltr_rtl_css(ltr_css, rtl_css),
+    do: ltr_css <> "\n\n/* RTL Overrides */\n" <> rtl_css
 
   # Generate rules with simple @layer wrapper or no wrapper
   defp generate_rules_simple(all_classes, use_layers) do
@@ -596,114 +516,111 @@ defmodule LiveStyle.CSS do
     end
   end
 
+  # Extract class tuples from atomic_classes entries
+  defp extract_class_tuples({_property, %{null: true}}), do: []
+
+  defp extract_class_tuples({property, %{class: class_name, value: value} = data})
+       when not is_map_key(data, :classes) do
+    [build_class_tuple(property, class_name, value, data)]
+  end
+
+  defp extract_class_tuples({property, %{classes: classes}}) do
+    Enum.map(classes, fn {_condition, %{class: class_name, value: value} = data} ->
+      build_class_tuple(property, class_name, value, data)
+    end)
+  end
+
+  defp build_class_tuple(property, class_name, value, data) do
+    {
+      class_name,
+      extract_property_name(property),
+      value,
+      Map.get(data, :selector_suffix),
+      Map.get(data, :pseudo_element),
+      Map.get(data, :fallback_values),
+      Map.get(data, :at_rule),
+      Map.get(data, :priority, 3000)
+    }
+  end
+
   # Generate LTR and RTL rules for a list of classes
   defp generate_rules_for_classes(all_classes) do
-    use_layers = LiveStyle.Config.use_css_layers?()
-
-    all_classes
-    |> Enum.reduce({[], []}, fn {class_name, property, value, selector_suffix, pseudo_element,
-                                 fallback_values, at_rule, _priority},
-                                {ltr_acc, rtl_acc} ->
-      # Generate LTR and optional RTL CSS
-      {ltr_prop, ltr_val, rtl_css} = RTL.generate_ltr_rtl(property, value, class_name)
-
-      # Build base selector with optional suffix and pseudo-element
-      base_selector =
-        cond do
-          pseudo_element != nil ->
-            ".#{class_name}#{pseudo_element}"
-
-          selector_suffix != nil ->
-            ".#{class_name}#{selector_suffix}"
-
-          true ->
-            ".#{class_name}"
-        end
-
-      # Apply specificity bumping (StyleX behavior)
-      # When using @layer, we double the class selector for:
-      # - at-rules (@media, @supports, etc.)
-      # - conditional pseudo-selectors (:where(), :nth-child, etc.)
-      # When not using @layer, we add :not(#\#) pseudo-selectors
-
-      # Determine if we need specificity bumping
-      needs_bump = at_rule != nil or selector_suffix != nil
-
-      raw_selector =
-        if needs_bump do
-          if use_layers do
-            # Double the class selector for specificity (StyleX behavior)
-            bumped_class = ".#{class_name}.#{class_name}"
-
-            cond do
-              pseudo_element != nil -> "#{bumped_class}#{pseudo_element}"
-              selector_suffix != nil -> "#{bumped_class}#{selector_suffix}"
-              true -> bumped_class
-            end
-          else
-            # Use :not(#\#) for specificity bumping (StyleX default behavior)
-            specificity_bump = ":not(#\\#)"
-
-            cond do
-              pseudo_element != nil -> ".#{class_name}#{specificity_bump}#{pseudo_element}"
-              selector_suffix != nil -> ".#{class_name}#{specificity_bump}#{selector_suffix}"
-              true -> ".#{class_name}#{specificity_bump}"
-            end
-          end
-        else
-          base_selector
-        end
-
-      # Expand ::thumb to vendor-prefixed variants (StyleX behavior)
-      selector = expand_thumb_selector(raw_selector)
-
-      # Handle fallback values - generate multiple declarations
-      # StyleX uses minified format: .class{prop:value}
-      inner_rule =
-        case fallback_values do
-          nil ->
-            "#{selector}{#{ltr_prop}:#{ltr_val}}"
-
-          values when is_list(values) ->
-            # StyleX firstThatWorks behavior:
-            # - var() values get nested with previous values as fallbacks
-            # - Non-var values become separate declarations (for browser fallbacks)
-            declarations = process_fallback_values(values, ltr_prop)
-            "#{selector}{#{declarations}}"
-        end
-
-      # Wrap in at-rule if present
-      # StyleX uses minified format: @media ...{.class{prop:value}}
-      ltr_rule =
-        if at_rule do
-          "#{at_rule}{#{inner_rule}}"
-        else
-          inner_rule
-        end
-
-      # Handle RTL with selector suffix
-      rtl_acc =
-        case rtl_css do
-          nil ->
-            rtl_acc
-
-          css when selector_suffix != nil ->
-            # Rewrite RTL rule to include selector suffix
-            rtl_rule = rewrite_rtl_rule_with_suffix(css, selector_suffix)
-            [rtl_rule | rtl_acc]
-
-          css when pseudo_element != nil ->
-            # Rewrite RTL rule to include pseudo-element
-            rtl_rule = rewrite_rtl_rule_with_suffix(css, pseudo_element)
-            [rtl_rule | rtl_acc]
-
-          css ->
-            [css | rtl_acc]
-        end
-
+    Enum.reduce(all_classes, {[], []}, fn class_tuple, {ltr_acc, rtl_acc} ->
+      {ltr_rule, rtl_rule} = generate_rule_for_class(class_tuple)
+      rtl_acc = if rtl_rule, do: [rtl_rule | rtl_acc], else: rtl_acc
       {[ltr_rule | ltr_acc], rtl_acc}
     end)
   end
+
+  defp generate_rule_for_class(
+         {class_name, property, value, selector_suffix, pseudo_element, fallback_values, at_rule,
+          _priority}
+       ) do
+    # Generate LTR and optional RTL CSS
+    {ltr_prop, ltr_val, rtl_css} = RTL.generate_ltr_rtl(property, value, class_name)
+
+    # Build selector with specificity bumping
+    selector = build_css_selector(class_name, selector_suffix, pseudo_element, at_rule)
+
+    # Build the inner rule with declarations
+    inner_rule = build_inner_rule(selector, ltr_prop, ltr_val, fallback_values)
+
+    # Wrap in at-rule if present
+    ltr_rule = wrap_at_rule(inner_rule, at_rule)
+
+    # Handle RTL
+    rtl_rule = build_rtl_rule(rtl_css, selector_suffix, pseudo_element)
+
+    {ltr_rule, rtl_rule}
+  end
+
+  defp build_css_selector(class_name, selector_suffix, pseudo_element, at_rule) do
+    use_layers = LiveStyle.Config.use_css_layers?()
+    needs_bump = at_rule != nil or selector_suffix != nil
+    suffix = pseudo_element || selector_suffix
+
+    raw_selector =
+      if needs_bump do
+        build_bumped_selector(class_name, suffix, use_layers)
+      else
+        build_base_selector(class_name, suffix)
+      end
+
+    expand_thumb_selector(raw_selector)
+  end
+
+  defp build_base_selector(class_name, nil), do: ".#{class_name}"
+  defp build_base_selector(class_name, suffix), do: ".#{class_name}#{suffix}"
+
+  defp build_bumped_selector(class_name, suffix, true = _use_layers) do
+    bumped = ".#{class_name}.#{class_name}"
+    if suffix, do: "#{bumped}#{suffix}", else: bumped
+  end
+
+  defp build_bumped_selector(class_name, suffix, false = _use_layers) do
+    bump = ":not(#\\#)"
+    if suffix, do: ".#{class_name}#{bump}#{suffix}", else: ".#{class_name}#{bump}"
+  end
+
+  defp build_inner_rule(selector, prop, val, nil), do: "#{selector}{#{prop}:#{val}}"
+
+  defp build_inner_rule(selector, prop, _val, values) when is_list(values) do
+    declarations = process_fallback_values(values, prop)
+    "#{selector}{#{declarations}}"
+  end
+
+  defp wrap_at_rule(rule, nil), do: rule
+  defp wrap_at_rule(rule, at_rule), do: "#{at_rule}{#{rule}}"
+
+  defp build_rtl_rule(nil, _suffix, _pseudo), do: nil
+
+  defp build_rtl_rule(css, suffix, _pseudo) when suffix != nil,
+    do: rewrite_rtl_rule_with_suffix(css, suffix)
+
+  defp build_rtl_rule(css, _suffix, pseudo) when pseudo != nil,
+    do: rewrite_rtl_rule_with_suffix(css, pseudo)
+
+  defp build_rtl_rule(css, _suffix, _pseudo), do: css
 
   # Process fallback values according to StyleX firstThatWorks pattern
   # - var() values get nested with previous values as fallbacks
@@ -732,8 +649,7 @@ defmodule LiveStyle.CSS do
       # StyleX minified format: prop:value;prop:value
       values
       |> Enum.reverse()
-      |> Enum.map(fn val -> "#{property}:#{val}" end)
-      |> Enum.join(";")
+      |> Enum.map_join(";", fn val -> "#{property}:#{val}" end)
     end
   end
 
@@ -741,50 +657,39 @@ defmodule LiveStyle.CSS do
   # Var values get nested with prior non-var values as fallbacks
   defp process_var_fallbacks(values, property) do
     # Walk through values, building nested var() chains
-    # When we hit a non-var after vars, output the chain and start fresh
     {output, pending_chain} =
-      Enum.reduce(values, {[], nil}, fn value, {out, chain} ->
-        is_var = String.contains?(value, "var(")
-
-        case {is_var, chain} do
-          {true, nil} ->
-            # First var(), no fallback yet
-            {out, value}
-
-          {true, prev} when is_binary(prev) ->
-            # Another var() - nest with previous
-            if String.contains?(prev, "var(") do
-              # Previous is also a var - nest this one around it
-              {out, nest_var_with_fallback(value, prev)}
-            else
-              # Previous is a plain value - use as fallback
-              {out, nest_var_with_fallback(value, prev)}
-            end
-
-          {false, nil} ->
-            # Non-var, no pending chain - this becomes potential fallback
-            {out, value}
-
-          {false, prev} ->
-            # Non-var after a chain - output the chain, this becomes new potential fallback
-            {[prev | out], value}
-        end
+      Enum.reduce(values, {[], nil}, fn value, acc ->
+        process_var_fallback_step(value, acc)
       end)
 
     # Handle any remaining pending chain
-    final_output =
-      case pending_chain do
-        nil -> output
-        chain -> [chain | output]
-      end
+    final_output = finalize_var_chain(output, pending_chain)
 
     # Generate declarations in reverse order
-    # StyleX minified format: prop:value;prop:value
     final_output
     |> Enum.reverse()
-    |> Enum.map(fn val -> "#{property}:#{val}" end)
-    |> Enum.join(";")
+    |> Enum.map_join(";", fn val -> "#{property}:#{val}" end)
   end
+
+  defp process_var_fallback_step(value, {out, nil}) do
+    # No pending chain - start new potential chain/fallback
+    {out, value}
+  end
+
+  defp process_var_fallback_step(value, {out, prev}) do
+    is_var = String.contains?(value, "var(")
+
+    if is_var do
+      # Var value - nest with previous
+      {out, nest_var_with_fallback(value, prev)}
+    else
+      # Non-var after a chain - output the chain, this becomes new potential fallback
+      {[prev | out], value}
+    end
+  end
+
+  defp finalize_var_chain(output, nil), do: output
+  defp finalize_var_chain(output, chain), do: [chain | output]
 
   # Nest a var() with a fallback value
   # "var(--height)" + "500px" => "var(--height,500px)"
@@ -801,10 +706,6 @@ defmodule LiveStyle.CSS do
     # Match the class selector in the RTL rule and append the suffix
     Regex.replace(~r/(\.x[a-f0-9]+)(\s*\{)/, rtl_css, "\\1#{selector_suffix}\\2")
   end
-
-  # ===========================================================================
-  # Themes
-  # ===========================================================================
 
   defp generate_themes(manifest) do
     manifest.themes
@@ -824,30 +725,30 @@ defmodule LiveStyle.CSS do
       grouped
       |> Enum.sort_by(fn {conditions, _} -> {length(conditions), conditions} end)
       |> Enum.map(fn {conditions, vars_list} ->
-        declarations =
-          vars_list
-          |> Enum.sort_by(fn {_, name, _} -> name end)
-          |> Enum.map(fn {_, name, value} -> "#{name}:#{value};" end)
-          |> Enum.join("")
-
-        selector = ".#{css_name},.#{css_name}:root"
-
-        case conditions do
-          [] ->
-            # Default rule
-            "#{selector}{#{declarations}}"
-
-          _ ->
-            # Wrap in nested @-rules (reversed so innermost is last)
-            inner = "#{selector}{#{declarations}}"
-
-            Enum.reduce(Enum.reverse(conditions), inner, fn condition, acc ->
-              "#{condition}{#{acc}}"
-            end)
-        end
+        generate_theme_condition_css(css_name, conditions, vars_list)
       end)
     end)
     |> Enum.join("\n")
+  end
+
+  defp generate_theme_condition_css(css_name, conditions, vars_list) do
+    declarations =
+      vars_list
+      |> Enum.sort_by(fn {_, name, _} -> name end)
+      |> Enum.map_join("", fn {_, name, value} -> "#{name}:#{value};" end)
+
+    selector = ".#{css_name},.#{css_name}:root"
+    inner = "#{selector}{#{declarations}}"
+
+    wrap_with_conditions(inner, conditions)
+  end
+
+  defp wrap_with_conditions(inner, []), do: inner
+
+  defp wrap_with_conditions(inner, conditions) do
+    Enum.reduce(Enum.reverse(conditions), inner, fn condition, acc ->
+      "#{condition}{#{acc}}"
+    end)
   end
 
   # Recursively collect theme rules, tracking the condition path
@@ -889,10 +790,6 @@ defmodule LiveStyle.CSS do
   defp collect_theme_value(name, value, conditions_path) do
     [{conditions_path, name, to_string(value)}]
   end
-
-  # ===========================================================================
-  # Helpers
-  # ===========================================================================
 
   # Unwrap var(--name) to just --name for use as property names in keyframes
   defp unwrap_var("var(" <> rest) do

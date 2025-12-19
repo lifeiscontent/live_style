@@ -108,11 +108,11 @@ defmodule LiveStyle.AtRulesTest do
   describe "media queries" do
     test "generates CSS with @media rules - exact StyleX output" do
       # StyleX test: 'media queries'
-      # Input: backgroundColor: { default: 'red', '@media (min-width: 1000px)': 'blue', '@media (min-width: 2000px)': 'purple' }
+      # Input: backgroundColor: { default: 'red', '@media ...': 'blue', '@media ...': 'purple' }
       # Expected output (exact from StyleX):
       # ["xrkmrrc", {ltr: ".xrkmrrc{background-color:red}", rtl: null}, 3000]
-      # ["xw6up8c", {ltr: "@media (min-width: 1000px) and (max-width: 1999.99px){.xw6up8c.xw6up8c{background-color:blue}}", rtl: null}, 3200]
-      # ["x1ssfqz5", {ltr: "@media (min-width: 2000px){.x1ssfqz5.x1ssfqz5{background-color:purple}}", rtl: null}, 3200]
+      # ["xw6up8c", {ltr: "@media ...{.xw6up8c.xw6up8c{background-color:blue}}", rtl: null}, 3200]
+      # ["x1ssfqz5", {ltr: "@media ...{.x1ssfqz5.x1ssfqz5{background-color:purple}}", rtl: null}, 3200]
       manifest = get_manifest()
       rule = manifest.rules["LiveStyle.AtRulesTest.MediaQueries.responsive"]
 
@@ -184,11 +184,11 @@ defmodule LiveStyle.AtRulesTest do
   describe "supports queries" do
     test "generates CSS with @supports rules - exact StyleX output" do
       # StyleX test: 'supports queries'
-      # Input: backgroundColor: { default:'red', '@supports (hover: hover)': 'blue', '@supports not (hover: hover)': 'purple' }
+      # Input: backgroundColor: { default:'red', '@supports ...': 'blue', '@supports not ...': 'purple' }
       # Expected output (exact from StyleX):
       # ["xrkmrrc", {ltr: ".xrkmrrc{background-color:red}", rtl: null}, 3000]
-      # ["x6m3b6q", {ltr: "@supports (hover: hover){.x6m3b6q.x6m3b6q{background-color:blue}}", rtl: null}, 3030]
-      # ["x6um648", {ltr: "@supports not (hover: hover){.x6um648.x6um648{background-color:purple}}", rtl: null}, 3030]
+      # ["x6m3b6q", {ltr: "@supports ...{.x6m3b6q.x6m3b6q{background-color:blue}}", rtl: null}, 3030]
+      # ["x6um648", {ltr: "@supports not ...{.x6um648.x6um648{background-color:purple}}", rtl: null}, 3030]
       manifest = get_manifest()
       rule = manifest.rules["LiveStyle.AtRulesTest.SupportsQueries.hover_support"]
 

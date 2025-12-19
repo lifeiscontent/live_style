@@ -6,8 +6,8 @@ LiveStyle provides a type-safe, composable styling system with:
 
 - **Atomic CSS**: Each property-value pair becomes a single class
 - **Deterministic hashing**: Same styles always produce same class names
-- **CSS Variables**: Type-safe design tokens with `defvars/2`
-- **Theming**: Override variables with `create_theme/3`
+- **CSS Variables**: Type-safe design tokens with `css_vars/2`
+- **Theming**: Override variables with `css_theme/3`
 - **@layer support**: CSS cascade layers for predictable specificity
 - **Last-wins merging**: Like StyleX, later styles override earlier ones
 
@@ -18,7 +18,7 @@ Add `live_style` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:live_style, "~> 0.4.0"}
+    {:live_style, "~> 0.5.0"}
   ]
 end
 ```
@@ -34,6 +34,17 @@ def project do
 end
 ```
 
+If your tests define LiveStyle modules (e.g., test fixtures with `use LiveStyle.Sheet`),
+add the test setup task to your aliases:
+
+```elixir
+defp aliases do
+  [
+    test: ["live_style.setup_tests", "test"]
+  ]
+end
+```
+
 Include the generated CSS in your root layout:
 
 ```heex
@@ -42,42 +53,100 @@ Include the generated CSS in your root layout:
 
 ## Configuration
 
-Configure LiveStyle in your `config/config.exs`:
-
-```elixir
-config :live_style,
-  output_path: "priv/static/assets/live.css",
-  manifest_path: "_build/live_style_manifest.etf"
-```
-
-### Options
-
-- `:output_path` - Path where the generated CSS file is written (default: `"priv/static/assets/live.css"`)
-- `:manifest_path` - Path where the compile-time manifest is stored (default: `"_build/live_style_manifest.etf"`). Useful for monorepos or custom build directories.
-- `:style_resolution` - Strategy for handling shorthand CSS properties (default: `:atomic`). See [Style Resolution Modes](#style-resolution-modes) below.
+LiveStyle works out of the box with sensible defaults. See `LiveStyle.Config` for all available options.
 
 ## Quick Start
 
 ```elixir
 defmodule MyAppWeb.Components.Button do
   use Phoenix.Component
-  use LiveStyle
+  use LiveStyle.Sheet
 
   # Define styles using keyword list syntax
-  style :base,
+  css_rule :base,
     display: "flex",
     align_items: "center",
     padding: "8px 16px",
     border_radius: "8px"
 
-  style :primary,
-    background_color: var(:fill_primary),
+  css_rule :primary,
+    background_color: css_var({MyApp.Tokens, :fill, :primary}),
     color: "white"
 
   def button(assigns) do
     ~H"""
-    <button class={style([:base, :primary])}>
+    <button class={css_class([:base, :primary])}>
       {render_slot(@inner_block)}
+    </button>
+    """
+  end
+end
+```
+
+## Module Organization
+
+LiveStyle provides two specialized modules for clearer intent:
+
+### `LiveStyle.Tokens` - Design Tokens
+
+For centralized design tokens (CSS variables, keyframes, themes):
+
+```elixir
+defmodule MyApp.Tokens do
+  use LiveStyle.Tokens
+
+  # Raw color palette (not themed)
+  css_vars :colors,
+    white: "#ffffff",
+    black: "#000000",
+    gray_900: "#111827",
+    indigo_600: "#4f46e5"
+
+  # Semantic tokens referencing colors (themed)
+  css_vars :semantic,
+    text_primary: css_var({:colors, :gray_900}),
+    text_inverse: css_var({:colors, :white}),
+    fill_primary: css_var({:colors, :indigo_600})
+
+  # Dark theme overrides semantic tokens
+  css_theme :semantic, :dark,
+    text_primary: css_var({:colors, :white}),
+    text_inverse: css_var({:colors, :gray_900}),
+    fill_primary: css_var({:colors, :indigo_600})
+
+  css_vars :space,
+    sm: "8px",
+    md: "16px",
+    lg: "24px"
+
+  css_keyframes :spin,
+    from: [transform: "rotate(0deg)"],
+    to: [transform: "rotate(360deg)"]
+end
+```
+
+### `LiveStyle.Sheet` - Component Styles
+
+For component-specific styles:
+
+```elixir
+defmodule MyApp.Button do
+  use Phoenix.Component
+  use LiveStyle.Sheet
+
+  css_rule :base,
+    display: "inline-flex",
+    padding: "0.5rem 1rem",
+    border_radius: "0.25rem"
+
+  css_rule :primary,
+    background_color: css_var({MyApp.Tokens, :semantic, :fill_primary}),
+    color: css_var({MyApp.Tokens, :semantic, :text_inverse})
+
+  def button(assigns) do
+    ~H"""
+    <button class={css_class([:base, :primary])}>
+      <%= @label %>
     </button>
     """
   end
@@ -90,94 +159,122 @@ LiveStyle supports both **keyword list syntax** (recommended) and **map syntax**
 
 ```elixir
 # Keyword list syntax (recommended - more idiomatic Elixir)
-style :button,
+css_rule :button,
   display: "flex",
   padding: "8px"
 
 # Map syntax (also supported)
-style :button, %{
+css_rule :button, %{
   display: "flex",
   padding: "8px"
 }
 ```
 
-**Computed keys:** When using function calls or module attributes as keys, you have two options:
+**Computed keys:** When using `css_const` references or module attributes as keys, you have two options:
 
 ```elixir
 # Option 1: Map syntax with =>
-style :responsive,
+css_rule :responsive,
   font_size: %{
     :default => "1rem",
-    Tokens.breakpoints_lg() => "1.5rem"
+    css_const({MyApp.Tokens, :breakpoint, :lg}) => "1.5rem"
   }
 
 # Option 2: Tuple list syntax (more consistent with keyword style)
-style :responsive,
+css_rule :responsive,
   font_size: [
     {:default, "1rem"},
-    {Tokens.breakpoints_lg(), "1.5rem"}
+    {css_const({MyApp.Tokens, :breakpoint, :lg}), "1.5rem"}
   ]
 ```
 
 Both produce identical CSS output. Use whichever style you prefer.
 
-## Design Tokens
+## Referencing Tokens
 
-Define CSS custom properties for your design system:
-
-```elixir
-defmodule MyApp.Tokens do
-  use LiveStyle.Tokens
-
-  defvars :color,
-    white: "#ffffff",
-    black: "#000000",
-    primary: "#1e68fa"
-
-  defvars :fill,
-    primary: "#3b82f6",
-    secondary: "#6b7280"
-
-  defvars :space,
-    sm: "8px",
-    md: "16px",
-    lg: "24px"
-end
-```
-
-Use tokens in your styles with the `var/1` macro:
+Use `css_var/1` to reference CSS variables from other modules:
 
 ```elixir
-style :container,
-  padding: var(:space_md),
-  background_color: var(:fill_primary)
+css_rule :container,
+  padding: css_var({MyApp.Tokens, :space, :md}),
+  background_color: css_var({MyApp.Tokens, :semantic, :fill_primary})
 ```
 
 ## Theming
 
-Create theme overrides that scope to an element and its children:
+The standard pattern for theming uses two layers:
+
+1. **`:colors`** - Raw color palette (hex values, not themed)
+2. **`:semantic`** - Semantic tokens that reference colors via `css_var` (themed)
+
+This separation keeps color values in one place while allowing themes to swap which colors semantic tokens point to.
 
 ```elixir
 defmodule MyApp.Tokens do
   use LiveStyle.Tokens
 
-  defvars :fill,
-    background: "#ffffff",
-    surface: "#f5f5f5"
+  # Raw colors (not themed)
+  css_vars :colors,
+    white: "#ffffff",
+    gray_900: "#111827",
+    gray_50: "#f9fafb"
 
-  create_theme :dark, :fill,
-    background: "#1a1a1a",
-    surface: "#2d2d2d"
+  # Semantic tokens reference colors (themed)
+  css_vars :semantic,
+    fill_page: css_var({:colors, :white}),
+    fill_surface: css_var({:colors, :gray_50}),
+    text_primary: css_var({:colors, :gray_900})
+
+  # Theme overrides swap which colors semantics point to
+  css_theme :semantic, :dark,
+    fill_page: css_var({:colors, :gray_900}),
+    fill_surface: css_var({:colors, :gray_900}),
+    text_primary: css_var({:colors, :gray_50})
 end
 ```
 
-Apply theme in templates:
+### Applying Themes
+
+Use `css_theme/1` to apply a theme to a subtree:
 
 ```heex
-<div class={MyApp.Tokens.dark()}>
+<div class={css_theme({MyApp.Tokens, :semantic, :dark})}>
   <!-- Children use dark theme colors -->
   <.button>I use dark colors</.button>
 </div>
+```
+
+Components don't need to know about themes - they just reference semantic tokens:
+
+```elixir
+css_rule :card,
+  background: css_var({MyApp.Tokens, :semantic, :fill_page}),
+  color: css_var({MyApp.Tokens, :semantic, :text_primary})
+```
+
+### Multiple Themes
+
+Define multiple themes for different contexts:
+
+```elixir
+# In your tokens module
+css_theme :semantic, :dark,
+  text_primary: css_var({:colors, :gray_50}),
+  fill_page: css_var({:colors, :gray_900})
+
+css_theme :semantic, :high_contrast,
+  text_primary: css_var({:colors, :black}),
+  fill_page: css_var({:colors, :white})
+```
+
+Themes can be nested - inner themes override outer ones:
+
+```heex
+<html class={@theme == :dark && css_theme({MyApp.Tokens, :semantic, :dark})}>
+  <body>
+    <!-- Uses dark or default theme based on @theme -->
+  </body>
+</html>
 ```
 
 ## Conditional Styles
@@ -187,7 +284,7 @@ Use Elixir's boolean logic for conditional styles:
 ```elixir
 def button(assigns) do
   ~H"""
-  <button class={style([:base, @variant == :primary && :primary, @disabled && :disabled])}>
+  <button class={css_class([:base, @variant == :primary && :primary, @disabled && :disabled])}>
     {render_slot(@inner_block)}
   </button>
   """
@@ -199,7 +296,7 @@ end
 LiveStyle uses the StyleX pattern of condition-in-value:
 
 ```elixir
-style :link,
+css_rule :link,
   color: [
     default: "blue",
     ":hover": "darkblue",
@@ -207,7 +304,7 @@ style :link,
   ],
   text_decoration: "none"
 
-style :container,
+css_rule :container,
   padding: [
     default: "16px",
     "@media (min-width: 768px)": "32px"
@@ -217,7 +314,7 @@ style :container,
 ## Pseudo-elements
 
 ```elixir
-style :with_before,
+css_rule :with_before,
   position: "relative",
   "::before": [
     content: "'*'",
@@ -234,31 +331,31 @@ Include styles from other modules or self-reference within the same module:
 ```elixir
 # External module include
 defmodule MyApp.BaseStyles do
-  use LiveStyle
+  use LiveStyle.Sheet
 
-  style :button_base,
+  css_rule :button_base,
     display: "inline-flex",
     padding: "8px 16px",
     cursor: "pointer"
 end
 
 defmodule MyApp.Button do
-  use LiveStyle
+  use LiveStyle.Sheet
 
-  style :primary,
+  css_rule :primary,
     __include__: [{MyApp.BaseStyles, :button_base}],
-    background_color: var(:fill_primary)
+    background_color: css_var({MyApp.Tokens, :fill, :primary})
 end
 
 # Self-reference (same module)
 defmodule MyApp.Card do
-  use LiveStyle
+  use LiveStyle.Sheet
 
-  style :base,
+  css_rule :base,
     border_radius: "8px",
     padding: "16px"
 
-  style :elevated,
+  css_rule :elevated,
     __include__: [:base],
     box_shadow: "0 4px 6px rgba(0,0,0,0.1)"
 end
@@ -266,75 +363,71 @@ end
 
 ## Dynamic Styles
 
-For styles that depend on runtime values, use a function in `style/2`:
+For styles that depend on runtime values, use a function in `css_rule/2`:
 
 ```elixir
 defmodule MyApp.Components do
-  use LiveStyle
+  use LiveStyle.Sheet
 
-  style :dynamic_opacity, fn opacity ->
+  css_rule :dynamic_opacity, fn opacity ->
     [opacity: opacity]
   end
 
-  style :dynamic_color, fn r, g, b ->
+  css_rule :dynamic_color, fn r, g, b ->
     [color: "rgb(#{r}, #{g}, #{b})"]
   end
 end
 ```
 
-Dynamic styles return `{class, style_map}` tuples. Use `props/1` to convert them for templates:
+Dynamic styles return `%LiveStyle.Attrs{}` structs. Spread them in templates:
 
 ```heex
-<div {LiveStyle.props(MyApp.Components.dynamic_opacity(0.5))}>
+<div {css([{:dynamic_opacity, 0.5}])}>
   Faded content
 </div>
 ```
 
 ### Merging Multiple Styles
 
-Use `props/1` with a list to merge multiple style sources:
+Use `css/1` with a list to merge multiple style sources:
 
 ```heex
-<div {LiveStyle.props([
-  MyStyles.button(),
-  MyStyles.dynamic_color(255, 0, 0),
-  MyStyles.dynamic_size(100),
-  @is_active && MyStyles.active()
+<div {css([
+  :button,
+  {:dynamic_color, [255, 0, 0]},
+  {:dynamic_size, [100]},
+  @is_active && :active
 ])}>
   Button
 </div>
 ```
 
 The list can contain:
-- Class strings (from static styles)
-- `{class, style}` tuples (from dynamic styles)
+- Atoms (static style names)
+- `{atom, args}` tuples (dynamic styles with arguments)
 - `nil` or `false` (ignored, useful for conditional styles)
 
 ## Keyframes Animations
 
 ```elixir
-defmodule MyApp.Animations do
-  use LiveStyle
+defmodule MyApp.Tokens do
+  use LiveStyle.Tokens
 
-  # keyframes/1 returns the generated animation name
-  @spin keyframes(
+  css_keyframes :spin,
     from: [transform: "rotate(0deg)"],
     to: [transform: "rotate(360deg)"]
-  )
 
-  style :spinner,
-    animation_name: @spin,
-    animation_duration: "1s",
-    animation_iteration_count: "infinite"
+  css_keyframes :pulse,
+    "0%": [opacity: "1"],
+    "50%": [opacity: "0.5"],
+    "100%": [opacity: "1"]
+end
 
-  # Or inline directly
-  style :pulse,
-    animation_name: keyframes(
-      "0%": [opacity: "1"],
-      "50%": [opacity: "0.5"],
-      "100%": [opacity: "1"]
-    ),
-    animation_duration: "2s"
+defmodule MyApp.Spinner do
+  use LiveStyle.Sheet
+
+  css_rule :spinner,
+    animation: "#{css_keyframes({MyApp.Tokens, :spin})} 1s linear infinite"
 end
 ```
 
@@ -343,7 +436,7 @@ end
 Use `first_that_works/1` for CSS fallbacks:
 
 ```elixir
-style :sticky_header,
+css_rule :sticky_header,
   position: first_that_works(["sticky", "-webkit-sticky", "fixed"])
 ```
 
@@ -353,19 +446,19 @@ Style elements based on ancestor, descendant, or sibling state - like StyleX's `
 
 ```elixir
 defmodule MyApp.Card do
-  use LiveStyle
-  import LiveStyle.When
+  use LiveStyle.Sheet
+  alias LiveStyle.When
 
-  style :card_content,
+  css_rule :card_content,
     transform: %{
       :default => "translateX(0)",
-      ancestor(":hover") => "translateX(10px)"
+      When.ancestor(":hover") => "translateX(10px)"
     }
 
   def render(assigns) do
     ~H"""
     <div class={LiveStyle.default_marker()}>
-      <div class={style(:card_content)}>
+      <div class={css_class(:card_content)}>
         Hover the parent to move me
       </div>
     </div>
@@ -374,7 +467,7 @@ defmodule MyApp.Card do
 end
 ```
 
-> **Note:** When using computed keys like `ancestor(":hover")`, you must use map syntax with `=>` arrows. This is an Elixir language requirement, not a LiveStyle limitation.
+> **Note:** When using computed keys like `When.ancestor(":hover")`, you must use map syntax with `=>` arrows. This is an Elixir language requirement, not a LiveStyle limitation.
 
 ### Available Selectors
 
@@ -392,33 +485,33 @@ Use custom markers to create independent sets of contextual selectors:
 
 ```elixir
 defmodule MyApp.Table do
-  use LiveStyle
-  import LiveStyle.When
+  use LiveStyle.Sheet
+  alias LiveStyle.When
 
   @row_marker LiveStyle.define_marker(:row)
-  @row_hover ancestor(":hover", @row_marker)
-  @col_hover ancestor(":has(td:nth-of-type(2):hover)")
+  @row_hover When.ancestor(":hover", @row_marker)
+  @col_hover When.ancestor(":has(td:nth-of-type(2):hover)")
 
-  style :cell,
-    opacity: conditions([
+  css_rule :cell,
+    opacity: [
       {:default, "1"},
-      {ancestor(":hover"), "0.1"},     # Dim when container hovered
-      {@row_hover, "1"},                # Restore for hovered row
-      {":hover", "1"}                   # Restore for direct hover
-    ]),
-    background_color: conditions([
+      {When.ancestor(":hover"), "0.1"},     # Dim when container hovered
+      {@row_hover, "1"},                     # Restore for hovered row
+      {":hover", "1"}                        # Restore for direct hover
+    ],
+    background_color: [
       {:default, "transparent"},
       {@row_hover, "#2266cc77"},
       {@col_hover, "#2266cc77"},
       {":hover", "#2266cc77"}
-    ])
+    ]
 
   def render(assigns) do
     ~H"""
     <div class={LiveStyle.default_marker()}>
       <table>
         <tr class={@row_marker}>
-          <td class={style(:cell)}>Cell</td>
+          <td class={css_class(:cell)}>Cell</td>
         </tr>
       </table>
     </div>
@@ -427,35 +520,20 @@ defmodule MyApp.Table do
 end
 ```
 
-### The `conditions/1` Helper
-
-Use `conditions/1` when you need module attributes as condition keys:
-
-```elixir
-@row_hover ancestor(":hover", @row_marker)
-
-style :cell,
-  opacity: conditions([
-    {:default, "1"},
-    {@row_hover, "0.5"},  # Module attribute as key
-    {":hover", "1"}
-  ])
-```
-
 ### Nested Conditions
 
 Combine pseudo-classes with contextual selectors for precise targeting:
 
 ```elixir
-style :cell,
-  background_color: conditions([
+css_rule :cell,
+  background_color: [
     {:default, "transparent"},
     # Only apply to nth-child(2) when column 2 is hovered
     {":nth-child(2)", %{
       :default => nil,
-      ancestor(":has(td:nth-of-type(2):hover)") => "#2266cc77"
+      When.ancestor(":has(td:nth-of-type(2):hover)") => "#2266cc77"
     }}
-  ])
+  ]
 ```
 
 ## View Transitions
@@ -467,27 +545,25 @@ LiveStyle provides first-class support for the [View Transitions API](https://de
 ```elixir
 defmodule MyApp.Tokens do
   use LiveStyle.Tokens
-  use LiveStyle.ViewTransitions
 
   # Define keyframes for your animations
-  defkeyframes :scale_in,
+  css_keyframes :scale_in,
     from: [opacity: "0", transform: "scale(0.8)"],
     to: [opacity: "1", transform: "scale(1)"]
 
-  defkeyframes :scale_out,
+  css_keyframes :scale_out,
     from: [opacity: "1", transform: "scale(1)"],
     to: [opacity: "0", transform: "scale(0.8)"]
 
-  # Define view transitions using atom keys
-  # Keyframe atoms are automatically resolved to their hashed names
-  view_transition "card-*",
+  # Define view transitions
+  css_view_transition :card,
     old: [
-      animation_name: :scale_out,
+      animation_name: css_keyframes(:scale_out),
       animation_duration: "200ms",
       animation_fill_mode: "both"
     ],
     new: [
-      animation_name: :scale_in,
+      animation_name: css_keyframes(:scale_in),
       animation_duration: "200ms",
       animation_fill_mode: "both"
     ]
@@ -507,27 +583,13 @@ end
 
 The `:only-child` variants apply when an element is being added or removed (not replaced), useful for different add/remove vs reorder animations.
 
-### Compile-time Validation
-
-LiveStyle validates keyframe references at compile time. If you reference an undefined keyframe, you'll get a helpful error:
-
-```elixir
-view_transition "item-*",
-  old: [animation_name: :nonexistent_keyframe]
-
-# => ** (CompileError) Undefined keyframe reference(s): :nonexistent_keyframe
-#    Defined keyframes: :fade_in, :fade_out
-```
-
-CSS keywords like `:none`, `:inherit`, `:initial`, and `:unset` are allowed without being defined as keyframes.
-
 ### Respecting Reduced Motion
 
 ```elixir
-view_transition "todo-*",
+css_view_transition :todo,
   old: [
     animation_name: %{
-      :default => :fade_out,
+      :default => css_keyframes(:fade_out),
       "@media (prefers-reduced-motion: reduce)" => "none"
     },
     animation_duration: "200ms"
@@ -536,28 +598,34 @@ view_transition "todo-*",
 
 ### JavaScript Integration
 
-To enable View Transitions with Phoenix LiveView, add to your `app.js`:
+To enable View Transitions with Phoenix LiveView 1.1.18+, use the `onDocumentPatch` callback:
 
 ```javascript
-if (document.startViewTransition) {
-  const originalRequestDOMUpdate = liveSocket.requestDOMUpdate.bind(liveSocket)
-  liveSocket.requestDOMUpdate = (callback) => {
-    document.startViewTransition(() => originalRequestDOMUpdate(callback))
+const liveSocket = new LiveSocket("/live", Socket, {
+  params: {_csrf_token: csrfToken},
+  dom: {
+    onDocumentPatch(proceed) {
+      if (document.startViewTransition) {
+        document.startViewTransition(proceed)
+      } else {
+        proceed()
+      }
+    }
   }
-}
+})
 ```
+
+For more advanced usage with transition types, see the [Phoenix LiveView View Transitions documentation](https://hexdocs.pm/phoenix_live_view/live-navigation.html#view-transitions).
 
 ### Using in Templates
 
 Add `view-transition-name` to elements you want to animate:
 
 ```heex
-<li style={"view-transition-name: todo-#{@id}"}>
+<li style={"view-transition-name: #{css_view_transition({MyApp.Tokens, :todo})}-#{@id}"}>
   <%= @item.text %>
 </li>
 ```
-
-The wildcard pattern `todo-*` in `view_transition/2` matches all elements with names like `todo-1`, `todo-2`, etc.
 
 ### Browser Support
 
@@ -572,11 +640,11 @@ defmodule MyApp.Tokens do
   use LiveStyle.Tokens
   import LiveStyle.Types
 
-  defvars :anim,
+  css_vars :anim,
     rotation: angle("0deg"),
     progress: percentage("0%")
 
-  defvars :theme,
+  css_vars :theme,
     accent: color("#ff0000")
 end
 ```
@@ -606,7 +674,7 @@ For development, add the watcher to your Phoenix endpoint:
 # config/dev.exs
 config :my_app, MyAppWeb.Endpoint,
   watchers: [
-    live_style: {LiveStyle.Watcher, :watch, [[]]}
+    live_style: {LiveStyle.Compiler, :run, [:default, ~w(--watch)]}
   ]
 ```
 
@@ -615,76 +683,117 @@ The watcher monitors the LiveStyle manifest file and regenerates CSS whenever st
 ## Generated CSS Structure
 
 ```css
-@property --v1234567 {
-  syntax: '<color>';
-  inherits: true;
-  initial-value: #ff0000;
-}
+/* Typed variables generate @property rules */
+@property --v1b5bwzm { syntax: "<angle>"; inherits: true; initial-value: 0deg }
 
+/* All CSS variables in a single :root block */
 :root {
-  --v1234567: #ff0000;
-  --v2345678: 16px;
+  --vc1svcr: #ffffff;
+  --v1co3hjg: #111827;
+  --v1m8p5kx: #6366f1;
 }
 
-@keyframes k1234567 {
+/* Keyframes with content-based hashes */
+@keyframes x1wc8ddo-B {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
+/* Atomic classes wrapped in @layer for specificity control */
 @layer live_style {
-  .x1a2b3c4 { display: flex; }
-  .x2b3c4d5 { padding: var(--v2345678); }
-  .x3c4d5e6 { background-color: var(--v1234567); }
+  .x1a2a7pz { outline: none }
+  .xh72szh { padding: var(--vdccikb) }
+  .x5u4613 { border-color: var(--vublb2l) }
 }
 ```
 
 ## API Reference
 
-### Core Macros (via `use LiveStyle`)
-
-| Macro | Description |
-|-------|-------------|
-| `style/2` | Define a named style with CSS declarations |
-| `keyframes/1` | Create keyframes animation and return the generated name |
-| `var/1` | Reference a CSS custom property |
-| `first_that_works/1` | Declare fallback values for a property |
-| `conditions/1` | Build conditional value map from tuples (for module attrs as keys) |
-| `position_try/1` | Create `@position-try` rules for CSS Anchor Positioning |
-
-### Marker Functions
-
-| Function | Description |
-|----------|-------------|
-| `LiveStyle.default_marker/0` | Returns the default marker class (`"{prefix}-default-marker"`) |
-| `LiveStyle.define_marker/1` | Creates a unique marker class for custom contexts |
-
-### Contextual Selectors (via `import LiveStyle.When`)
-
-| Function | Description |
-|----------|-------------|
-| `ancestor/1,2` | Style when ancestor has pseudo-state |
-| `descendant/1,2` | Style when descendant has pseudo-state |
-| `sibling_before/1,2` | Style when preceding sibling has pseudo-state |
-| `sibling_after/1,2` | Style when following sibling has pseudo-state |
-| `any_sibling/1,2` | Style when any sibling has pseudo-state |
-
 ### Token Macros (via `use LiveStyle.Tokens`)
 
 | Macro | Description |
 |-------|-------------|
-| `defvars/2` | Define CSS custom properties with a namespace |
-| `defconsts/2` | Define compile-time constants (not CSS variables) |
-| `defkeyframes/2` | Define keyframes and create a function returning the hashed name |
-| `keyframes/1` | Create keyframes and return the generated name |
-| `create_theme/3` | Create theme overrides for a var group |
-| `position_try/1` | Create `@position-try` rules for CSS Anchor Positioning |
+| `css_vars/2` | Define CSS custom properties with a namespace |
+| `css_consts/2` | Define compile-time constants (not CSS variables) |
+| `css_keyframes/2` | Define keyframes animation |
+| `css_theme/3` | Create theme overrides for a variable group |
+| `css_position_try/2` | Define `@position-try` rules for CSS Anchor Positioning |
+| `css_view_transition/2` | Define view transition styles |
 
-### View Transitions (via `use LiveStyle.ViewTransitions`)
+### Style Macros (via `use LiveStyle.Sheet`)
 
 | Macro | Description |
 |-------|-------------|
-| `view_transition/2` | Define view transition styles for a name pattern |
-| `view_transition_class/1` | Create view transition styles and return the generated class name |
+| `css_rule/2` | Define a named style with CSS declarations |
+| `first_that_works/1` | Declare fallback values for a property |
+
+### Reference Macros (available in both)
+
+| Macro | Description |
+|-------|-------------|
+| `css_var/1` | Reference a CSS variable: `css_var({Module, :namespace, :name})` |
+| `css_const/1` | Reference a constant: `css_const({Module, :namespace, :name})` |
+| `css_keyframes/1` | Reference keyframes: `css_keyframes({Module, :name})` |
+| `css_position_try/1` | Reference position-try: `css_position_try({Module, :name})` |
+| `css_view_transition/1` | Reference view transition: `css_view_transition({Module, :name})` |
+| `css_theme/1` | Reference theme: `css_theme({Module, :namespace, :theme_name})` |
+
+### Generated Functions (in modules using `LiveStyle.Sheet`)
+
+| Function | Description |
+|----------|-------------|
+| `css_class/1` | Returns a class string for use with `class={...}` |
+| `css/1` | Returns `%LiveStyle.Attrs{}` for spreading with `{...}` |
+
+### Module Functions
+
+| Function | Description |
+|----------|-------------|
+| `LiveStyle.default_marker/0` | Returns the default marker class for contextual selectors |
+| `LiveStyle.define_marker/1` | Creates a unique marker class for custom contexts |
+| `LiveStyle.css/2` | Get class string from another module: `LiveStyle.css(Module, :rule)` |
+| `LiveStyle.css_class/2` | Same as `css/2` |
+
+### Compiler Functions (via `LiveStyle.Compiler`)
+
+| Function | Description |
+|----------|-------------|
+| `LiveStyle.Compiler.run/2` | Run CSS generation for a profile |
+| `LiveStyle.Compiler.install_and_run/2` | Same as `run/2` (for Tailwind API compatibility) |
+| `LiveStyle.Compiler.write_css/1` | Write CSS to file if changed |
+
+### Validation Functions (via `LiveStyle.Vars`)
+
+| Function | Description |
+|----------|-------------|
+| `LiveStyle.Vars.validate_references!/0` | Validate CSS variable references in manifest |
+
+### Config Functions (via `LiveStyle.Config`)
+
+| Function | Description |
+|----------|-------------|
+| `LiveStyle.Config.output_path/0` | Get configured CSS output path |
+| `LiveStyle.Config.shorthand_strategy/0` | Get configured shorthand strategy |
+| `LiveStyle.Config.config_for!/1` | Get configuration for a profile |
+
+### Storage Functions (via `LiveStyle.Storage`)
+
+| Function | Description |
+|----------|-------------|
+| `LiveStyle.Storage.path/0` | Get current manifest path |
+| `LiveStyle.Storage.read/0` | Read manifest from file |
+| `LiveStyle.Storage.write/1` | Write manifest to file |
+| `LiveStyle.Storage.update/1` | Update manifest atomically |
+
+### Contextual Selectors (via `alias LiveStyle.When`)
+
+| Function | Description |
+|----------|-------------|
+| `When.ancestor/1,2` | Style when ancestor has pseudo-state |
+| `When.descendant/1,2` | Style when descendant has pseudo-state |
+| `When.sibling_before/1,2` | Style when preceding sibling has pseudo-state |
+| `When.sibling_after/1,2` | Style when following sibling has pseudo-state |
+| `When.any_sibling/1,2` | Style when any sibling has pseudo-state |
 
 ### Type Helpers (via `import LiveStyle.Types`)
 
@@ -698,70 +807,56 @@ The watcher monitors the LiveStyle manifest file and regenerates CSS whenever st
 | `time/1` | CSS `<time>` type |
 | `percentage/1` | CSS `<percentage>` type |
 
-### Module Functions
-
-| Function | Description |
-|----------|-------------|
-| `LiveStyle.props/1` | Merge style references into `[class: "...", style: "..."]` for templates |
-| `LiveStyle.inline_style/1` | Convert a style map to a CSS style string |
-| `LiveStyle.get_all_css/0` | Get complete CSS output |
-| `LiveStyle.write_css/1` | Write CSS to file if changed (used by compiler/watcher) |
-| `LiveStyle.clear/0` | Clear all collected CSS (useful for testing) |
-| `LiveStyle.output_path/0` | Get configured CSS output path |
-| `LiveStyle.manifest_path/0` | Get configured manifest path |
-| `LiveStyle.style_resolution/0` | Get configured style resolution mode |
-
-## Style Resolution Modes
+## Shorthand Strategies
 
 LiveStyle supports three strategies for handling CSS shorthand properties:
 
 ```elixir
 config :live_style,
-  style_resolution: :atomic  # default
+  shorthand_strategy: :keep_shorthands  # default
 ```
 
-### Available Modes
+### Available Strategies
 
-| Mode | Description | CSS Output for `margin: "10px 20px"` |
-|------|-------------|--------------------------------------|
-| `:atomic` | Pass through with null resets for cascade control | `margin: 10px 20px` |
-| `:strict` | Pass through as-is, error on disallowed shorthands | `margin: 10px 20px` |
-| `:expanded` | Expand to longhand properties | `margin-top: 10px; margin-right: 20px; ...` |
+| Strategy | Description |
+|----------|-------------|
+| `:keep_shorthands` | Pass through with null resets for cascade control (default) |
+| `:expand_to_longhands` | Expand to longhand properties |
+| `:reject_shorthands` | Error on disallowed shorthands |
 
-### `:atomic` (Default)
+### `:keep_shorthands` (Default)
 
-Keeps shorthands intact and allows all shorthand properties. Uses null resets internally for cascade control. Last style wins, matching developer expectations from traditional CSS. Good for maximum CSS compatibility and intuitive behavior.
+Keeps shorthands intact and allows all shorthand properties. Uses null resets internally for cascade control. Last style wins, matching developer expectations from traditional CSS.
 
-### `:strict`
+### `:expand_to_longhands`
 
-Shorthands like `margin`, `padding`, `gap` pass through unchanged. Certain shorthands are disallowed and raise compile-time errors. Use this mode for large codebases where you want to enforce explicit property declarations:
+Expands shorthand properties to their longhand equivalents. Produces more verbose CSS but provides maximum specificity predictability.
+
+### `:reject_shorthands`
+
+Certain shorthands are disallowed and raise compile-time errors. Use this mode for large codebases where you want to enforce explicit property declarations:
 
 ```elixir
-# These raise compile errors in :strict mode:
-style :button, border: "1px solid red"      # Use border_width, border_style, border_color
-style :card, background: "red url(...)"     # Use background_color, background_image
-style :animated, animation: "fade 1s"       # Use animation_name, animation_duration
+# These raise compile errors in :reject_shorthands mode:
+css_rule :button, border: "1px solid red"      # Use border_width, border_style, border_color
+css_rule :card, background: "red url(...)"     # Use background_color, background_image
 ```
-
-### `:expanded`
-
-Expands shorthand properties to their longhand equivalents. Produces more verbose CSS but provides maximum specificity predictability when mixing shorthands and longhands.
 
 ## CSS Anchor Positioning
 
-LiveStyle supports [CSS Anchor Positioning](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_anchor_positioning) through the `position_try/1` macro, which creates `@position-try` at-rules for fallback positioning.
+LiveStyle supports [CSS Anchor Positioning](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_anchor_positioning) through the `css_position_try/2` macro, which creates `@position-try` at-rules for fallback positioning.
 
 ```elixir
 defmodule MyApp.Tooltip do
-  use LiveStyle
+  use LiveStyle.Sheet
 
-  style :tooltip,
+  css_rule :tooltip,
     position: "absolute",
     position_anchor: "--trigger",
     top: "anchor(bottom)",
     left: "anchor(center)",
     # Fallback position if tooltip doesn't fit below
-    position_try_fallbacks: position_try(
+    position_try_fallbacks: css_position_try(
       bottom: "anchor(top)",
       left: "anchor(center)"
     )
@@ -780,27 +875,13 @@ This generates CSS like:
 
 ### Allowed Properties
 
-Only positioning-related properties are allowed in `position_try`:
+Only positioning-related properties are allowed in `css_position_try`:
 
 - **Position anchor**: `position_anchor`, `position_area`
 - **Inset**: `top`, `right`, `bottom`, `left`, `inset`, `inset_block`, `inset_inline`, etc.
 - **Margin**: `margin`, `margin_top`, `margin_inline_start`, etc.
 - **Size**: `width`, `height`, `min_width`, `max_height`, `block_size`, `inline_size`, etc.
 - **Self-alignment**: `align_self`, `justify_self`, `place_self`
-
-### Sharing Position Fallbacks
-
-To share position-try values across modules, use `defvars`:
-
-```elixir
-defmodule MyApp.PositionFallbacks do
-  use LiveStyle.Tokens
-
-  defvars :fallback,
-    top_left: position_try(top: "0", left: "0", width: "100px"),
-    bottom_right: position_try(bottom: "0", right: "0", width: "100px")
-end
-```
 
 ### Browser Support
 

@@ -140,10 +140,6 @@ defmodule LiveStyle.Fallback do
     |> String.trim_trailing(")")
   end
 
-  # ===========================================================================
-  # Private Functions
-  # ===========================================================================
-
   # StyleX validation: array values can only contain strings or numbers
   # Matches validation-stylex-create-test.js: "A style array value can only contain strings or numbers."
   defp validate_array_values!(values) do
@@ -164,99 +160,86 @@ defmodule LiveStyle.Fallback do
   # Nests vars only when non-var values come BEFORE the first var
   # Matches convert-to-className.js variableFallbacks function
   defp variable_fallbacks(values) do
-    has_vars = Enum.any?(values, &css_var?/1)
-
-    if not has_vars do
+    if Enum.any?(values, &css_var?/1) do
+      process_values_with_vars(values)
+    else
       # No vars - return as-is (order preserved)
       values
-    else
-      first_var = Enum.find_index(values, &css_var?/1)
-      last_var = find_last_index(values, &css_var?/1)
-
-      values_before = Enum.slice(values, 0, first_var)
-      var_values = Enum.slice(values, first_var, last_var - first_var + 1)
-      values_after = Enum.slice(values, last_var + 1, length(values) - last_var - 1)
-
-      # Extract var names (unwrap var(--x) to --x)
-      var_names =
-        var_values
-        |> Enum.reverse()
-        |> Enum.map(fn val ->
-          if css_var?(val), do: extract_var_name(val), else: val
-        end)
-
-      nested =
-        case values_before do
-          [] ->
-            # No values before first var - just compose vars (no nesting with after values)
-            [compose_vars(var_names)]
-
-          _ ->
-            # Values before first var get nested with the vars
-            # compose_vars expects innermost first, so val goes at the beginning
-            Enum.map(values_before, fn val -> compose_vars([val | var_names]) end)
-        end
-
-      nested ++ values_after
     end
+  end
+
+  defp process_values_with_vars(values) do
+    first_var = Enum.find_index(values, &css_var?/1)
+    last_var = find_last_index(values, &css_var?/1)
+
+    values_before = Enum.slice(values, 0, first_var)
+    var_values = Enum.slice(values, first_var, last_var - first_var + 1)
+    values_after = Enum.slice(values, last_var + 1, length(values) - last_var - 1)
+
+    # Extract var names (unwrap var(--x) to --x)
+    var_names = extract_var_names(var_values)
+
+    nested = build_nested_vars(values_before, var_names)
+    nested ++ values_after
+  end
+
+  defp extract_var_names(var_values) do
+    var_values
+    |> Enum.reverse()
+    |> Enum.map(fn val ->
+      if css_var?(val), do: extract_var_name(val), else: val
+    end)
+  end
+
+  defp build_nested_vars([], var_names) do
+    # No values before first var - just compose vars (no nesting with after values)
+    [compose_vars(var_names)]
+  end
+
+  defp build_nested_vars(values_before, var_names) do
+    # Values before first var get nested with the vars
+    # compose_vars expects innermost first, so val goes at the beginning
+    Enum.map(values_before, fn val -> compose_vars([val | var_names]) end)
   end
 
   # StyleX firstThatWorks transformation
   # Nests vars when var comes FIRST, otherwise keeps separate declarations
   # Matches stylex-first-that-works.js
   defp first_that_works_transform(values) do
-    first_var_index = Enum.find_index(values, &css_var?/1)
-
-    case first_var_index do
-      nil ->
-        # No CSS variables - reverse for fallback order
-        Enum.reverse(values)
-
-      0 ->
-        # Var comes first - nest vars with following non-var fallback
-        # Find first non-var after the vars
-        rest = values
-        first_non_var = Enum.find_index(rest, &(not css_var?(&1)))
-
-        var_parts =
-          case first_non_var do
-            nil -> rest
-            idx -> Enum.slice(rest, 0, idx + 1)
-          end
-
-        # Reverse and extract var names
-        var_names =
-          var_parts
-          |> Enum.reverse()
-          |> Enum.map(fn val ->
-            if css_var?(val), do: extract_var_name(val), else: val
-          end)
-
-        [compose_vars(var_names)]
-
-      idx ->
-        # Non-var values come first - they become separate declarations
-        priorities = Enum.slice(values, 0, idx) |> Enum.reverse()
-        rest = Enum.slice(values, idx, length(values) - idx)
-
-        # Process the rest (vars + possible fallback)
-        first_non_var = Enum.find_index(rest, &(not css_var?(&1)))
-
-        var_parts =
-          case first_non_var do
-            nil -> rest
-            i -> Enum.slice(rest, 0, i + 1)
-          end
-
-        var_names =
-          var_parts
-          |> Enum.reverse()
-          |> Enum.map(fn val ->
-            if css_var?(val), do: extract_var_name(val), else: val
-          end)
-
-        [compose_vars(var_names) | priorities]
+    case Enum.find_index(values, &css_var?/1) do
+      nil -> Enum.reverse(values)
+      0 -> transform_var_first(values)
+      idx -> transform_non_var_first(values, idx)
     end
+  end
+
+  defp transform_var_first(values) do
+    composed = compose_var_parts(extract_var_parts(values, 0))
+    [composed]
+  end
+
+  defp transform_non_var_first(values, idx) do
+    priorities = values |> Enum.take(idx) |> Enum.reverse()
+    rest = Enum.drop(values, idx)
+    composed = compose_var_parts(extract_var_parts(rest, 0))
+    [composed | priorities]
+  end
+
+  defp extract_var_parts(values, offset) do
+    first_non_var = Enum.find_index(values, &(not css_var?(&1)))
+    end_idx = if first_non_var, do: first_non_var + 1, else: length(values)
+    Enum.slice(values, offset, end_idx)
+  end
+
+  defp compose_var_parts(var_parts) do
+    var_parts
+    |> Enum.reverse()
+    |> Enum.map(&extract_var_or_value/1)
+    |> compose_vars()
+  end
+
+  defp extract_var_or_value(val) do
+    if css_var?(val), do: extract_var_name(val), else: val
   end
 
   # Find last index matching predicate

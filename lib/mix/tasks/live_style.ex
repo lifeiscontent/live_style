@@ -52,7 +52,7 @@ defmodule Mix.Tasks.LiveStyle do
   end
 
   defp run_profile([profile | args]) do
-    case LiveStyle.run(String.to_atom(profile), args) do
+    case LiveStyle.Compiler.run(String.to_atom(profile), args) do
       0 ->
         :ok
 
