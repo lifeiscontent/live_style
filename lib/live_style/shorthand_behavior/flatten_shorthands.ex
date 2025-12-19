@@ -139,27 +139,7 @@ defmodule LiveStyle.ShorthandBehavior.FlattenShorthands do
     end
   end
 
-  defp split_value(value) do
-    value
-    |> String.trim()
-    |> do_split_value([], "", 0)
-    |> Enum.reverse()
-    |> Enum.reject(&(&1 == ""))
-  end
-
-  defp do_split_value("", acc, current, _depth), do: [String.trim(current) | acc]
-
-  defp do_split_value(" " <> rest, acc, current, 0),
-    do: do_split_value(rest, [String.trim(current) | acc], "", 0)
-
-  defp do_split_value("(" <> rest, acc, current, depth),
-    do: do_split_value(rest, acc, current <> "(", depth + 1)
-
-  defp do_split_value(")" <> rest, acc, current, depth),
-    do: do_split_value(rest, acc, current <> ")", max(0, depth - 1))
-
-  defp do_split_value(<<char::utf8, rest::binary>>, acc, current, depth),
-    do: do_split_value(rest, acc, current <> <<char::utf8>>, depth)
+  defp split_value(value), do: LiveStyle.Utils.split_css_value(value)
 
   # ==========================================================================
   # Pattern-Specific Expansion

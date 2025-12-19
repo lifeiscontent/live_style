@@ -32,7 +32,6 @@ defmodule LiveStyle.ShorthandBehavior.AcceptShorthands do
   alias LiveStyle.Data
 
   # Load data at compile time
-  @shorthand_properties Data.shorthand_properties()
   @keep_shorthands_expansions Data.keep_shorthands_expansions()
 
   # ==========================================================================
@@ -87,16 +86,6 @@ defmodule LiveStyle.ShorthandBehavior.AcceptShorthands do
   # Generate lookup function for simple expansions
   for {css_prop, props} <- @expansions do
     defp get_expansion(unquote(css_prop)), do: {:simple, unquote(Macro.escape(props))}
-  end
-
-  # Add aliases from shorthand_properties
-  for {property, _expansion_fn} <- @shorthand_properties do
-    # Skip if already defined above
-    unless Map.has_key?(@expansions, property) do
-      if Map.has_key?(@expansions, property) do
-        defp get_expansion(unquote(property)), do: get_expansion(unquote(property))
-      end
-    end
   end
 
   # Complex expansions
@@ -202,32 +191,9 @@ defmodule LiveStyle.ShorthandBehavior.AcceptShorthands do
         {trimmed, false}
       end
 
-    parts = do_split_css_value(base_value, [], "", 0)
+    parts = LiveStyle.Utils.split_css_value(base_value)
     if important?, do: Enum.map(parts, &(&1 <> " !important")), else: parts
   end
 
   defp split_css_value(value), do: [value]
-
-  defp do_split_css_value("", acc, current, _depth) do
-    case String.trim(current) do
-      "" -> Enum.reverse(acc)
-      trimmed -> Enum.reverse([trimmed | acc])
-    end
-  end
-
-  defp do_split_css_value(<<" ", rest::binary>>, acc, current, 0) do
-    case String.trim(current) do
-      "" -> do_split_css_value(rest, acc, "", 0)
-      trimmed -> do_split_css_value(rest, [trimmed | acc], "", 0)
-    end
-  end
-
-  defp do_split_css_value(<<"(", rest::binary>>, acc, current, depth),
-    do: do_split_css_value(rest, acc, current <> "(", depth + 1)
-
-  defp do_split_css_value(<<")", rest::binary>>, acc, current, depth),
-    do: do_split_css_value(rest, acc, current <> ")", max(0, depth - 1))
-
-  defp do_split_css_value(<<char::utf8, rest::binary>>, acc, current, depth),
-    do: do_split_css_value(rest, acc, current <> <<char::utf8>>, depth)
 end

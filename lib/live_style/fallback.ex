@@ -210,16 +210,11 @@ defmodule LiveStyle.Fallback do
     if css_var?(val), do: extract_var_name(val), else: val
   end
 
-  # Find last index matching predicate
+  # Find last index matching predicate (returns -1 if not found)
   defp find_last_index(list, pred) do
     list
     |> Enum.with_index()
-    |> Enum.filter(fn {val, _idx} -> pred.(val) end)
-    |> List.last()
-    |> case do
-      nil -> -1
-      {_val, idx} -> idx
-    end
+    |> Enum.reduce(-1, fn {val, idx}, acc -> if pred.(val), do: idx, else: acc end)
   end
 
   # Compose CSS variables using StyleX's reduce pattern
