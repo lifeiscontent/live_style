@@ -9,7 +9,7 @@ defmodule LiveStyle.Class.CSS do
   - Array fallback handling
   """
 
-  alias LiveStyle.Hash
+  alias LiveStyle.Pseudo
   alias LiveStyle.RTL
 
   @doc """
@@ -106,7 +106,7 @@ defmodule LiveStyle.Class.CSS do
       # Sort pseudo-classes alphabetically (StyleX behavior)
       # e.g., ":hover:active" becomes ":active:hover"
       # Note: Complex selectors like :where(...) are passed through unchanged
-      sorted_suffix = Hash.sort_combined_pseudos(selector_suffix)
+      sorted_suffix = Pseudo.sort_combined(selector_suffix)
       "#{base}#{sorted_suffix}"
     else
       base
