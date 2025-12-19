@@ -82,7 +82,7 @@ defmodule LiveStyle.Config do
   @default_use_priority_layers false
   @default_validate_properties true
   @default_unknown_property_level :warn
-  @default_autoprefixer true
+  @default_prefixer nil
 
   @config_key :live_style_config_overrides
 
@@ -382,16 +382,52 @@ defmodule LiveStyle.Config do
   end
 
   @doc """
-  Returns whether autoprefixing is enabled.
+  Returns the prefixer function or module.
 
-  When enabled, LiveStyle automatically adds vendor prefixes for CSS properties
-  that need them based on modern browser support (browserslist "defaults").
+  The prefixer is called during CSS generation to add vendor prefixes.
+  It should be a function that takes `(property, value)` and returns
+  a CSS string with any needed prefixes.
 
-  Default is `true`. Disable if you handle prefixing elsewhere:
+  Default is `nil` (no prefixing). Set to a function or module:
 
-      config :live_style, autoprefixer: false
+      # Using a function
+      config :live_style, prefixer: &MyApp.Prefixer.prefix_css/2
+
+      # Using a module (must implement prefix_css/2)
+      config :live_style, prefixer: MyApp.Prefixer
+
+  The function signature should be:
+
+      @spec prefix_css(String.t(), String.t()) :: String.t()
+
+  Example implementation:
+
+      def prefix_css("user-select", value) do
+        "-webkit-user-select:\#{value};user-select:\#{value}"
+      end
+      def prefix_css(property, value), do: "\#{property}:\#{value}"
   """
-  def autoprefixer? do
-    get_config(:autoprefixer, @default_autoprefixer)
+  def prefixer do
+    get_config(:prefixer, @default_prefixer)
+  end
+
+  @doc """
+  Applies the configured prefixer to a property-value pair.
+
+  Returns the CSS string. If no prefixer is configured, returns
+  the standard "property:value" format.
+  """
+  @spec apply_prefixer(String.t(), String.t()) :: String.t()
+  def apply_prefixer(property, value) do
+    case prefixer() do
+      nil ->
+        "#{property}:#{value}"
+
+      fun when is_function(fun, 2) ->
+        fun.(property, value)
+
+      module when is_atom(module) ->
+        module.prefix_css(property, value)
+    end
   end
 end
