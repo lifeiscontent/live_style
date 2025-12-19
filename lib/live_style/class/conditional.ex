@@ -1,61 +1,8 @@
 defmodule LiveStyle.Class.Conditional do
-  @moduledoc """
-  Conditional value detection and flattening for LiveStyle class processing.
+  @moduledoc false
+  # Internal module for conditional value detection and flattening.
 
-  This module handles CSS values that vary based on selectors (pseudo-classes,
-  media queries, etc.). It provides:
-
-  - Detection of conditional values (maps/lists with selector keys)
-  - Flattening nested conditional structures
-  - Selector combination (parent + child selectors)
-
-  ## Conditional Value Format
-
-  Conditional values are maps or keyword lists where keys are CSS selectors:
-
-      %{
-        default: "black",
-        ":hover": "red",
-        "@media (min-width: 800px)": %{
-          default: "blue",
-          ":hover": "green"
-        }
-      }
-
-  These get flattened into a list of `{selector, value}` tuples for processing.
-
-  ## Examples
-
-      iex> conditional?(%{default: "red", ":hover": "blue"})
-      true
-
-      iex> conditional?("static-value")
-      false
-
-      iex> flatten(%{default: "black", ":hover": "red"}, nil)
-      [{nil, "black"}, {":hover", "red"}]
-  """
-
-  @doc """
-  Check if a value is a conditional value (varies by selector).
-
-  A value is conditional if it's a map or list where:
-  - It has a `:default` or `"default"` key, OR
-  - All keys are selector-like (start with `:` or `@`)
-
-  But NOT if it contains CSS property keys (like pseudo-element declarations).
-
-  ## Examples
-
-      iex> LiveStyle.Class.Conditional.conditional?(%{default: "red", ":hover": "blue"})
-      true
-
-      iex> LiveStyle.Class.Conditional.conditional?(%{content: "''", display: "block"})
-      false
-
-      iex> LiveStyle.Class.Conditional.conditional?("static")
-      false
-  """
+  @doc false
   @spec conditional?(term()) :: boolean()
   def conditional?(value) when is_map(value) do
     has_default = Map.has_key?(value, :default) or Map.has_key?(value, "default")
@@ -87,22 +34,7 @@ defmodule LiveStyle.Class.Conditional do
   def conditional?({key, _value}) when is_atom(key), do: selector_key?(key)
   def conditional?(_), do: false
 
-  @doc """
-  Recursively flatten nested conditional values into `{selector, value}` tuples.
-
-  Handles arbitrarily nested conditional maps/lists, combining selectors as it descends.
-
-  ## Examples
-
-      iex> flatten(%{default: "black", ":hover": "red"}, nil)
-      [{nil, "black"}, {":hover", "red"}]
-
-      iex> flatten(%{":hover": %{default: "red", ":focus": "blue"}}, nil)
-      [{":hover", "red"}, {":hover:focus", "blue"}]
-
-      iex> flatten(%{"@media (x)": %{default: "a", ":hover": "b"}}, nil)
-      [{"@media (x)", "a"}, {"@media (x):hover", "b"}]
-  """
+  @doc false
   @spec flatten(term(), String.t() | nil) :: [{String.t() | nil, term()}]
   def flatten(value_map, parent_selector) when is_map(value_map) do
     Enum.flat_map(value_map, fn {condition, value} ->
@@ -158,26 +90,7 @@ defmodule LiveStyle.Class.Conditional do
     [{parent_selector, value}]
   end
 
-  @doc """
-  Combine parent and child selectors into a single selector string.
-
-  Handles the special `:default` / `"default"` key which represents the
-  unconditional value.
-
-  ## Examples
-
-      iex> combine_selectors(nil, :default)
-      nil
-
-      iex> combine_selectors(nil, ":hover")
-      ":hover"
-
-      iex> combine_selectors(":hover", ":focus")
-      ":hover:focus"
-
-      iex> combine_selectors("@media (x)", ":hover")
-      "@media (x):hover"
-  """
+  @doc false
   @spec combine_selectors(String.t() | nil, atom() | String.t()) :: String.t() | nil
   def combine_selectors(nil, key) when key in [:default, "default"], do: nil
   def combine_selectors(parent, key) when key in [:default, "default"], do: parent
@@ -196,20 +109,7 @@ defmodule LiveStyle.Class.Conditional do
     parent <> condition
   end
 
-  @doc """
-  Check if a key looks like a CSS selector (pseudo-class, pseudo-element, at-rule).
-
-  ## Examples
-
-      iex> selector_key?(":hover")
-      true
-
-      iex> selector_key?("@media (min-width: 800px)")
-      true
-
-      iex> selector_key?(:display)
-      false
-  """
+  @doc false
   @spec selector_key?(atom() | String.t()) :: boolean()
   def selector_key?(key) when is_atom(key) do
     selector_key?(Atom.to_string(key))

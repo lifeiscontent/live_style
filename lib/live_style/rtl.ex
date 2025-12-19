@@ -1,14 +1,6 @@
 defmodule LiveStyle.RTL do
-  @moduledoc """
-  RTL/LTR bidirectional support for LiveStyle.
-
-  Following StyleX's physical-rtl approach:
-  1. Logical properties are transformed to physical properties
-  2. LTR: logical → physical left
-  3. RTL: logical → physical right (wrapped in html[dir="rtl"] selector)
-
-  Uses compile-time generated function clauses for optimized property lookups.
-  """
+  @moduledoc false
+  # Internal module for RTL/LTR bidirectional CSS support.
 
   alias LiveStyle.Data
 
@@ -53,26 +45,12 @@ defmodule LiveStyle.RTL do
 
   defp has_rtl_value?(_), do: false
 
-  @doc """
-  Generate LTR and RTL CSS rules for a property/value pair (simple version).
-
-  Returns `{ltr_property, ltr_value, rtl_css_or_nil}` where:
-  - ltr_property: The physical property name for LTR
-  - ltr_value: The physical value for LTR
-  - rtl_css_or_nil: The RTL CSS override rule string, or nil if not needed
-  """
+  @doc false
   def generate_ltr_rtl(css_property, css_value, class_name) do
     generate_ltr_rtl(css_property, css_value, class_name, nil, nil)
   end
 
-  @doc """
-  Generate LTR and RTL CSS rules for a property/value pair (full version).
-
-  Returns `{ltr_property, ltr_value, rtl_rule_or_nil}` where:
-  - ltr_property: The physical property name for LTR
-  - ltr_value: The physical value for LTR
-  - rtl_rule_or_nil: The RTL CSS override rule, or nil if not needed
-  """
+  @doc false
   def generate_ltr_rtl(css_property, css_value, class_name, selector_suffix, at_rule) do
     {ltr_prop, ltr_val} = generate_ltr(css_property, css_value)
     rtl_result = generate_rtl(css_property, css_value)
@@ -89,10 +67,7 @@ defmodule LiveStyle.RTL do
     {ltr_prop, ltr_val, rtl_rule}
   end
 
-  @doc """
-  Generate LTR (left-to-right) physical property and value.
-  Uses compile-time generated function clauses for O(1) lookups.
-  """
+  @doc false
   def generate_ltr(css_property, css_value) do
     # Check if property needs transformation using generated function
     case ltr_property(css_property) do
@@ -106,11 +81,7 @@ defmodule LiveStyle.RTL do
     end
   end
 
-  @doc """
-  Generate RTL (right-to-left) physical property and value.
-  Returns nil if no RTL override is needed.
-  Uses compile-time generated function clauses for O(1) lookups.
-  """
+  @doc false
   def generate_rtl(css_property, css_value) do
     cond do
       # Property is a logical property that needs RTL override

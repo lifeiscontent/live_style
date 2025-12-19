@@ -76,22 +76,15 @@ defmodule LiveStyle.ViewTransition do
   @valid_atom_keys [:group, :image_pair, :old, :new]
   @valid_string_keys ["group", "image-pair", "old", "new"]
 
-  @doc """
-  Returns the list of valid view transition atom keys.
-  """
+  @doc false
   @spec valid_atom_keys() :: list(atom())
   def valid_atom_keys, do: @valid_atom_keys
 
-  @doc """
-  Returns the list of valid view transition string keys.
-  """
+  @doc false
   @spec valid_string_keys() :: list(String.t())
   def valid_string_keys, do: @valid_string_keys
 
-  @doc """
-  Validates the keys in a view transition style map.
-  Returns :ok or {:error, invalid_keys}.
-  """
+  @doc false
   @spec validate_keys(map()) :: :ok | {:error, list()}
   def validate_keys(style_map) do
     invalid_keys =
@@ -154,40 +147,14 @@ defmodule LiveStyle.ViewTransition do
     end
   end
 
-  @doc """
-  Gets a view transition name, returning empty string if not found.
-  Used for runtime lookups where missing transitions shouldn't raise.
-  """
-  @spec get_name(module(), atom()) :: String.t()
-  def get_name(module, name) do
-    key = Manifest.simple_key(module, name)
-    manifest = LiveStyle.Storage.read()
-
-    case Manifest.get_view_transition(manifest, key) do
-      %{css_name: css_name} -> css_name
-      nil -> ""
-    end
-  end
-
-  @doc """
-  Generates a CSS name hash from the styles.
-  """
+  @doc false
   @spec generate_css_name(keyword() | map()) :: String.t()
   def generate_css_name(styles) do
     css_content = generate_css_string(styles)
     Hash.view_transition_name(css_content)
   end
 
-  @doc """
-  Generates a deterministic CSS string for content-based hashing.
-
-  StyleX format: "::view-transition-group:transition-property:none;;::view-transition-image-pair:border-radius:16px;;..."
-  Each pseudo element is formatted as: {pseudo}:{property}:{value};
-  And each pseudo element's styles end with an extra ; (so ";;" between pseudos)
-
-  IMPORTANT: StyleX preserves the input order of both pseudo elements and properties.
-  We must NOT sort them - use the original order from the keyword list/map.
-  """
+  @doc false
   @spec generate_css_string(keyword() | map()) :: String.t()
   def generate_css_string(styles) do
     # Convert to list preserving order (keyword list stays as-is, map gets converted)

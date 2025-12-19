@@ -118,12 +118,9 @@ defmodule LiveStyle.Config do
     :ok
   end
 
-  @doc """
-  Gets a per-process configuration override.
-
-  Returns `nil` if no override is set.
-  """
-  def get_override(key) do
+  # Gets a per-process configuration override.
+  # Returns `nil` if no override is set.
+  defp get_override(key) do
     overrides = Process.get(@config_key, %{})
     Map.get(overrides, key)
   end

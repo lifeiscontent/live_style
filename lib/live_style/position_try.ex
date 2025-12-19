@@ -54,64 +54,9 @@ defmodule LiveStyle.PositionTry do
   alias LiveStyle.Property
   alias LiveStyle.Value
 
-  @doc """
-  Returns the set of allowed properties in @position-try rules.
-  Loaded from data/position_try_properties.txt
-  """
+  @doc false
   @spec allowed_properties() :: MapSet.t()
   def allowed_properties, do: Property.position_try_properties()
-
-  @doc """
-  Creates a @position-try CSS rule and returns the dashed-ident.
-  """
-  @spec create(map()) :: String.t()
-  def create(declarations) do
-    allowed = allowed_properties()
-
-    # Validate properties using compile-time generated lookups
-    invalid_props =
-      declarations
-      |> Map.keys()
-      |> Enum.map(&Value.to_css_property/1)
-      |> Enum.reject(&Property.position_try?/1)
-
-    unless Enum.empty?(invalid_props) do
-      raise ArgumentError, """
-      Invalid properties in position_try: #{inspect(invalid_props)}
-
-      Only these properties are allowed in @position-try rules:
-      #{allowed |> MapSet.to_list() |> Enum.sort() |> Enum.join(", ")}
-      """
-    end
-
-    # Generate CSS declarations (keep logical properties as-is)
-    declarations_css =
-      declarations
-      |> Enum.sort_by(fn {k, _} -> Value.to_css_property(k) end)
-      |> Enum.map_join("; ", fn {k, v} ->
-        css_prop = Value.to_css_property(k)
-        css_value = normalize_value(v)
-        "#{css_prop}: #{css_value}"
-      end)
-
-    dashed_ident = Hash.position_try_name(declarations_css)
-    css_rule = "@position-try #{dashed_ident} { #{declarations_css}; }"
-
-    # Register the rule
-    LiveStyle.Storage.update(fn manifest ->
-      position_try_rules = manifest[:position_try] || %{}
-
-      if Map.has_key?(position_try_rules, dashed_ident) do
-        manifest
-      else
-        # Store as simple CSS rule (no LTR/RTL variants for position-try)
-        entry = %{ltr: css_rule, rtl: nil}
-        Map.put(manifest, :position_try, Map.put(position_try_rules, dashed_ident, entry))
-      end
-    end)
-
-    dashed_ident
-  end
 
   @doc """
   Defines a named position-try rule and stores it in the manifest.
@@ -183,10 +128,7 @@ defmodule LiveStyle.PositionTry do
     end
   end
 
-  @doc """
-  Generates the CSS dashed-ident name from declarations using StyleX's algorithm.
-  StyleX hashes the LTR string which has format: "key:key;key:value;" for each property.
-  """
+  @doc false
   @spec generate_css_name(map()) :: String.t()
   def generate_css_name(declarations) do
     css_string =
@@ -202,20 +144,14 @@ defmodule LiveStyle.PositionTry do
     "--x" <> Hash.create_hash(css_string)
   end
 
-  @doc """
-  Normalizes a value for use in position-try declarations.
-  Adds px suffix to numbers, converts atoms to strings.
-  """
+  @doc false
   @spec normalize_value(term()) :: String.t()
   def normalize_value(value) when is_integer(value), do: "#{value}px"
   def normalize_value(value) when is_float(value), do: "#{value}px"
   def normalize_value(value) when is_binary(value), do: value
   def normalize_value(value) when is_atom(value), do: Atom.to_string(value)
 
-  @doc """
-  Validates that all properties in declarations are allowed in @position-try rules.
-  Returns {:ok, normalized_declarations} or {:error, invalid_props}.
-  """
+  @doc false
   @spec validate_declarations(map()) :: {:ok, map()} | {:error, list(String.t())}
   def validate_declarations(declarations) do
     allowed = allowed_properties()

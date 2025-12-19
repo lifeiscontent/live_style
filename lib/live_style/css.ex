@@ -64,16 +64,6 @@ defmodule LiveStyle.CSS do
   defdelegate write(path, opts \\ []), to: LiveStyle.CSS.Writer
 
   @doc """
-  Converts a style map to an inline CSS string.
-  """
-  @spec inline_style(map()) :: String.t()
-  def inline_style(style_map) when is_map(style_map) do
-    style_map
-    |> Enum.sort_by(fn {k, _} -> k end)
-    |> Enum.map_join("; ", fn {var_name, value} -> "#{var_name}: #{value}" end)
-  end
-
-  @doc """
   Expands `::thumb` pseudo-element to vendor-prefixed variants.
 
   Delegates to `LiveStyle.CSS.RuleGenerator.expand_thumb_selector/1`.

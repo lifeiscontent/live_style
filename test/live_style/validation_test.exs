@@ -96,7 +96,7 @@ defmodule LiveStyle.ValidationTest do
     defmodule ValidViewTransitionModule do
       use LiveStyle
 
-      css_view_transition(:slide)
+      css_view_transition(:slide, old: [opacity: "0"], new: [opacity: "1"])
     end
 
     test "raises error for unknown view_transition reference" do

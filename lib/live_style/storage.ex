@@ -26,8 +26,21 @@ defmodule LiveStyle.Storage do
   """
 
   @default_path "_build/live_style_manifest.etf"
-  @lock_timeout 30_000
+  @default_lock_timeout 30_000
   @path_key :live_style_manifest_path
+
+  @doc """
+  Returns the lock timeout in milliseconds.
+
+  Configurable via:
+
+      config :live_style, lock_timeout: 60_000
+
+  Defaults to 30 seconds.
+  """
+  def lock_timeout do
+    Application.get_env(:live_style, :lock_timeout, @default_lock_timeout)
+  end
 
   @doc """
   Sets the manifest path for the current process.
@@ -71,15 +84,7 @@ defmodule LiveStyle.Storage do
     if File.exists?(file_path) do
       case File.read(file_path) do
         {:ok, binary} ->
-          try do
-            manifest = :erlang.binary_to_term(binary)
-            LiveStyle.Manifest.ensure_keys(manifest)
-          rescue
-            e ->
-              require Logger
-              Logger.warning("LiveStyle: Failed to parse manifest at #{file_path}: #{inspect(e)}")
-              LiveStyle.Manifest.empty()
-          end
+          parse_manifest(binary, file_path)
 
         {:error, reason} ->
           require Logger
@@ -89,6 +94,19 @@ defmodule LiveStyle.Storage do
     else
       LiveStyle.Manifest.empty()
     end
+  end
+
+  # Parse manifest binary, handling only expected errors from corrupt data.
+  # Programming errors (FunctionClauseError, etc.) are allowed to propagate.
+  defp parse_manifest(binary, file_path) do
+    manifest = :erlang.binary_to_term(binary)
+    LiveStyle.Manifest.ensure_keys(manifest)
+  catch
+    # :erlang.binary_to_term raises :badarg for invalid binary format
+    :error, :badarg ->
+      require Logger
+      Logger.warning("LiveStyle: Corrupt manifest at #{file_path}, starting fresh")
+      LiveStyle.Manifest.empty()
   end
 
   @doc """
@@ -144,16 +162,9 @@ defmodule LiveStyle.Storage do
     :ok
   end
 
-  @doc """
-  Checks if the manifest has any styles.
-
-  Delegates to `LiveStyle.Manifest.has_styles?/1`.
-  """
-  defdelegate has_styles?(manifest), to: LiveStyle.Manifest
-
   # Simple file-based locking using mkdir (atomic on most filesystems)
   defp with_lock(lock_path, fun) do
-    acquire_lock(lock_path, @lock_timeout)
+    acquire_lock(lock_path, lock_timeout())
 
     try do
       fun.()

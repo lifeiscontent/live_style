@@ -1,36 +1,14 @@
 defmodule LiveStyle.Fallback do
-  @moduledoc """
-  CSS fallback value processing for LiveStyle.
-
-  This module implements StyleX-compatible fallback value handling:
-  - Plain array fallbacks (variableFallbacks behavior)
-  - Explicit first_that_works fallbacks (firstThatWorks behavior)
-  - CSS variable nesting: `var(--a, var(--b, fallback))`
-
-  ## StyleX Behavior
-
-  StyleX has two types of fallback handling:
-
-  1. **Plain arrays** - Uses variableFallbacks algorithm
-     - Order preserved for non-var values
-     - CSS vars get nested when non-var values precede them
-
-  2. **first_that_works()** - Uses firstThatWorks algorithm
-     - Reverses non-var values for proper CSS fallback order
-     - Nests CSS vars with their fallbacks
-  """
+  @moduledoc false
+  # Internal module for CSS fallback value processing.
+  # Implements StyleX-compatible fallback value handling.
 
   alias LiveStyle.Class.CSS, as: ClassCss
   alias LiveStyle.Hash
   alias LiveStyle.Priority
   alias LiveStyle.Value
 
-  @doc """
-  Process plain array fallback values (StyleX variableFallbacks behavior).
-
-  Arrays preserve order, only CSS vars get nested into `var(--x, var(--y, fallback))`.
-  This matches StyleX's convert-to-className.js variableFallbacks function.
-  """
+  @doc false
   @spec process_array(String.t(), list()) :: {String.t(), map()}
   def process_array(css_prop, values) do
     # StyleX validation: array values can only contain strings or numbers
@@ -56,11 +34,7 @@ defmodule LiveStyle.Fallback do
     build_result(css_prop, class_name, transformed, ltr_css, rtl_css, priority)
   end
 
-  @doc """
-  Process explicit first_that_works() values (StyleX firstThatWorks behavior).
-
-  This reverses non-var values and nests CSS vars.
-  """
+  @doc false
   @spec process_first_that_works(String.t(), list()) :: {String.t(), map()}
   def process_first_that_works(css_prop, values) do
     normalized_values =
@@ -83,9 +57,7 @@ defmodule LiveStyle.Fallback do
     build_result(css_prop, class_name, transformed, ltr_css, rtl_css, priority)
   end
 
-  @doc """
-  Build the result map for fallback values.
-  """
+  @doc false
   @spec build_result(
           String.t(),
           String.t(),
@@ -120,9 +92,7 @@ defmodule LiveStyle.Fallback do
     {css_prop, result}
   end
 
-  @doc """
-  Check if a value is a CSS variable reference.
-  """
+  @doc false
   @spec css_var?(term()) :: boolean()
   def css_var?(value) when is_binary(value) do
     String.starts_with?(value, "var(") and String.ends_with?(value, ")")
@@ -130,9 +100,7 @@ defmodule LiveStyle.Fallback do
 
   def css_var?(_), do: false
 
-  @doc """
-  Extract var name from var(--name) -> --name
-  """
+  @doc false
   @spec extract_var_name(String.t()) :: String.t()
   def extract_var_name(value) do
     value

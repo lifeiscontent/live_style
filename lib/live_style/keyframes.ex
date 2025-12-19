@@ -140,12 +140,20 @@ defmodule LiveStyle.Keyframes do
 
   defp frame_sort_key(key) when is_binary(key) do
     # Parse percentage like "50%" -> 50
-    key |> String.trim_trailing("%") |> String.to_integer()
-  rescue
-    _ -> 50
+    case Integer.parse(String.trim_trailing(key, "%")) do
+      {num, ""} ->
+        num
+
+      _ ->
+        raise ArgumentError,
+              "Invalid keyframe key: #{inspect(key)}. Expected 'from', 'to', or a percentage like '50%'"
+    end
   end
 
-  defp frame_sort_key(_), do: 50
+  defp frame_sort_key(key) do
+    raise ArgumentError,
+          "Invalid keyframe key: #{inspect(key)}. Expected atom (:from, :to) or string ('50%')"
+  end
 
   # Normalize frame key to string
   defp normalize_frame_key(:from), do: "from"

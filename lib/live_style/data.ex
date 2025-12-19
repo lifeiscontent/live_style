@@ -71,27 +71,6 @@ defmodule LiveStyle.Data do
   @logical_value_to_ltr val_ltr
   @logical_value_to_rtl val_rtl
 
-  # Derive property priority tiers from @property_priorities (single source of truth)
-  # This eliminates duplication and ensures consistency with data files
-  @shorthands_of_shorthands @property_priorities
-                            |> Enum.filter(fn {_prop, category} ->
-                              category == :shorthands_of_shorthands
-                            end)
-                            |> Enum.map(fn {prop, _} -> prop end)
-                            |> MapSet.new()
-
-  @shorthands_of_longhands @property_priorities
-                           |> Enum.filter(fn {_prop, category} ->
-                             category == :shorthands_of_longhands
-                           end)
-                           |> Enum.map(fn {prop, _} -> prop end)
-                           |> MapSet.new()
-
-  @longhand_physical @property_priorities
-                     |> Enum.filter(fn {_prop, category} -> category == :longhand_physical end)
-                     |> Enum.map(fn {prop, _} -> prop end)
-                     |> MapSet.new()
-
   # Public accessors
   def property_priorities, do: @property_priorities
   def pseudo_priorities, do: @pseudo_priorities
@@ -106,9 +85,6 @@ defmodule LiveStyle.Data do
   def logical_to_rtl, do: @logical_to_rtl
   def logical_value_to_ltr, do: @logical_value_to_ltr
   def logical_value_to_rtl, do: @logical_value_to_rtl
-  def shorthands_of_shorthands, do: @shorthands_of_shorthands
-  def shorthands_of_longhands, do: @shorthands_of_longhands
-  def longhand_physical, do: @longhand_physical
 
   # KeepShorthands strategy expansions
   @keep_shorthands_expansions Parser.keep_shorthands_expansions()

@@ -1,30 +1,11 @@
 defmodule LiveStyle.Class.CSS do
-  @moduledoc """
-  CSS class generation helpers for LiveStyle.
-
-  This module handles the generation of CSS rule strings including:
-  - LTR/RTL CSS generation
-  - At-rule wrapping (@media, @supports)
-  - Selector building with specificity bumping
-  - Array fallback handling
-  """
+  @moduledoc false
+  # Internal module for CSS class generation helpers.
 
   alias LiveStyle.Pseudo.Sort, as: PseudoSort
   alias LiveStyle.RTL
 
-  @doc """
-  Generate StyleX-compatible CSS rule metadata (ltr, rtl strings).
-
-  Returns a tuple of `{ltr_css, rtl_css}` where rtl_css may be nil.
-
-  ## Examples
-
-      iex> generate_css_rule_metadata("x123", "color", "red", nil, nil)
-      {".x123{color:red}", nil}
-
-      iex> generate_css_rule_metadata("x123", "color", "red", ":hover", nil)
-      {".x123:hover{color:red}", nil}
-  """
+  @doc false
   @spec generate_metadata(
           String.t(),
           String.t(),
@@ -84,13 +65,7 @@ defmodule LiveStyle.Class.CSS do
     {ltr_css, nil}
   end
 
-  @doc """
-  Build CSS selector with optional pseudo-class/element and specificity bumping.
-
-  StyleX doubles the class selector for specificity when:
-  - at-rules are present (@media, @supports, etc.)
-  - contextual selectors are used (:where(...), when.ancestor, etc.)
-  """
+  @doc false
   @spec build_selector(String.t(), String.t() | nil, String.t() | nil) :: String.t()
   def build_selector(class_name, selector_suffix, at_rule) do
     needs_specificity_bump = at_rule != nil or contextual_selector?(selector_suffix)
@@ -113,14 +88,7 @@ defmodule LiveStyle.Class.CSS do
     end
   end
 
-  @doc """
-  Wrap CSS in nested at-rules.
-
-  StyleX sorts at-rules alphabetically, then wraps left-to-right.
-  Input: "@media (min-width: 800px)@supports (color: oklch(0 0 0))"
-  Output: "@supports (color: oklch(0 0 0)){@media (min-width: 800px){...}}"
-  (because @media < @supports alphabetically, @supports ends up as outer wrapper)
-  """
+  @doc false
   @spec wrap_in_at_rules(String.t() | nil, String.t()) :: String.t()
   def wrap_in_at_rules(nil, css), do: css
   def wrap_in_at_rules("", css), do: css
@@ -140,29 +108,17 @@ defmodule LiveStyle.Class.CSS do
     end)
   end
 
-  @doc """
-  Split combined at-rules into individual rules.
-
-  ## Examples
-
-      iex> split_at_rules("@media (min-width: 800px)@supports (color: oklch(0 0 0))")
-      ["@media (min-width: 800px)", "@supports (color: oklch(0 0 0))"]
-  """
-  @spec split_at_rules(String.t()) :: list(String.t())
-  def split_at_rules(at_rule) do
-    # Use regex to split at @ boundaries, preserving the @ symbol
+  # Split combined at-rules into individual rules.
+  # "@media (x)@supports (y)" -> ["@media (x)", "@supports (y)"]
+  defp split_at_rules(at_rule) do
     Regex.split(~r/(?=@)/, at_rule, trim: true)
   end
 
-  @doc """
-  Check if selector_suffix is a contextual selector.
+  # Check if selector_suffix is a contextual selector.
+  # Contextual selectors include :where, :is, :has, or :not with complex content.
+  defp contextual_selector?(nil), do: false
 
-  Contextual selectors include :where, :is, :has, or :not with complex content.
-  """
-  @spec contextual_selector?(String.t() | nil) :: boolean()
-  def contextual_selector?(nil), do: false
-
-  def contextual_selector?(suffix) when is_binary(suffix) do
+  defp contextual_selector?(suffix) when is_binary(suffix) do
     String.starts_with?(suffix, ":where(") or
       String.starts_with?(suffix, ":is(") or
       String.starts_with?(suffix, ":has(") or

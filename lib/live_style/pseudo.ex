@@ -181,7 +181,8 @@ defmodule LiveStyle.Pseudo do
   @doc "Returns all pseudo-class priorities as a map."
   def priorities, do: @pseudo_class_priorities
 
-  @doc "Returns the pseudo-element split regex pattern."
+  @doc false
+  # Used by Pseudo.Sort to avoid duplicating the regex
   def element_split_regex, do: @pseudo_element_split_regex
 
   @doc """

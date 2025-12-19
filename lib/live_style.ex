@@ -462,7 +462,7 @@ defmodule LiveStyle do
   """
   defmacro css_view_transition(ref) when is_atom(ref) do
     quote do
-      LiveStyle.ViewTransition.get_name(__MODULE__, unquote(ref))
+      LiveStyle.ViewTransition.lookup!(__MODULE__, unquote(ref))
     end
   end
 
@@ -470,7 +470,7 @@ defmodule LiveStyle do
     {module, _} = Code.eval_quoted(module_ast, [], __CALLER__)
 
     quote do
-      LiveStyle.ViewTransition.get_name(unquote(module), unquote(name))
+      LiveStyle.ViewTransition.lookup!(unquote(module), unquote(name))
     end
   end
 

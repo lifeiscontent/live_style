@@ -251,9 +251,6 @@ defmodule LiveStyle.Hash do
     |> String.downcase()
   end
 
-  @doc """
-  Sorts at-rules alphabetically (matches StyleX's sortAtRules).
-  """
-  @spec sort_at_rules(list(String.t())) :: list(String.t())
-  def sort_at_rules(at_rules), do: Enum.sort(at_rules)
+  # Sorts at-rules alphabetically (matches StyleX's sortAtRules)
+  defp sort_at_rules(at_rules), do: Enum.sort(at_rules)
 end

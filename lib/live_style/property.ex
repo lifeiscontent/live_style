@@ -227,21 +227,6 @@ defmodule LiveStyle.Property do
     end
   end
 
-  @doc "Returns all property priorities as a map."
-  def priorities, do: @property_priorities
-
-  @doc "Returns all unitless properties as a MapSet."
-  def unitless_properties, do: @unitless_properties
-
-  @doc "Returns all time properties as a MapSet."
-  def time_properties, do: @time_properties
-
   @doc "Returns all position-try properties as a MapSet."
   def position_try_properties, do: @position_try_properties
-
-  @doc "Returns all RTL value properties as a MapSet."
-  def rtl_value_properties, do: @rtl_value_properties
-
-  @doc "Returns all disallowed shorthands as a MapSet."
-  def disallowed_shorthands, do: @disallowed_shorthands
 end

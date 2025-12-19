@@ -16,8 +16,7 @@ defmodule LiveStyle.Pseudo.Sort do
       ":active:hover"
   """
 
-  # Compiled regex pattern for pseudo-element splitting
-  @pseudo_element_split_regex ~r/^(::[\w-]+)(.*)$/
+  alias LiveStyle.Pseudo
 
   @doc """
   Sorts pseudos matching StyleX's sortPseudos behavior exactly.
@@ -94,7 +93,7 @@ defmodule LiveStyle.Pseudo.Sort do
   # Starts with pseudo-element
   def sort_combined(<<"::", _rest::binary>> = combined) do
     # For ::before:hover, keep the pseudo-element first, then the pseudo-classes
-    case Regex.run(@pseudo_element_split_regex, combined) do
+    case Regex.run(Pseudo.element_split_regex(), combined) do
       [_, pseudo_element, rest] when rest != "" ->
         # Sort only the pseudo-classes that come after the pseudo-element
         sorted_rest = sort_classes_only(rest)
