@@ -168,19 +168,9 @@ defmodule LiveStyle.RTL do
   end
 
   # Build RTL CSS rule with html[dir="rtl"] selector
-  defp build_rtl_rule(class_name, property, value, nil, nil) do
-    "html[dir=\"rtl\"] .#{class_name} { #{property}: #{value}; }"
-  end
-
-  defp build_rtl_rule(class_name, property, value, selector_suffix, nil) do
-    "html[dir=\"rtl\"] .#{class_name}#{selector_suffix} { #{property}: #{value}; }"
-  end
-
-  defp build_rtl_rule(class_name, property, value, nil, at_rule) do
-    "#{at_rule} { html[dir=\"rtl\"] .#{class_name} { #{property}: #{value}; } }"
-  end
-
   defp build_rtl_rule(class_name, property, value, selector_suffix, at_rule) do
-    "#{at_rule} { html[dir=\"rtl\"] .#{class_name}#{selector_suffix} { #{property}: #{value}; } }"
+    suffix = selector_suffix || ""
+    inner = "html[dir=\"rtl\"] .#{class_name}#{suffix} { #{property}: #{value}; }"
+    if at_rule, do: "#{at_rule} { #{inner} }", else: inner
   end
 end

@@ -6,6 +6,17 @@ defmodule LiveStyle.Data.Parser do
   for automatic recompilation when data files change.
 
   Inspired by the unicode library's approach to data parsing.
+
+  ## Note on String.to_atom Usage
+
+  This module uses `String.to_atom/1` in several places. This is safe because:
+  1. It runs only at **compile time**, not at runtime
+  2. The input comes from **static data files** bundled with the library
+  3. The set of atoms is **finite and bounded** by the data files
+  4. No user input ever reaches these functions
+
+  The atoms are category names, function names, and type identifiers that are
+  known at compile time and used for pattern matching in generated code.
   """
 
   # Get the data directory path at compile time
