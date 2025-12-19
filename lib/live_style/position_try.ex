@@ -121,6 +121,21 @@ defmodule LiveStyle.PositionTry do
   def define(module, name, declarations, css_name) do
     key = Manifest.simple_key(module, name)
 
+    # In test environment, skip if already exists to avoid race conditions
+    if Mix.env() == :test do
+      manifest = LiveStyle.Storage.read()
+
+      unless Manifest.get_position_try(manifest, key) do
+        do_define_position_try(key, css_name, declarations)
+      end
+    else
+      do_define_position_try(key, css_name, declarations)
+    end
+
+    :ok
+  end
+
+  defp do_define_position_try(key, css_name, declarations) do
     entry = %{
       css_name: css_name,
       declarations: declarations
@@ -129,8 +144,6 @@ defmodule LiveStyle.PositionTry do
     LiveStyle.Storage.update(fn manifest ->
       Manifest.put_position_try(manifest, key, entry)
     end)
-
-    :ok
   end
 
   @doc """
@@ -141,14 +154,16 @@ defmodule LiveStyle.PositionTry do
   def define_anonymous(module, declarations, css_name) do
     key = "#{module}:__anon_position_try__:#{css_name}"
 
-    entry = %{
-      css_name: css_name,
-      declarations: declarations
-    }
+    # In test environment, skip if already exists to avoid race conditions
+    if Mix.env() == :test do
+      manifest = LiveStyle.Storage.read()
 
-    LiveStyle.Storage.update(fn manifest ->
-      Manifest.put_position_try(manifest, key, entry)
-    end)
+      unless Manifest.get_position_try(manifest, key) do
+        do_define_position_try(key, css_name, declarations)
+      end
+    else
+      do_define_position_try(key, css_name, declarations)
+    end
 
     :ok
   end

@@ -89,6 +89,22 @@ defmodule LiveStyle.Theme do
   def define(var_group_module, namespace, theme_name, overrides, css_name, theme_module \\ nil) do
     theme_module = theme_module || var_group_module
     key = Manifest.namespaced_key(theme_module, namespace, theme_name)
+
+    # In test environment, skip if already exists to avoid race conditions
+    if Mix.env() == :test do
+      manifest = LiveStyle.Storage.read()
+
+      unless Manifest.get_theme(manifest, key) do
+        do_define_theme(key, var_group_module, namespace, overrides, css_name)
+      end
+    else
+      do_define_theme(key, var_group_module, namespace, overrides, css_name)
+    end
+
+    :ok
+  end
+
+  defp do_define_theme(key, var_group_module, namespace, overrides, css_name) do
     overrides = normalize_to_map(overrides)
 
     # Convert override keys to CSS var names using the var group's module and namespace
@@ -110,8 +126,6 @@ defmodule LiveStyle.Theme do
     LiveStyle.Storage.update(fn manifest ->
       Manifest.put_theme(manifest, key, entry)
     end)
-
-    :ok
   end
 
   @doc """

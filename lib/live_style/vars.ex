@@ -19,10 +19,23 @@ defmodule LiveStyle.Vars do
   def define(module, namespace, vars) do
     vars = normalize_to_map(vars)
 
-    Enum.each(vars, fn {name, value} ->
-      key = Manifest.namespaced_key(module, namespace, name)
-      define_var(module, namespace, name, key, value)
-    end)
+    # In test environment, skip if var already exists to avoid race conditions
+    if Mix.env() == :test do
+      manifest = LiveStyle.Storage.read()
+
+      Enum.each(vars, fn {name, value} ->
+        key = Manifest.namespaced_key(module, namespace, name)
+
+        unless Manifest.get_var(manifest, key) do
+          define_var(module, namespace, name, key, value)
+        end
+      end)
+    else
+      Enum.each(vars, fn {name, value} ->
+        key = Manifest.namespaced_key(module, namespace, name)
+        define_var(module, namespace, name, key, value)
+      end)
+    end
 
     :ok
   end
