@@ -138,13 +138,14 @@ defmodule LiveStyle.CSS.Vars do
   end
 
   # Extract the initial value for @property rules
-  defp extract_initial_value(%{default: default}) when is_binary(default), do: default
-  defp extract_initial_value(%{"default" => default}) when is_binary(default), do: default
   defp extract_initial_value(value) when is_binary(value), do: value
   defp extract_initial_value(value) when is_number(value), do: to_string(value)
 
   defp extract_initial_value(%{} = map) do
-    case Map.get(map, :default) || Map.get(map, "default") do
+    # Check for :default or "default" key
+    default = Map.get(map, :default) || Map.get(map, "default")
+
+    case default do
       nil -> map |> Map.values() |> List.first() |> to_string()
       val when is_binary(val) -> val
       val -> to_string(val)
