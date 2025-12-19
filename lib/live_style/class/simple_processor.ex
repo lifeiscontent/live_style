@@ -16,7 +16,8 @@ defmodule LiveStyle.Class.SimpleProcessor do
 
   alias LiveStyle.Class.CSS, as: ClassCSS
   alias LiveStyle.Class.Conditional
-  alias LiveStyle.{Hash, Priority, Value}
+  alias LiveStyle.{Config, Hash, Priority, Value}
+  alias LiveStyle.Property.Validation
   alias LiveStyle.ShorthandBehavior
 
   @doc """
@@ -39,11 +40,12 @@ defmodule LiveStyle.Class.SimpleProcessor do
   """
   @spec process(list()) :: map()
   def process(declarations) do
-    # Convert keys to CSS strings at boundary, then expand shorthand properties
+    # Convert keys to CSS strings at boundary, validate, then expand shorthand properties
     expanded =
       declarations
       |> Enum.flat_map(fn {prop, value} ->
         css_prop = Value.to_css_property(prop)
+        maybe_validate_property(css_prop)
         ShorthandBehavior.expand_declaration(css_prop, value)
       end)
 
@@ -127,5 +129,12 @@ defmodule LiveStyle.Class.SimpleProcessor do
 
   defp process_first_that_works(css_prop, values) do
     LiveStyle.Fallback.process_first_that_works(css_prop, values)
+  end
+
+  # Validate property name if validation is enabled
+  defp maybe_validate_property(css_prop) do
+    if Config.validate_properties?() do
+      Validation.validate!(css_prop)
+    end
   end
 end

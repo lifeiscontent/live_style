@@ -80,6 +80,8 @@ defmodule LiveStyle.Config do
   @default_font_size_root_px 16
   @default_use_css_layers true
   @default_use_priority_layers false
+  @default_validate_properties true
+  @default_unknown_property_level :warn
 
   @config_key :live_style_config_overrides
 
@@ -342,5 +344,36 @@ defmodule LiveStyle.Config do
       nil -> Application.get_env(:live_style, :use_priority_layers, @default_use_priority_layers)
       value -> value
     end
+  end
+
+  @doc """
+  Returns whether property validation is enabled.
+
+  When enabled, LiveStyle validates CSS property names at compile time and
+  warns or errors on unknown properties with "did you mean?" suggestions.
+
+  Custom properties (starting with `--`) are always allowed.
+
+  Default is `true`. Disable if you need to use non-standard properties:
+
+      config :live_style, validate_properties: false
+  """
+  def validate_properties? do
+    get_config(:validate_properties, @default_validate_properties)
+  end
+
+  @doc """
+  Returns the level of unknown property handling.
+
+  - `:warn` (default) - Log a warning with suggestions
+  - `:error` - Raise a CompileError
+  - `:ignore` - Silently allow unknown properties
+
+  Example:
+
+      config :live_style, unknown_property_level: :error
+  """
+  def unknown_property_level do
+    get_config(:unknown_property_level, @default_unknown_property_level)
   end
 end
