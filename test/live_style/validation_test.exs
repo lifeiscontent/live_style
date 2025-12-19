@@ -172,18 +172,18 @@ defmodule LiveStyle.ValidationTest do
   end
 
   # ===========================================================================
-  # css_rule value validation (StyleX parity)
+  # css_class value validation (StyleX parity)
   # Reference: validation-stylex-create-test.js lines 247-378
   # ===========================================================================
 
-  describe "css_rule value validation" do
+  describe "css_class value validation" do
     test "raises error for boolean true value" do
       # StyleX: 'invalid value: boolean' - throws messages.ILLEGAL_PROP_VALUE
       assert_raise ArgumentError, ~r/Invalid property value: boolean/, fn ->
         defmodule BooleanTrueModule do
           use LiveStyle
 
-          css_rule(:test, color: true)
+          css_class(:test, color: true)
         end
       end
     end
@@ -193,7 +193,7 @@ defmodule LiveStyle.ValidationTest do
         defmodule BooleanFalseModule do
           use LiveStyle
 
-          css_rule(:test, display: false)
+          css_class(:test, display: false)
         end
       end
     end
@@ -204,7 +204,7 @@ defmodule LiveStyle.ValidationTest do
         defmodule ArrayWithObjectModule do
           use LiveStyle
 
-          css_rule(:test, transition_duration: [[], %{}])
+          css_class(:test, transition_duration: [[], %{}])
         end
       end
     end
@@ -214,7 +214,7 @@ defmodule LiveStyle.ValidationTest do
         defmodule ArrayWithBooleanModule do
           use LiveStyle
 
-          css_rule(:test, transition_duration: [true, "0.5s"])
+          css_class(:test, transition_duration: [true, "0.5s"])
         end
       end
     end
@@ -224,7 +224,7 @@ defmodule LiveStyle.ValidationTest do
       defmodule NumberValueModule do
         use LiveStyle
 
-        css_rule(:test, padding: 5)
+        css_class(:test, padding: 5)
       end
 
       manifest = get_manifest()
@@ -236,7 +236,7 @@ defmodule LiveStyle.ValidationTest do
       defmodule StringValueModule do
         use LiveStyle
 
-        css_rule(:test, background_color: "red")
+        css_class(:test, background_color: "red")
       end
 
       manifest = get_manifest()
@@ -248,7 +248,7 @@ defmodule LiveStyle.ValidationTest do
       defmodule NilValueModule do
         use LiveStyle
 
-        css_rule(:test, color: nil)
+        css_class(:test, color: nil)
       end
 
       manifest = get_manifest()
@@ -260,7 +260,7 @@ defmodule LiveStyle.ValidationTest do
       defmodule ArrayNumbersModule do
         use LiveStyle
 
-        css_rule(:test, transition_duration: [500])
+        css_class(:test, transition_duration: [500])
       end
 
       manifest = get_manifest()
@@ -272,7 +272,7 @@ defmodule LiveStyle.ValidationTest do
       defmodule ArrayStringsModule do
         use LiveStyle
 
-        css_rule(:test, transition_duration: ["0.5s"])
+        css_class(:test, transition_duration: ["0.5s"])
       end
 
       manifest = get_manifest()

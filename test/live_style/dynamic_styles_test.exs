@@ -19,26 +19,26 @@ defmodule LiveStyle.DynamicStylesTest do
     use LiveStyle
 
     # Single parameter dynamic rule
-    css_rule(:opacity, fn opacity -> [opacity: opacity] end)
+    css_class(:opacity, fn opacity -> [opacity: opacity] end)
 
     # Single parameter with different property
-    css_rule(:color, fn color -> [color: color] end)
+    css_class(:color, fn color -> [color: color] end)
 
     # Single parameter with background
-    css_rule(:background, fn bg -> [background_color: bg] end)
+    css_class(:background, fn bg -> [background_color: bg] end)
   end
 
   defmodule MultiParamDynamic do
     use LiveStyle
 
     # Multiple parameters
-    css_rule(:size, fn width, height -> [width: width, height: height] end)
+    css_class(:size, fn width, height -> [width: width, height: height] end)
 
     # Multiple parameters - different properties
-    css_rule(:position, fn top, left -> [top: top, left: left] end)
+    css_class(:position, fn top, left -> [top: top, left: left] end)
 
     # Three parameters
-    css_rule(:box, fn width, height, margin ->
+    css_class(:box, fn width, height, margin ->
       [width: width, height: height, margin: margin]
     end)
   end
@@ -47,13 +47,13 @@ defmodule LiveStyle.DynamicStylesTest do
     use LiveStyle
 
     # Static rule for comparison
-    css_rule(:static_box,
+    css_class(:static_box,
       display: "flex",
       padding: "10px"
     )
 
     # Dynamic rule
-    css_rule(:dynamic_color, fn color -> [color: color] end)
+    css_class(:dynamic_color, fn color -> [color: color] end)
   end
 
   # ============================================================================
@@ -182,9 +182,9 @@ defmodule LiveStyle.DynamicStylesTest do
   defmodule RuntimeDynamic do
     use LiveStyle
 
-    css_rule(:opacity, fn opacity -> [opacity: opacity] end)
-    css_rule(:colors, fn bg, fg -> [background_color: bg, color: fg] end)
-    css_rule(:static_base, display: "block", padding: "10px")
+    css_class(:opacity, fn opacity -> [opacity: opacity] end)
+    css_class(:colors, fn bg, fg -> [background_color: bg, color: fg] end)
+    css_class(:static_base, display: "block", padding: "10px")
 
     def test_css(args), do: css(args)
   end
@@ -263,13 +263,13 @@ defmodule LiveStyle.DynamicStylesTest do
     use LiveStyle
 
     # Dynamic with transform property
-    css_rule(:transform, fn transform -> [transform: transform] end)
+    css_class(:transform, fn transform -> [transform: transform] end)
 
     # Dynamic with shorthand property
-    css_rule(:margin, fn margin -> [margin: margin] end)
+    css_class(:margin, fn margin -> [margin: margin] end)
 
     # Dynamic with custom property
-    css_rule(:custom, fn value -> [{:"--custom-var", value}] end)
+    css_class(:custom, fn value -> [{:"--custom-var", value}] end)
   end
 
   describe "edge cases" do

@@ -2,14 +2,19 @@ defmodule Mix.Tasks.LiveStyle do
   @moduledoc """
   Invokes LiveStyle CSS generation with the given profile and args.
 
-  Usage:
+  ## Usage
 
       $ mix live_style PROFILE [ARGS]
 
-  Example:
+  ## Examples
 
+      # Generate CSS once
       $ mix live_style default
+
+      # Watch mode for development
       $ mix live_style default --watch
+
+  ## Profile Configuration
 
   The profile must be defined in your config files:
 
@@ -19,15 +24,30 @@ defmodule Mix.Tasks.LiveStyle do
           cd: Path.expand("..", __DIR__)
         ]
 
-  ## Options
+  ## Arguments
 
-    * `--runtime-config` - load the runtime configuration
-      before executing command
+  - `--watch` - Watch for changes and regenerate CSS automatically
 
-  Note flags to control this Mix task must be given before the
-  profile:
+  ## Task Options
+
+  Options for the Mix task itself (must be given before the profile):
+
+  - `--runtime-config` - Load the runtime configuration before executing
+
+  Example:
 
       $ mix live_style --runtime-config default
+
+  ## Development Watcher
+
+  For development, it's typically easier to configure a watcher in your
+  Phoenix endpoint instead of running this task manually:
+
+      # config/dev.exs
+      config :my_app, MyAppWeb.Endpoint,
+        watchers: [
+          live_style: {LiveStyle.Compiler, :run, [:default, ~w(--watch)]}
+        ]
   """
 
   @shortdoc "Invokes LiveStyle with the profile and args"

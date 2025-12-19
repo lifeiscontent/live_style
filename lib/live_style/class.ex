@@ -1,43 +1,49 @@
-defmodule LiveStyle.Rule do
+defmodule LiveStyle.Class do
   @moduledoc """
-  Style rule definition and processing for LiveStyle.
+  Style class definition and processing for LiveStyle.
 
-  This module handles:
-  - Defining static and dynamic style rules
+  This is an internal module that handles the processing of `css_class/2` declarations.
+  You typically don't use this module directly - instead use `LiveStyle.Sheet` with
+  the `css_class/2` macro.
+
+  ## Responsibilities
+
+  - Defining static and dynamic style classes
   - Processing declarations into atomic CSS classes
   - Handling conditional values (pseudo-classes, media queries)
   - Processing pseudo-element declarations
+  - Applying shorthand expansion strategies
 
-  ## Example
+  ## Internal API Example
 
-      # Static rule
-      LiveStyle.Rule.define(MyModule, :button, %{display: "flex", padding: "8px"})
+      # Static class (called by css_class macro)
+      LiveStyle.Class.define(MyModule, :button, %{display: "flex", padding: "8px"})
 
-      # Dynamic rule
-      LiveStyle.Rule.define_dynamic(MyModule, :opacity, [:opacity], [:opacity])
+      # Dynamic class
+      LiveStyle.Class.define_dynamic(MyModule, :opacity, [:opacity], [:opacity])
 
       # Lookup
-      LiveStyle.Rule.lookup!(MyModule, :button)
-      # => %{class_string: "x1234 x5678", ...}
+      LiveStyle.Class.lookup!(MyModule, :button)
+      # => %{class_string: "x1234 x5678", atomic_classes: %{...}, ...}
   """
 
+  alias LiveStyle.Class.CSS, as: ClassCSS
   alias LiveStyle.{Hash, Include, Manifest, Priority, Value}
   alias LiveStyle.MediaQuery.Transform, as: MediaQueryTransform
-  alias LiveStyle.Rule.CSS, as: RuleCSS
   alias LiveStyle.Shorthand.Strategy, as: ShorthandStrategy
 
   @doc """
-  Defines a static style rule.
+  Defines a static style class.
 
   ## Parameters
 
-    * `module` - The module defining the rule
-    * `name` - The rule name (atom)
+    * `module` - The module defining the class
+    * `name` - The class name (atom)
     * `declarations` - Map of CSS property declarations
 
   ## Example
 
-      LiveStyle.Rule.define(MyModule, :button, %{display: "flex"})
+      LiveStyle.Class.define(MyModule, :button, %{display: "flex"})
   """
   @spec define(module(), atom(), map()) :: :ok
   def define(module, name, declarations) do
@@ -72,20 +78,20 @@ defmodule LiveStyle.Rule do
   end
 
   @doc """
-  Defines a dynamic style rule.
+  Defines a dynamic style class.
 
-  Dynamic rules use CSS variables that are set at runtime via inline styles.
+  Dynamic classes use CSS variables that are set at runtime via inline styles.
 
   ## Parameters
 
-    * `module` - The module defining the rule
-    * `name` - The rule name (atom)
-    * `all_props` - List of all CSS properties in the rule
+    * `module` - The module defining the class
+    * `name` - The class name (atom)
+    * `all_props` - List of all CSS properties in the class
     * `param_names` - List of parameter names for the dynamic function
 
   ## Example
 
-      LiveStyle.Rule.define_dynamic(MyModule, :opacity, [:opacity], [:opacity])
+      LiveStyle.Class.define_dynamic(MyModule, :opacity, [:opacity], [:opacity])
   """
   @spec define_dynamic(module(), atom(), [atom()], [atom()]) :: :ok
   def define_dynamic(module, name, all_props, param_names) do
@@ -118,13 +124,13 @@ defmodule LiveStyle.Rule do
   end
 
   @doc """
-  Looks up a rule by module and name.
+  Looks up a class by module and name.
 
-  Returns the rule entry or raises if not found.
+  Returns the class entry or raises if not found.
 
   ## Examples
 
-      LiveStyle.Rule.lookup!(MyModule, :button)
+      LiveStyle.Class.lookup!(MyModule, :button)
       # => %{class_string: "x1234 x5678", atomic_classes: %{...}, ...}
   """
   @spec lookup!(module(), atom()) :: map()
@@ -135,7 +141,7 @@ defmodule LiveStyle.Rule do
     case Manifest.get_rule(manifest, key) do
       nil ->
         raise ArgumentError, """
-        Unknown rule: #{inspect(module)}.#{name}
+        Unknown class: #{inspect(module)}.#{name}
 
         Make sure #{inspect(module)} is compiled before this module.
         """
@@ -296,7 +302,7 @@ defmodule LiveStyle.Rule do
 
             # Generate StyleX-compatible metadata
             {ltr_css, rtl_css} =
-              RuleCSS.generate_metadata(class_name, css_prop, css_value, nil, nil)
+              ClassCSS.generate_metadata(class_name, css_prop, css_value, nil, nil)
 
             priority = Priority.calculate(css_prop, nil, nil)
 
@@ -370,7 +376,7 @@ defmodule LiveStyle.Rule do
     # Default value - no selector suffix
     css_value_str = Value.to_css(css_value, css_prop)
     class_name = Hash.atomic_class(css_prop, css_value_str, nil, nil, nil)
-    {ltr_css, rtl_css} = RuleCSS.generate_metadata(class_name, css_prop, css_value_str, nil, nil)
+    {ltr_css, rtl_css} = ClassCSS.generate_metadata(class_name, css_prop, css_value_str, nil, nil)
     priority = Priority.calculate(css_prop, nil, nil)
 
     {:default,
@@ -390,7 +396,7 @@ defmodule LiveStyle.Rule do
     class_name = Hash.atomic_class(css_prop, css_value_str, nil, selector_suffix, at_rule)
 
     {ltr_css, rtl_css} =
-      RuleCSS.generate_metadata(class_name, css_prop, css_value_str, selector_suffix, at_rule)
+      ClassCSS.generate_metadata(class_name, css_prop, css_value_str, selector_suffix, at_rule)
 
     priority = Priority.calculate(css_prop, selector_suffix, at_rule)
 
@@ -592,7 +598,10 @@ defmodule LiveStyle.Rule do
   defp build_pseudo_class_entry(css_prop, value, selector) do
     css_value = Value.to_css(value, css_prop)
     class_name = Hash.atomic_class(css_prop, css_value, selector, nil, nil)
-    {ltr_css, rtl_css} = RuleCSS.generate_metadata(class_name, css_prop, css_value, selector, nil)
+
+    {ltr_css, rtl_css} =
+      ClassCSS.generate_metadata(class_name, css_prop, css_value, selector, nil)
+
     priority = Priority.calculate(css_prop, selector, nil)
 
     {"#{css_prop}#{selector}",

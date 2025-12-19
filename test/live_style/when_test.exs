@@ -18,14 +18,14 @@ defmodule LiveStyle.WhenTest do
   alias LiveStyle.When
 
   # ===========================================================================
-  # Test Modules - Integration with css_rule
+  # Test Modules - Integration with css_class
   # ===========================================================================
 
   defmodule WhenAncestorExample do
     use LiveStyle
     alias LiveStyle.When
 
-    css_rule(:card,
+    css_class(:card,
       background_color: %{
         :default => "blue",
         When.ancestor(":hover") => "red"
@@ -37,7 +37,7 @@ defmodule LiveStyle.WhenTest do
     use LiveStyle
     alias LiveStyle.When
 
-    css_rule(:label,
+    css_class(:label,
       color: %{
         :default => "black",
         When.sibling_before(":focus") => "blue"
@@ -49,7 +49,7 @@ defmodule LiveStyle.WhenTest do
     use LiveStyle
     alias LiveStyle.When
 
-    css_rule(:hint,
+    css_class(:hint,
       visibility: %{
         :default => "hidden",
         When.sibling_after(":focus") => "visible"
@@ -61,7 +61,7 @@ defmodule LiveStyle.WhenTest do
     use LiveStyle
     alias LiveStyle.When
 
-    css_rule(:tab,
+    css_class(:tab,
       opacity: %{
         :default => "1",
         When.any_sibling(":hover") => "0.7"
@@ -73,7 +73,7 @@ defmodule LiveStyle.WhenTest do
     use LiveStyle
     alias LiveStyle.When
 
-    css_rule(:container,
+    css_class(:container,
       border_color: %{
         :default => "gray",
         When.descendant(":focus") => "blue"
@@ -87,7 +87,7 @@ defmodule LiveStyle.WhenTest do
 
     @card_marker Marker.define(:card)
 
-    css_rule(:child,
+    css_class(:child,
       transform: %{
         :default => "translateX(0)",
         When.ancestor(":hover", @card_marker) => "translateX(10px)"
@@ -99,7 +99,7 @@ defmodule LiveStyle.WhenTest do
     use LiveStyle
     alias LiveStyle.When
 
-    css_rule(:item,
+    css_class(:item,
       background_color: %{
         :default => "white",
         When.ancestor(":hover") => "lightblue",
@@ -113,7 +113,7 @@ defmodule LiveStyle.WhenTest do
     use LiveStyle
     alias LiveStyle.When
 
-    css_rule(:responsive_card,
+    css_class(:responsive_card,
       background_color: %{
         :default => "blue",
         When.ancestor(":hover") => "red",
@@ -394,10 +394,10 @@ defmodule LiveStyle.WhenTest do
   end
 
   # ===========================================================================
-  # Integration tests with css_rule
+  # Integration tests with css_class
   # ===========================================================================
 
-  describe "integration with css_rule" do
+  describe "integration with css_class" do
     test "ancestor generates correct CSS in rules" do
       manifest = get_manifest()
       key = LiveStyle.Manifest.simple_key(WhenAncestorExample, :card)

@@ -33,7 +33,7 @@ defmodule LiveStyle.PositionTryTest do
     use LiveStyle
 
     # Inline anonymous position-try
-    css_rule(:anchored,
+    css_class(:anchored,
       position: "absolute",
       position_anchor: "--my-anchor",
       position_try_fallbacks: css_position_try(top: "0", left: "50px")

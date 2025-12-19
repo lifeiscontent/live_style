@@ -14,16 +14,16 @@ defmodule LiveStyle.PseudoTest do
   defmodule PseudoClasses do
     use LiveStyle
 
-    css_rule(:hover,
+    css_class(:hover,
       background_color: {:":hover", "red"},
       color: {:":hover", "blue"}
     )
 
-    css_rule(:focus, color: {:":focus", "yellow"})
-    css_rule(:active, color: {:":active", "red"})
+    css_class(:focus, color: {:":focus", "yellow"})
+    css_class(:active, color: {:":active", "red"})
 
     # Multiple pseudo-classes on same property
-    css_rule(:multiple_pseudos,
+    css_class(:multiple_pseudos,
       color: [
         default: "black",
         ":hover": "blue",
@@ -37,7 +37,7 @@ defmodule LiveStyle.PseudoTest do
     use LiveStyle
 
     # Nested pseudo-classes: :hover + :active
-    css_rule(:nested,
+    css_class(:nested,
       color: {:":hover", {:":active", "red"}}
     )
   end
@@ -49,20 +49,20 @@ defmodule LiveStyle.PseudoTest do
   defmodule PseudoElements do
     use LiveStyle
 
-    css_rule(:before,
+    css_class(:before,
       "::before": [
         color: "red"
       ]
     )
 
-    css_rule(:after,
+    css_class(:after,
       "::after": [
         content: "hello",
         color: "blue"
       ]
     )
 
-    css_rule(:placeholder,
+    css_class(:placeholder,
       "::placeholder": [
         color: "gray"
       ]
@@ -73,7 +73,7 @@ defmodule LiveStyle.PseudoTest do
     use LiveStyle
 
     # ::before with :hover inside
-    css_rule(:before_hover,
+    css_class(:before_hover,
       "::before": [
         color: "red",
         color: {:":hover", "blue"}
@@ -90,13 +90,13 @@ defmodule LiveStyle.PseudoTest do
 
     # StyleX expands ::thumb to vendor-prefixed variants:
     # ::-webkit-slider-thumb, ::-moz-range-thumb, ::-ms-thumb
-    css_rule(:slider_thumb,
+    css_class(:slider_thumb,
       "::thumb": [
         width: 16
       ]
     )
 
-    css_rule(:slider_thumb_styled,
+    css_class(:slider_thumb_styled,
       "::thumb": [
         width: 20,
         height: 20,

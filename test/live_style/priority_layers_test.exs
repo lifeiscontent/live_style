@@ -20,30 +20,30 @@ defmodule LiveStyle.PriorityLayersTest do
     use LiveStyle
 
     # Priority 3000 - regular property
-    css_rule(:color_style, color: "red")
+    css_class(:color_style, color: "red")
 
     # Priority 3000 - another regular property
-    css_rule(:background_style, background_color: "blue")
+    css_class(:background_style, background_color: "blue")
 
     # Priority 1000 - shorthand (margin is shorthand of shorthands)
-    css_rule(:margin_style, margin: "10px")
+    css_class(:margin_style, margin: "10px")
 
     # Priority 4000 - physical longhand
-    css_rule(:margin_top_style, margin_top: "5px")
+    css_class(:margin_top_style, margin_top: "5px")
   end
 
   defmodule PseudoStyles do
     use LiveStyle
 
     # Priority 3000 + pseudo offset
-    css_rule(:hover_style, color: [default: "blue", ":hover": "red"])
+    css_class(:hover_style, color: [default: "blue", ":hover": "red"])
   end
 
   defmodule MediaQueryStyles do
     use LiveStyle
 
     # Priority 3000 + at-rule offset
-    css_rule(:responsive_style,
+    css_class(:responsive_style,
       font_size: [
         default: "1rem",
         "@media (min-width: 800px)": "2rem"

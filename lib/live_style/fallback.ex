@@ -20,9 +20,9 @@ defmodule LiveStyle.Fallback do
      - Nests CSS vars with their fallbacks
   """
 
+  alias LiveStyle.Class.CSS, as: ClassCss
   alias LiveStyle.Hash
   alias LiveStyle.Priority
-  alias LiveStyle.Rule.CSS, as: RuleCss
   alias LiveStyle.Value
 
   @doc """
@@ -49,7 +49,7 @@ defmodule LiveStyle.Fallback do
 
     # Generate StyleX-compatible metadata
     {ltr_css, rtl_css} =
-      RuleCss.generate_metadata(class_name, css_prop, transformed, nil, nil)
+      ClassCss.generate_metadata(class_name, css_prop, transformed, nil, nil)
 
     priority = Priority.calculate(css_prop, nil, nil)
 
@@ -76,7 +76,7 @@ defmodule LiveStyle.Fallback do
 
     # Generate StyleX-compatible metadata
     {ltr_css, rtl_css} =
-      RuleCss.generate_metadata(class_name, css_prop, transformed, nil, nil)
+      ClassCss.generate_metadata(class_name, css_prop, transformed, nil, nil)
 
     priority = Priority.calculate(css_prop, nil, nil)
 

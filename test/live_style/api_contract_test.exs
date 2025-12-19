@@ -67,13 +67,13 @@ defmodule LiveStyle.APIContractTest.TokensModule do
 end
 
 defmodule LiveStyle.APIContractTest.StylesModule do
-  @moduledoc "Test module for css_rule and style definitions"
+  @moduledoc "Test module for css_class and style definitions"
   use LiveStyle
 
   alias LiveStyle.APIContractTest.TokensModule
 
   # Basic static rule
-  css_rule(:button,
+  css_class(:button,
     display: "flex",
     padding: "8px 16px",
     background_color: "blue",
@@ -81,7 +81,7 @@ defmodule LiveStyle.APIContractTest.StylesModule do
   )
 
   # Rule with pseudo-classes
-  css_rule(:link,
+  css_class(:link,
     color: [
       default: "blue",
       ":hover": "darkblue",
@@ -91,7 +91,7 @@ defmodule LiveStyle.APIContractTest.StylesModule do
   )
 
   # Rule with media queries
-  css_rule(:container,
+  css_class(:container,
     padding: [
       default: "16px",
       "@media (min-width: 768px)": "32px",
@@ -100,7 +100,7 @@ defmodule LiveStyle.APIContractTest.StylesModule do
   )
 
   # Rule with pseudo-elements
-  css_rule(:with_before,
+  css_class(:with_before,
     position: "relative",
     "::before": [
       content: "'*'",
@@ -109,37 +109,37 @@ defmodule LiveStyle.APIContractTest.StylesModule do
   )
 
   # Rule with array fallbacks
-  css_rule(:sticky,
+  css_class(:sticky,
     position: ["sticky", "fixed"]
   )
 
   # Rule referencing tokens from another module
-  css_rule(:themed,
+  css_class(:themed,
     color: css_var({TokensModule, :color, :primary}),
     animation_name: css_keyframes({TokensModule, :spin})
   )
 
   # Dynamic rule with single parameter
-  css_rule(:dynamic_opacity, fn opacity -> [opacity: opacity] end)
+  css_class(:dynamic_opacity, fn opacity -> [opacity: opacity] end)
 
   # Dynamic rule with multiple parameters
-  css_rule(:dynamic_size, fn width, height -> [width: width, height: height] end)
+  css_class(:dynamic_size, fn width, height -> [width: width, height: height] end)
 
   # Rule with custom properties
-  css_rule(:custom_props,
+  css_class(:custom_props,
     "--my-color": "red",
     "--my-size": 10
   )
 
   # Rule with nested pseudo-classes
-  css_rule(:nested_pseudo,
+  css_class(:nested_pseudo,
     color: [
       ":hover": [":active": "red"]
     ]
   )
 
   # Rule with @supports
-  css_rule(:supports_test,
+  css_class(:supports_test,
     display: [
       default: "block",
       "@supports (display: grid)": "grid"
@@ -190,12 +190,12 @@ defmodule LiveStyle.APIContractTest.IncludeModule do
   @moduledoc "Test module for __include__ feature"
   use LiveStyle
 
-  css_rule(:base,
+  css_class(:base,
     display: "flex",
     align_items: "center"
   )
 
-  css_rule(:extended,
+  css_class(:extended,
     __include__: [:base],
     justify_content: "space-between"
   )
@@ -207,14 +207,14 @@ defmodule LiveStyle.APIContractTest.WhenModule do
   alias LiveStyle.When
 
   # ancestor takes a pseudo selector like :hover, not a class
-  css_rule(:with_ancestor,
+  css_class(:with_ancestor,
     color: %{
       :default => "black",
       When.ancestor(":hover") => "blue"
     }
   )
 
-  css_rule(:with_descendant,
+  css_class(:with_descendant,
     color: %{
       :default => "gray",
       When.descendant(":focus") => "blue"
@@ -281,7 +281,7 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
   end
 
-  describe "css_rule/2 API" do
+  describe "css_class/2 API" do
     test "static rules generate atomic classes" do
       manifest = get_manifest()
       rule = LiveStyle.Manifest.get_rule(manifest, key(StylesModule, :button))
@@ -649,14 +649,14 @@ defmodule LiveStyle.APIContractTest.Tests do
 
   describe "Public helper functions" do
     test "LiveStyle.css_class/2 returns class string" do
-      class = LiveStyle.css_class(StylesModule, [:button])
+      class = LiveStyle.get_css_class(StylesModule, [:button])
 
       assert is_binary(class)
       assert class != ""
     end
 
     test "LiveStyle.css_class/2 merges multiple rules" do
-      class = LiveStyle.css_class(StylesModule, [:button, :link])
+      class = LiveStyle.get_css_class(StylesModule, [:button, :link])
 
       assert is_binary(class)
       # Should contain classes from both rules

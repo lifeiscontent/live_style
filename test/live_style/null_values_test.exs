@@ -23,13 +23,13 @@ defmodule LiveStyle.NullValuesTest do
     use LiveStyle
 
     # A style with a regular color value
-    css_rule(:red, color: "red")
+    css_class(:red, color: "red")
 
     # A style that "unsets" the color - should not generate CSS
-    css_rule(:revert, color: nil)
+    css_class(:revert, color: nil)
 
     # Multiple properties, one nil
-    css_rule(:partial_nil,
+    css_class(:partial_nil,
       color: "blue",
       background_color: nil
     )
@@ -48,7 +48,7 @@ defmodule LiveStyle.NullValuesTest do
 
     # Default value with nil for hover
     # This means: apply color:blue by default, but unset it on hover
-    css_rule(:default_with_nil_hover,
+    css_class(:default_with_nil_hover,
       color: [
         default: "blue",
         ":hover": nil
@@ -57,7 +57,7 @@ defmodule LiveStyle.NullValuesTest do
 
     # Nil default with conditional value
     # This means: no default color, but apply red on hover
-    css_rule(:nil_default_with_hover,
+    css_class(:nil_default_with_hover,
       color: [
         default: nil,
         ":hover": "red"

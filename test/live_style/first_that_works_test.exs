@@ -19,19 +19,19 @@ defmodule LiveStyle.FirstThatWorksTest do
     use LiveStyle
 
     # No CSS variables - order preserved
-    css_rule(:no_vars, position: ["sticky", "fixed"])
+    css_class(:no_vars, position: ["sticky", "fixed"])
 
     # CSS var first, non-var after - NOT nested (two declarations)
-    css_rule(:var_first, color: ["var(--color)", "red"])
+    css_class(:var_first, color: ["var(--color)", "red"])
 
     # Non-var first, CSS var after - nested into var(--color, red)
-    css_rule(:var_last, color: ["red", "var(--color)"])
+    css_class(:var_last, color: ["red", "var(--color)"])
 
     # Multiple CSS vars - nested together
-    css_rule(:multi_vars, color: ["var(--primary)", "var(--fallback)"])
+    css_class(:multi_vars, color: ["var(--primary)", "var(--fallback)"])
 
     # Multiple CSS vars with final non-var fallback
-    css_rule(:multi_vars_with_fallback,
+    css_class(:multi_vars_with_fallback,
       color: ["blue", "var(--primary)", "var(--fallback)"]
     )
   end
@@ -45,16 +45,16 @@ defmodule LiveStyle.FirstThatWorksTest do
     use LiveStyle
 
     # No CSS variables - reversed order
-    css_rule(:no_vars, position: first_that_works(["sticky", "fixed"]))
+    css_class(:no_vars, position: first_that_works(["sticky", "fixed"]))
 
     # CSS var first, non-var after - nested into var(--color, red)
-    css_rule(:var_first, color: first_that_works(["var(--color)", "red"]))
+    css_class(:var_first, color: first_that_works(["var(--color)", "red"]))
 
     # Non-var first, CSS var after - NOT nested (two declarations, reversed)
-    css_rule(:var_last, color: first_that_works(["red", "var(--color)"]))
+    css_class(:var_last, color: first_that_works(["red", "var(--color)"]))
 
     # Multiple CSS vars with fallback - all nested
-    css_rule(:multi_vars_with_fallback,
+    css_class(:multi_vars_with_fallback,
       color: first_that_works(["var(--primary)", "var(--secondary)", "blue"])
     )
   end
@@ -177,22 +177,22 @@ defmodule LiveStyle.FirstThatWorksTest do
     # test('args: value, var')
     # color: stylex.firstThatWorks('red', 'var(--color)')
     # Expected: ".x1nv2f59{color:var(--color);color:red}"
-    css_rule(:value_then_var, color: first_that_works(["red", "var(--color)"]))
+    css_class(:value_then_var, color: first_that_works(["red", "var(--color)"]))
 
     # test('args: var, value')
     # color: stylex.firstThatWorks('var(--color)', 'red')
     # Expected: ".x8nmrrw{color:var(--color,red)}"
-    css_rule(:var_then_value, color: first_that_works(["var(--color)", "red"]))
+    css_class(:var_then_value, color: first_that_works(["var(--color)", "red"]))
 
     # test('args: var, var')
     # color: stylex.firstThatWorks('var(--color)', 'var(--otherColor)')
     # Expected: ".x1775bb3{color:var(--color,var(--otherColor))}"
-    css_rule(:var_then_var, color: first_that_works(["var(--color)", "var(--otherColor)"]))
+    css_class(:var_then_var, color: first_that_works(["var(--color)", "var(--otherColor)"]))
 
     # test('args: var, var, var')
     # color: stylex.firstThatWorks('var(--color)', 'var(--secondColor)', 'var(--thirdColor)')
     # Expected: ".xsrkhny{color:var(--color,var(--secondColor,var(--thirdColor)))}"
-    css_rule(:three_vars,
+    css_class(:three_vars,
       color: first_that_works(["var(--color)", "var(--secondColor)", "var(--thirdColor)"])
     )
   end

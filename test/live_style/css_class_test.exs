@@ -1,6 +1,6 @@
-defmodule LiveStyle.CSSRuleTest do
+defmodule LiveStyle.CSSClassTest do
   @moduledoc """
-  Tests for basic css_rule functionality.
+  Tests for basic css_class functionality.
 
   These tests mirror StyleX's transform-stylex-create-test.js to ensure
   LiveStyle generates equivalent CSS output and metadata.
@@ -11,7 +11,7 @@ defmodule LiveStyle.CSSRuleTest do
   defmodule BasicStyles do
     use LiveStyle
 
-    css_rule(:root,
+    css_class(:root,
       background_color: "red",
       color: "blue"
     )
@@ -20,9 +20,9 @@ defmodule LiveStyle.CSSRuleTest do
   defmodule MultipleRules do
     use LiveStyle
 
-    css_rule(:root, background_color: "red")
-    css_rule(:other, color: "blue")
-    css_rule(:bar_baz, color: "green")
+    css_class(:root, background_color: "red")
+    css_class(:other, color: "blue")
+    css_class(:bar_baz, color: "green")
   end
 
   defmodule CustomProperties do
@@ -31,7 +31,7 @@ defmodule LiveStyle.CSSRuleTest do
     # Custom properties (CSS variables) should:
     # - Not modify casing
     # - Not add units to unitless values
-    css_rule(:root,
+    css_class(:root,
       "--background-color": "red",
       "--otherColor": "green",
       "--foo": 10
@@ -46,7 +46,7 @@ defmodule LiveStyle.CSSRuleTest do
     use LiveStyle
 
     # StyleX test: userSelect: 'none' -> ".x87ps6o{user-select:none}"
-    css_rule(:user_select, user_select: "none")
+    css_class(:user_select, user_select: "none")
   end
 
   # ===========================================================================
@@ -57,7 +57,7 @@ defmodule LiveStyle.CSSRuleTest do
     use LiveStyle
 
     # StyleX test: position: ['sticky', 'fixed'] -> ".x1ruww2u{position:sticky;position:fixed}"
-    css_rule(:position_fallback, position: ["sticky", "fixed"])
+    css_class(:position_fallback, position: ["sticky", "fixed"])
   end
 
   # ===========================================================================
@@ -74,14 +74,14 @@ defmodule LiveStyle.CSSRuleTest do
 
     # Idiomatic Elixir: use kebab-case strings (CSS convention)
     # StyleX equivalent: transitionProperty: 'margin-top'
-    css_rule(:kebab_case, transition_property: "margin-top")
+    css_class(:kebab_case, transition_property: "margin-top")
 
     # Custom property names (--foo) pass through unchanged
-    css_rule(:custom_prop, transition_property: "--foo")
+    css_class(:custom_prop, transition_property: "--foo")
 
     # Multiple values in kebab-case
     # StyleX equivalent: transitionProperty: 'opacity, inset-inline-start'
-    css_rule(:multi_value, transition_property: "opacity,inset-inline-start")
+    css_class(:multi_value, transition_property: "opacity,inset-inline-start")
   end
 
   defmodule WillChangeStyles do
@@ -89,7 +89,7 @@ defmodule LiveStyle.CSSRuleTest do
 
     # Idiomatic Elixir: use kebab-case strings
     # StyleX equivalent: willChange: 'inset-inline-start'
-    css_rule(:kebab_case, will_change: "inset-inline-start")
+    css_class(:kebab_case, will_change: "inset-inline-start")
   end
 
   describe "static styles" do
@@ -121,7 +121,7 @@ defmodule LiveStyle.CSSRuleTest do
     end
 
     test "generates correct class string for properties" do
-      class = LiveStyle.css_class(BasicStyles, [:root])
+      class = LiveStyle.get_css_class(BasicStyles, [:root])
 
       # Should have class names for both properties
       # StyleX produces: "xrkmrrc xju2f9n"

@@ -134,10 +134,10 @@ defmodule LiveStyle.ConstsTest do
   end
 
   # ===========================================================================
-  # Using constants in css_rule
+  # Using constants in css_class
   # ===========================================================================
 
-  describe "using constants in css_rule" do
+  describe "using constants in css_class" do
     defmodule ConstsWithRule do
       use LiveStyle
 
@@ -146,7 +146,7 @@ defmodule LiveStyle.ConstsTest do
         large: "@media (min-width: 1024px)"
       )
 
-      css_rule(:responsive,
+      css_class(:responsive,
         color: %{
           :default => "red",
           css_const({__MODULE__, :breakpoint, :small}) => "blue"
@@ -172,9 +172,9 @@ defmodule LiveStyle.ConstsTest do
         tooltip: 3000
       )
 
-      css_rule(:dropdown, z_index: css_const({__MODULE__, :z, :dropdown}))
-      css_rule(:modal, z_index: css_const({__MODULE__, :z, :modal}))
-      css_rule(:tooltip, z_index: css_const({__MODULE__, :z, :tooltip}))
+      css_class(:dropdown, z_index: css_const({__MODULE__, :z, :dropdown}))
+      css_class(:modal, z_index: css_const({__MODULE__, :z, :modal}))
+      css_class(:tooltip, z_index: css_const({__MODULE__, :z, :tooltip}))
     end
 
     test "numeric constants can be used as property values" do
@@ -323,7 +323,7 @@ defmodule LiveStyle.ConstsTest do
     end
 
     test "css_const/1 retrieves constant value" do
-      # The css_const function is used at compile time in css_rule
+      # The css_const function is used at compile time in css_class
       # Here we verify the manifest contains the expected values
       manifest = get_manifest()
 
@@ -353,7 +353,7 @@ defmodule LiveStyle.ConstsTest do
       use LiveStyle
       alias LiveStyle.ConstsTest.SharedConsts
 
-      css_rule(:box,
+      css_class(:box,
         padding: css_const({SharedConsts, :shared, :spacing})
       )
     end

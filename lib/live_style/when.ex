@@ -14,29 +14,51 @@ defmodule LiveStyle.When do
   ## Using Markers
 
   To use these selectors, you must mark the element being observed with a marker class.
-  Use `Marker.default/0` for the default marker, or `Marker.define/1` for custom markers.
+  Use `LiveStyle.default_marker/0` for the default marker, or `LiveStyle.define_marker/1`
+  for custom markers.
 
   ## Example
 
       defmodule MyComponent do
+        use Phoenix.Component
         use LiveStyle.Sheet
         alias LiveStyle.When
-        alias LiveStyle.Marker
 
-        css_rule :card,
+        # Note: computed keys require map syntax with `=>`
+        css_class :card,
           transform: %{
-            default: "translateX(0)",
+            :default => "translateX(0)",
             When.ancestor(":hover") => "translateX(10px)"
           }
 
         def render(assigns) do
           ~H\"\"\"
-          <div class={Marker.default()}>
-            <div class={css_class([:card])}>Hover parent to move me</div>
+          <div class={LiveStyle.default_marker()}>
+            <div class={css_class(:card)}>Hover parent to move me</div>
           </div>
           \"\"\"
         end
       end
+
+  ## Syntax Note
+
+  When using `LiveStyle.When` functions as map keys, you must use map syntax with `=>`
+  arrows instead of keyword list syntax. This is an Elixir language requirement -
+  keyword lists can only have literal atoms as keys.
+
+      # Correct - map syntax with =>
+      css_class :card,
+        opacity: %{
+          :default => "1",
+          When.ancestor(":hover") => "0.5"
+        }
+
+      # Also correct - tuple list syntax
+      css_class :card,
+        opacity: [
+          {:default, "1"},
+          {When.ancestor(":hover"), "0.5"}
+        ]
   """
 
   alias LiveStyle.Marker
@@ -54,7 +76,7 @@ defmodule LiveStyle.When do
 
   ## Example
 
-      css_rule :item,
+      css_class :item,
         opacity: %{
           default: "1",
           When.ancestor(":hover") => "0.5"
@@ -82,7 +104,7 @@ defmodule LiveStyle.When do
 
   ## Example
 
-      css_rule :container,
+      css_class :container,
         border_color: %{
           default: "gray",
           When.descendant(":focus") => "blue"
@@ -110,7 +132,7 @@ defmodule LiveStyle.When do
 
   ## Example
 
-      css_rule :item,
+      css_class :item,
         background_color: %{
           default: "white",
           When.sibling_before(":hover") => "lightblue"
@@ -138,7 +160,7 @@ defmodule LiveStyle.When do
 
   ## Example
 
-      css_rule :label,
+      css_class :label,
         color: %{
           default: "black",
           When.sibling_after(":focus") => "blue"
@@ -166,7 +188,7 @@ defmodule LiveStyle.When do
 
   ## Example
 
-      css_rule :tab,
+      css_class :tab,
         opacity: %{
           default: "1",
           When.any_sibling(":hover") => "0.7"

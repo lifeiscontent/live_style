@@ -29,7 +29,7 @@ defmodule LiveStyle.KeyframesTest do
     )
 
     # Rule that references keyframes
-    css_rule(:animated,
+    css_class(:animated,
       animation_name: css_keyframes(:fade),
       animation_duration: "1s"
     )
@@ -61,7 +61,7 @@ defmodule LiveStyle.KeyframesTest do
       to: %{transform: "scale(1.1)"}
     )
 
-    css_rule(:pulse,
+    css_class(:pulse,
       animation_name: css_keyframes(:pulse),
       animation_duration: "0.5s",
       animation_iteration_count: "infinite"

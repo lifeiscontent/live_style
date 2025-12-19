@@ -60,7 +60,7 @@ defmodule LiveStyle.Types do
         from: %{css_var(:anim_angle) => "0deg"},
         to: %{css_var(:anim_angle) => "360deg"}
 
-      css_rule :gradient,
+      css_class :gradient,
         background_image: "conic-gradient(from \#{css_var({MyApp.Tokens, :anim, :angle})}, red, blue)",
         animation: "\#{css_keyframes(:rotate)} 10s linear infinite"
 

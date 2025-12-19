@@ -2,9 +2,36 @@ defmodule LiveStyle.Keyframes do
   @moduledoc """
   CSS @keyframes animation support for LiveStyle.
 
-  This module provides functions for defining and generating keyframes animations.
-  It handles frame ordering, CSS generation, and the StyleX-compatible hash-based
-  naming scheme.
+  This is an internal module that handles the processing of `css_keyframes/2` definitions.
+  You typically don't use this module directly - instead use `LiveStyle.Tokens` with
+  the `css_keyframes/2` macro.
+
+  ## Features
+
+  - Content-based hashing for deterministic animation names
+  - Frame ordering (from/to/percentage-based)
+  - StyleX-compatible CSS generation
+
+  ## Example
+
+  Define keyframes in a tokens module:
+
+      defmodule MyApp.Tokens do
+        use LiveStyle.Tokens
+
+        css_keyframes :spin,
+          from: [transform: "rotate(0deg)"],
+          to: [transform: "rotate(360deg)"]
+
+        css_keyframes :fade_in,
+          "0%": [opacity: "0"],
+          "100%": [opacity: "1"]
+      end
+
+  Reference in a style class:
+
+      css_class :spinner,
+        animation: "\#{css_keyframes({MyApp.Tokens, :spin})} 1s linear infinite"
   """
 
   alias LiveStyle.{Hash, Manifest, Value}

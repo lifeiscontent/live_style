@@ -23,18 +23,18 @@ defmodule LiveStyle.LogicalPropertiesTest do
     use LiveStyle
 
     # float: inline-start → float: left (LTR), float: right (RTL)
-    css_rule(:float_start, float: "inline-start")
+    css_class(:float_start, float: "inline-start")
     # float: inline-end → float: right (LTR), float: left (RTL)
-    css_rule(:float_end, float: "inline-end")
+    css_class(:float_end, float: "inline-end")
 
     # clear: inline-start → clear: left (LTR), clear: right (RTL)
-    css_rule(:clear_start, clear: "inline-start")
+    css_class(:clear_start, clear: "inline-start")
     # clear: inline-end → clear: right (LTR), clear: left (RTL)
-    css_rule(:clear_end, clear: "inline-end")
+    css_class(:clear_end, clear: "inline-end")
 
     # text-align: start/end - browser handles these natively, NO transformation
-    css_rule(:text_align_start, text_align: "start")
-    css_rule(:text_align_end, text_align: "end")
+    css_class(:text_align_start, text_align: "start")
+    css_class(:text_align_end, text_align: "end")
   end
 
   # ============================================================================
@@ -48,39 +48,39 @@ defmodule LiveStyle.LogicalPropertiesTest do
     # These should stay as logical properties (NOT converted to physical)
 
     # Border inline (shorthands stay as-is)
-    css_rule(:border_inline_color, border_inline_color: "red")
+    css_class(:border_inline_color, border_inline_color: "red")
 
     # Border inline longhands (stay as logical)
-    css_rule(:border_inline_start_color, border_inline_start_color: "red")
-    css_rule(:border_inline_end_color, border_inline_end_color: "red")
+    css_class(:border_inline_start_color, border_inline_start_color: "red")
+    css_class(:border_inline_end_color, border_inline_end_color: "red")
 
     # Margin inline shorthand (stays as-is)
-    css_rule(:margin_inline, margin_inline: "10px")
+    css_class(:margin_inline, margin_inline: "10px")
 
     # Margin inline longhands (stay as logical)
-    css_rule(:margin_inline_start, margin_inline_start: "10px")
-    css_rule(:margin_inline_end, margin_inline_end: "10px")
+    css_class(:margin_inline_start, margin_inline_start: "10px")
+    css_class(:margin_inline_end, margin_inline_end: "10px")
 
     # Padding inline shorthand
-    css_rule(:padding_inline, padding_inline: "10px")
+    css_class(:padding_inline, padding_inline: "10px")
 
     # Padding inline longhands
-    css_rule(:padding_inline_start, padding_inline_start: "10px")
-    css_rule(:padding_inline_end, padding_inline_end: "10px")
+    css_class(:padding_inline_start, padding_inline_start: "10px")
+    css_class(:padding_inline_end, padding_inline_end: "10px")
 
     # Inset inline shorthand
-    css_rule(:inset_inline, inset_inline: "10px")
+    css_class(:inset_inline, inset_inline: "10px")
 
     # Inset inline longhands
-    css_rule(:inset_inline_start, inset_inline_start: "10px")
-    css_rule(:inset_inline_end, inset_inline_end: "10px")
+    css_class(:inset_inline_start, inset_inline_start: "10px")
+    css_class(:inset_inline_end, inset_inline_end: "10px")
 
     # Block shorthands (stay as-is)
-    css_rule(:margin_block, margin_block: "10px")
+    css_class(:margin_block, margin_block: "10px")
 
     # Block longhands (converted to physical - top/bottom don't flip)
-    css_rule(:margin_block_start, margin_block_start: "10px")
-    css_rule(:margin_block_end, margin_block_end: "10px")
+    css_class(:margin_block_start, margin_block_start: "10px")
+    css_class(:margin_block_end, margin_block_end: "10px")
   end
 
   # ============================================================================

@@ -23,14 +23,14 @@ defmodule LiveStyle.PseudoClassesTest do
   defmodule FormStatePseudoClasses do
     use LiveStyle
 
-    css_rule(:disabled,
+    css_class(:disabled,
       color: [
         default: "black",
         ":disabled": "gray"
       ]
     )
 
-    css_rule(:enabled,
+    css_class(:enabled,
       opacity: [
         default: "1",
         ":enabled": "1",
@@ -38,77 +38,77 @@ defmodule LiveStyle.PseudoClassesTest do
       ]
     )
 
-    css_rule(:checked,
+    css_class(:checked,
       background_color: [
         default: "white",
         ":checked": "blue"
       ]
     )
 
-    css_rule(:indeterminate,
+    css_class(:indeterminate,
       background_color: [
         default: "white",
         ":indeterminate": "gray"
       ]
     )
 
-    css_rule(:valid,
+    css_class(:valid,
       border_color: [
         default: "gray",
         ":valid": "green"
       ]
     )
 
-    css_rule(:invalid,
+    css_class(:invalid,
       border_color: [
         default: "gray",
         ":invalid": "red"
       ]
     )
 
-    css_rule(:required,
+    css_class(:required,
       border_style: [
         default: "solid",
         ":required": "dashed"
       ]
     )
 
-    css_rule(:optional,
+    css_class(:optional,
       border_style: [
         default: "solid",
         ":optional": "dotted"
       ]
     )
 
-    css_rule(:read_only,
+    css_class(:read_only,
       background_color: [
         default: "white",
         ":read-only": "#f5f5f5"
       ]
     )
 
-    css_rule(:read_write,
+    css_class(:read_write,
       background_color: [
         default: "white",
         ":read-write": "white"
       ]
     )
 
-    css_rule(:placeholder_shown,
+    css_class(:placeholder_shown,
       color: [
         default: "black",
         ":placeholder-shown": "#999"
       ]
     )
 
-    css_rule(:in_range,
+    css_class(:in_range,
       border_color: [
         default: "gray",
         ":in-range": "green"
       ]
     )
 
-    css_rule(:out_of_range,
+    css_class(:out_of_range,
       border_color: [
         default: "gray",
         ":out-of-range": "red"
@@ -123,14 +123,14 @@ defmodule LiveStyle.PseudoClassesTest do
   defmodule FocusPseudoClasses do
     use LiveStyle
 
-    css_rule(:focus_visible,
+    css_class(:focus_visible,
       outline: [
         default: "none",
         ":focus-visible": "2px solid blue"
       ]
     )
 
-    css_rule(:focus_within,
+    css_class(:focus_within,
       border_color: [
         default: "gray",
         ":focus-within": "blue"
@@ -145,42 +145,42 @@ defmodule LiveStyle.PseudoClassesTest do
   defmodule TreeStructuralPseudoClasses do
     use LiveStyle
 
-    css_rule(:first_child,
+    css_class(:first_child,
       margin_top: [
         default: "1rem",
         ":first-child": "0"
       ]
     )
 
-    css_rule(:last_child,
+    css_class(:last_child,
       margin_bottom: [
         default: "1rem",
         ":last-child": "0"
       ]
     )
 
-    css_rule(:only_child,
+    css_class(:only_child,
       margin: [
         default: "1rem",
         ":only-child": "0"
       ]
     )
 
-    css_rule(:first_of_type,
+    css_class(:first_of_type,
       font_weight: [
         default: "normal",
         ":first-of-type": "bold"
       ]
     )
 
-    css_rule(:last_of_type,
+    css_class(:last_of_type,
       font_style: [
         default: "normal",
         ":last-of-type": "italic"
       ]
     )
 
-    css_rule(:only_of_type,
+    css_class(:only_of_type,
       color: [
         default: "black",
         ":only-of-type": "blue"
@@ -188,35 +188,35 @@ defmodule LiveStyle.PseudoClassesTest do
     )
 
     # Functional pseudo-classes with arguments
-    css_rule(:nth_child_odd,
+    css_class(:nth_child_odd,
       background_color: [
         default: "white",
         ":nth-child(odd)": "#f0f0f0"
       ]
     )
 
-    css_rule(:nth_child_even,
+    css_class(:nth_child_even,
       background_color: [
         default: "white",
         ":nth-child(even)": "#e0e0e0"
       ]
     )
 
-    css_rule(:nth_child_formula,
+    css_class(:nth_child_formula,
       background_color: [
         default: "white",
         ":nth-child(2n+1)": "#f0f0f0"
       ]
     )
 
-    css_rule(:nth_last_child,
+    css_class(:nth_last_child,
       opacity: [
         default: "1",
         ":nth-last-child(2)": "0.8"
       ]
     )
 
-    css_rule(:nth_of_type,
+    css_class(:nth_of_type,
       color: [
         default: "black",
         ":nth-of-type(3)": "red"
@@ -231,7 +231,7 @@ defmodule LiveStyle.PseudoClassesTest do
   defmodule LinkPseudoClasses do
     use LiveStyle
 
-    css_rule(:link,
+    css_class(:link,
       color: [
         default: "blue",
         ":link": "blue",
@@ -239,14 +239,14 @@ defmodule LiveStyle.PseudoClassesTest do
       ]
     )
 
-    css_rule(:any_link,
+    css_class(:any_link,
       text_decoration: [
         default: "none",
         ":any-link": "underline"
       ]
     )
 
-    css_rule(:target,
+    css_class(:target,
       background_color: [
         default: "transparent",
         ":target": "yellow"
@@ -261,28 +261,28 @@ defmodule LiveStyle.PseudoClassesTest do
   defmodule OtherPseudoClasses do
     use LiveStyle
 
-    css_rule(:empty,
+    css_class(:empty,
       display: [
         default: "block",
         ":empty": "none"
       ]
     )
 
-    css_rule(:autofill,
+    css_class(:autofill,
       background_color: [
         default: "white",
         ":autofill": "#e8f0fe"
       ]
     )
 
-    css_rule(:fullscreen,
+    css_class(:fullscreen,
       width: [
         default: "auto",
         ":fullscreen": "100vw"
       ]
     )
 
-    css_rule(:modal,
+    css_class(:modal,
       z_index: [
         default: "auto",
         ":modal": "9999"
@@ -298,7 +298,7 @@ defmodule LiveStyle.PseudoClassesTest do
     use LiveStyle
 
     # :not() pseudo-class
-    css_rule(:not_disabled,
+    css_class(:not_disabled,
       opacity: [
         default: "1",
         ":not(:disabled)": "1"
@@ -306,7 +306,7 @@ defmodule LiveStyle.PseudoClassesTest do
     )
 
     # :is() pseudo-class
-    css_rule(:is_hover_focus,
+    css_class(:is_hover_focus,
       color: [
         default: "black",
         ":is(:hover, :focus)": "blue"
@@ -314,7 +314,7 @@ defmodule LiveStyle.PseudoClassesTest do
     )
 
     # :where() pseudo-class
-    css_rule(:where_hover,
+    css_class(:where_hover,
       color: [
         default: "black",
         ":where(:hover)": "blue"
@@ -322,7 +322,7 @@ defmodule LiveStyle.PseudoClassesTest do
     )
 
     # :has() pseudo-class
-    css_rule(:has_focus,
+    css_class(:has_focus,
       border_color: [
         default: "gray",
         ":has(:focus)": "blue"

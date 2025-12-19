@@ -22,7 +22,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule StyleObject do
     use LiveStyle
 
-    css_rule(:root,
+    css_class(:root,
       background_color: "red",
       color: "blue"
     )
@@ -36,10 +36,10 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule StyleObjectMultiple do
     use LiveStyle
 
-    css_rule(:root, background_color: "red")
-    css_rule(:other, color: "blue")
-    css_rule(:bar_baz, color: "green")
-    css_rule(:purple_color, color: "purple")
+    css_class(:root, background_color: "red")
+    css_class(:other, color: "blue")
+    css_class(:bar_baz, color: "green")
+    css_class(:purple_color, color: "purple")
   end
 
   # ============================================================================
@@ -50,7 +50,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule CustomProperties do
     use LiveStyle
 
-    css_rule(:root,
+    css_class(:root,
       "--background-color": "red",
       "--otherColor": "green",
       "--foo": 10
@@ -65,7 +65,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule VendorPrefixes do
     use LiveStyle
 
-    css_rule(:root, user_select: "none")
+    css_class(:root, user_select: "none")
   end
 
   # ============================================================================
@@ -76,7 +76,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule ArrayFallbacks do
     use LiveStyle
 
-    css_rule(:root, position: ["sticky", "fixed"])
+    css_class(:root, position: ["sticky", "fixed"])
   end
 
   # ============================================================================
@@ -87,7 +87,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule ValidPseudoClass do
     use LiveStyle
 
-    css_rule(:root,
+    css_class(:root,
       background_color: [":hover": "red"],
       color: [":hover": "blue"]
     )
@@ -101,7 +101,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule PseudoClassOrder do
     use LiveStyle
 
-    css_rule(:root,
+    css_class(:root,
       color: [
         ":hover": "blue",
         ":active": "red",
@@ -121,7 +121,7 @@ defmodule LiveStyle.StyleXParityTest do
 
     # Both :hover:active and :active:hover produce same class because value is same
     # and pseudos are sorted alphabetically
-    css_rule(:root,
+    css_class(:root,
       color: [
         ":hover": [":active": "red"],
         ":active": [":hover": "red"]
@@ -137,7 +137,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule BeforeAfter do
     use LiveStyle
 
-    css_rule(:foo,
+    css_class(:foo,
       "::before": [color: "red"],
       "::after": [color: "blue"]
     )
@@ -151,7 +151,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule BeforeWithPseudo do
     use LiveStyle
 
-    css_rule(:foo,
+    css_class(:foo,
       "::before": [
         color: [
           default: "red",
@@ -183,7 +183,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule MediaQueries do
     use LiveStyle
 
-    css_rule(:root,
+    css_class(:root,
       background_color: [
         default: "red",
         "@media (min-width: 1000px)": "blue",
@@ -200,7 +200,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule SupportsQueries do
     use LiveStyle
 
-    css_rule(:root,
+    css_class(:root,
       background_color: [
         default: "red",
         "@supports (hover: hover)": "blue",
@@ -217,7 +217,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule MediaQueryWithPseudo do
     use LiveStyle
 
-    css_rule(:root,
+    css_class(:root,
       font_size: [
         default: "1rem",
         "@media (min-width: 800px)": [

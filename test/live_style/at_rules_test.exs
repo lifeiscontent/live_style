@@ -14,7 +14,7 @@ defmodule LiveStyle.AtRulesTest do
   defmodule MediaQueries do
     use LiveStyle
 
-    css_rule(:responsive,
+    css_class(:responsive,
       background_color: [
         default: "red",
         "@media (min-width: 1000px)": "blue",
@@ -22,7 +22,7 @@ defmodule LiveStyle.AtRulesTest do
       ]
     )
 
-    css_rule(:font_responsive,
+    css_class(:font_responsive,
       font_size: [
         default: "1rem",
         "@media (min-width: 800px)": "2rem"
@@ -33,7 +33,7 @@ defmodule LiveStyle.AtRulesTest do
   defmodule MediaQueryWithPseudo do
     use LiveStyle
 
-    css_rule(:hover_in_media,
+    css_class(:hover_in_media,
       font_size: [
         default: "1rem",
         "@media (min-width: 800px)": [
@@ -51,7 +51,7 @@ defmodule LiveStyle.AtRulesTest do
   defmodule SupportsQueries do
     use LiveStyle
 
-    css_rule(:hover_support,
+    css_class(:hover_support,
       background_color: [
         default: "red",
         "@supports (hover: hover)": "blue",
@@ -60,7 +60,7 @@ defmodule LiveStyle.AtRulesTest do
     )
 
     # @supports selector() syntax for feature detection
-    css_rule(:has_support,
+    css_class(:has_support,
       display: [
         default: "block",
         "@supports selector(:has(*))": "grid"
@@ -75,7 +75,7 @@ defmodule LiveStyle.AtRulesTest do
   defmodule ContainerQueries do
     use LiveStyle
 
-    css_rule(:container,
+    css_class(:container,
       font_size: [
         default: "1rem",
         "@container (min-width: 400px)": "2rem"
@@ -91,7 +91,7 @@ defmodule LiveStyle.AtRulesTest do
     use LiveStyle
 
     # Triple nested: @media -> @supports -> :hover
-    css_rule(:triple_nested,
+    css_class(:triple_nested,
       color: [
         default: "black",
         "@media (min-width: 800px)": [
@@ -319,7 +319,7 @@ defmodule LiveStyle.AtRulesTest do
     use LiveStyle
 
     # Multiple different media queries on same property
-    css_rule(:responsive,
+    css_class(:responsive,
       padding: [
         default: "8px",
         "@media (min-width: 640px)": "16px",
@@ -334,28 +334,28 @@ defmodule LiveStyle.AtRulesTest do
     use LiveStyle
 
     # Different types of media queries
-    css_rule(:print,
+    css_class(:print,
       display: [
         default: "block",
         "@media print": "none"
       ]
     )
 
-    css_rule(:dark_mode,
+    css_class(:dark_mode,
       background_color: [
         default: "white",
         "@media (prefers-color-scheme: dark)": "black"
       ]
     )
 
-    css_rule(:reduced_motion,
+    css_class(:reduced_motion,
       transition: [
         default: "all 0.3s ease",
         "@media (prefers-reduced-motion: reduce)": "none"
       ]
     )
 
-    css_rule(:max_width,
+    css_class(:max_width,
       font_size: [
         default: "16px",
         "@media (max-width: 640px)": "14px"
@@ -367,21 +367,21 @@ defmodule LiveStyle.AtRulesTest do
     use LiveStyle
 
     # Different types of @supports queries
-    css_rule(:grid_support,
+    css_class(:grid_support,
       display: [
         default: "flex",
         "@supports (display: grid)": "grid"
       ]
     )
 
-    css_rule(:gap_support,
+    css_class(:gap_support,
       margin: [
         default: "10px",
         "@supports (gap: 10px)": "0"
       ]
     )
 
-    css_rule(:aspect_ratio_support,
+    css_class(:aspect_ratio_support,
       padding_bottom: [
         default: "56.25%",
         "@supports (aspect-ratio: 16 / 9)": "0"
@@ -393,14 +393,14 @@ defmodule LiveStyle.AtRulesTest do
     use LiveStyle
 
     # Different container query conditions
-    css_rule(:inline_size,
+    css_class(:inline_size,
       font_size: [
         default: "1rem",
         "@container (inline-size > 300px)": "1.25rem"
       ]
     )
 
-    css_rule(:named_container,
+    css_class(:named_container,
       padding: [
         default: "8px",
         "@container sidebar (min-width: 200px)": "16px"

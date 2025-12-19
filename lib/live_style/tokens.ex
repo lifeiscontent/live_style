@@ -1,8 +1,8 @@
 defmodule LiveStyle.Tokens do
   @moduledoc """
-  Defines design tokens (CSS variables, keyframes, themes).
+  Defines design tokens (CSS variables, keyframes, themes, view transitions).
 
-  Use this for centralized token modules that are shared across your app.
+  Use this module for centralized token modules that are shared across your app.
   Use `LiveStyle.Sheet` for component styles.
 
   ## Basic Usage
@@ -75,7 +75,7 @@ defmodule LiveStyle.Tokens do
 
   Components don't need to know about themes - they just reference semantic tokens:
 
-      css_rule :button,
+      css_class :button,
         color: css_var({MyApp.Tokens, :semantic, :text_inverse}),
         background: css_var({MyApp.Tokens, :semantic, :fill_primary})
 
@@ -93,6 +93,24 @@ defmodule LiveStyle.Tokens do
       end
 
   This generates CSS `@property` rules that enable CSS to interpolate values.
+  See `LiveStyle.Types` for all available type helpers.
+
+  ## Compile-Time Constants
+
+  For values that should be inlined at compile-time (not CSS variables), use `css_consts/2`:
+
+      css_consts :breakpoint,
+        sm: "@media (max-width: 640px)",
+        lg: "@media (min-width: 1025px)"
+
+      css_consts :z,
+        modal: "50",
+        tooltip: "100"
+
+  Reference constants with `css_const/1`:
+
+      css_class :modal,
+        z_index: css_const({MyApp.Tokens, :z, :modal})
 
   ## Referencing Tokens
 
@@ -101,7 +119,7 @@ defmodule LiveStyle.Tokens do
       defmodule MyApp.Button do
         use LiveStyle.Sheet
 
-        css_rule :base,
+        css_class :base,
           background_color: css_var({MyApp.Tokens, :semantic, :fill_primary}),
           animation: "\#{css_keyframes({MyApp.Tokens, :spin})} 1s linear infinite"
       end

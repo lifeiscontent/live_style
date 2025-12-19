@@ -14,18 +14,18 @@ defmodule LiveStyle.PropsTest do
   defmodule BasicStyles do
     use LiveStyle
 
-    css_rule(:red, color: "red")
-    css_rule(:blue, color: "blue")
-    css_rule(:bold, font_weight: "bold")
-    css_rule(:large, font_size: "24px")
+    css_class(:red, color: "red")
+    css_class(:blue, color: "blue")
+    css_class(:bold, font_weight: "bold")
+    css_class(:large, font_size: "24px")
   end
 
   defmodule ConflictingStyles do
     use LiveStyle
 
-    css_rule(:primary, color: "blue", background_color: "white")
-    css_rule(:secondary, color: "red")
-    css_rule(:warning, color: "orange", background_color: "yellow")
+    css_class(:primary, color: "blue", background_color: "white")
+    css_class(:secondary, color: "red")
+    css_class(:warning, color: "orange", background_color: "yellow")
   end
 
   # ============================================================================
@@ -34,7 +34,7 @@ defmodule LiveStyle.PropsTest do
 
   describe "basic style application" do
     test "css/2 returns Attrs struct with class" do
-      attrs = LiveStyle.css(BasicStyles, [:red])
+      attrs = LiveStyle.get_css(BasicStyles, [:red])
 
       assert %LiveStyle.Attrs{class: class} = attrs
       assert is_binary(class)
@@ -42,7 +42,7 @@ defmodule LiveStyle.PropsTest do
     end
 
     test "css_class/2 returns class string" do
-      class = LiveStyle.css_class(BasicStyles, [:red])
+      class = LiveStyle.get_css_class(BasicStyles, [:red])
 
       assert is_binary(class)
       assert class =~ ~r/^[a-z0-9]+$/
@@ -60,7 +60,7 @@ defmodule LiveStyle.PropsTest do
       assert color.priority == 3000
 
       # The class returned by css_class should match the metadata
-      class = LiveStyle.css_class(BasicStyles, [:red])
+      class = LiveStyle.get_css_class(BasicStyles, [:red])
       assert class == color.class
     end
   end
@@ -68,7 +68,7 @@ defmodule LiveStyle.PropsTest do
   describe "style merging" do
     test "multiple non-conflicting styles are combined" do
       # StyleX: stylex.props(styles.red, styles.bold) combines both
-      class = LiveStyle.css_class(BasicStyles, [:red, :bold])
+      class = LiveStyle.get_css_class(BasicStyles, [:red, :bold])
 
       # Should have classes for both properties
       classes = String.split(class, " ")
@@ -82,7 +82,7 @@ defmodule LiveStyle.PropsTest do
       primary_rule = manifest.rules["LiveStyle.PropsTest.ConflictingStyles.primary"]
       secondary_rule = manifest.rules["LiveStyle.PropsTest.ConflictingStyles.secondary"]
 
-      class = LiveStyle.css_class(ConflictingStyles, [:primary, :secondary])
+      class = LiveStyle.get_css_class(ConflictingStyles, [:primary, :secondary])
       classes = String.split(class, " ")
 
       # Should have secondary's color class (red) and primary's background class
@@ -102,7 +102,7 @@ defmodule LiveStyle.PropsTest do
       manifest = get_manifest()
       warning_rule = manifest.rules["LiveStyle.PropsTest.ConflictingStyles.warning"]
 
-      class = LiveStyle.css_class(ConflictingStyles, [:primary, :secondary, :warning])
+      class = LiveStyle.get_css_class(ConflictingStyles, [:primary, :secondary, :warning])
       classes = String.split(class, " ")
 
       # Color should be warning's orange (last)
@@ -117,7 +117,7 @@ defmodule LiveStyle.PropsTest do
     test "nil values are filtered out" do
       # StyleX: stylex.props(styles.red, null, styles.bold)
       # -> null is ignored
-      class = LiveStyle.css_class(BasicStyles, [:red, nil, :bold])
+      class = LiveStyle.get_css_class(BasicStyles, [:red, nil, :bold])
 
       classes =
         class
@@ -128,7 +128,7 @@ defmodule LiveStyle.PropsTest do
     end
 
     test "empty refs list returns empty class" do
-      class = LiveStyle.css_class(BasicStyles, [])
+      class = LiveStyle.get_css_class(BasicStyles, [])
 
       assert class == "" or class == nil
     end
@@ -136,7 +136,7 @@ defmodule LiveStyle.PropsTest do
 
   describe "class deduplication" do
     test "same style applied multiple times is not duplicated" do
-      class = LiveStyle.css_class(BasicStyles, [:red, :red, :red])
+      class = LiveStyle.get_css_class(BasicStyles, [:red, :red, :red])
 
       classes =
         class
@@ -148,7 +148,7 @@ defmodule LiveStyle.PropsTest do
     end
 
     test "same property from different rules - only last class appears" do
-      class = LiveStyle.css_class(ConflictingStyles, [:primary, :secondary])
+      class = LiveStyle.get_css_class(ConflictingStyles, [:primary, :secondary])
 
       classes =
         class
@@ -163,7 +163,7 @@ defmodule LiveStyle.PropsTest do
 
   describe "attrs struct" do
     test "Attrs struct can be used with Phoenix.HTML" do
-      attrs = LiveStyle.css(BasicStyles, [:red])
+      attrs = LiveStyle.get_css(BasicStyles, [:red])
 
       assert %LiveStyle.Attrs{} = attrs
       assert Map.has_key?(attrs, :class)
@@ -171,7 +171,7 @@ defmodule LiveStyle.PropsTest do
 
     test "Attrs can include style for inline styles" do
       # When dynamic values are used, style attribute may be needed
-      attrs = LiveStyle.css(BasicStyles, [:red])
+      attrs = LiveStyle.get_css(BasicStyles, [:red])
 
       # For static styles, style should be nil or empty
       assert attrs.style == nil or attrs.style == %{}
@@ -181,7 +181,7 @@ defmodule LiveStyle.PropsTest do
   describe "conditional styles" do
     test "false condition excludes style" do
       # Pattern: css(module, [condition && :style])
-      class = LiveStyle.css_class(BasicStyles, [false && :red, :bold])
+      class = LiveStyle.get_css_class(BasicStyles, [false && :red, :bold])
 
       classes =
         class
@@ -198,7 +198,7 @@ defmodule LiveStyle.PropsTest do
       # The env var doesn't need to exist - we just need a non-nil check
       include_red = System.get_env("__NONEXISTENT__") == nil
 
-      class = LiveStyle.css_class(BasicStyles, [include_red && :red, :bold])
+      class = LiveStyle.get_css_class(BasicStyles, [include_red && :red, :bold])
 
       classes =
         class

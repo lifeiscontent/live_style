@@ -98,7 +98,7 @@ defmodule LiveStyle.VarsTest do
       text_size: "16px"
     )
 
-    css_rule(:styled,
+    css_class(:styled,
       color: css_var({__MODULE__, :theme, :primary_color}),
       font_size: css_var({__MODULE__, :theme, :text_size})
     )
@@ -242,7 +242,7 @@ defmodule LiveStyle.VarsTest do
   end
 
   describe "using CSS variables in rules" do
-    test "css_var reference in css_rule generates var() in atomic class" do
+    test "css_var reference in css_class generates var() in atomic class" do
       # StyleX: ".xx2qnu0{color:var(--xwx8imx)}"
       manifest = get_manifest()
       rule = manifest.rules["LiveStyle.VarsTest.VarsUsedInRules.styled"]

@@ -22,47 +22,47 @@ defmodule LiveStyle.ShorthandTest do
     use LiveStyle
 
     # Shorthand of shorthands (priority 1000)
-    css_rule(:margin_all, margin: "10px")
-    css_rule(:padding_all, padding: "10px")
+    css_class(:margin_all, margin: "10px")
+    css_class(:padding_all, padding: "10px")
 
     # Multi-value shorthands
-    css_rule(:margin_two_values, margin: "10px 20px")
-    css_rule(:margin_three_values, margin: "10px 20px 30px")
-    css_rule(:margin_four_values, margin: "10px 20px 30px 40px")
+    css_class(:margin_two_values, margin: "10px 20px")
+    css_class(:margin_three_values, margin: "10px 20px 30px")
+    css_class(:margin_four_values, margin: "10px 20px 30px 40px")
 
     # Padding variants
-    css_rule(:padding_two_values, padding: "5px 10px")
-    css_rule(:padding_four_values, padding: "5px 10px 15px 20px")
+    css_class(:padding_two_values, padding: "5px 10px")
+    css_class(:padding_four_values, padding: "5px 10px 15px 20px")
   end
 
   defmodule LonghandProperties do
     use LiveStyle
 
     # Physical longhands (priority 4000)
-    css_rule(:margin_top, margin_top: "10px")
-    css_rule(:margin_right, margin_right: "10px")
-    css_rule(:margin_bottom, margin_bottom: "10px")
-    css_rule(:margin_left, margin_left: "10px")
+    css_class(:margin_top, margin_top: "10px")
+    css_class(:margin_right, margin_right: "10px")
+    css_class(:margin_bottom, margin_bottom: "10px")
+    css_class(:margin_left, margin_left: "10px")
 
-    css_rule(:padding_top, padding_top: "10px")
-    css_rule(:padding_right, padding_right: "10px")
-    css_rule(:padding_bottom, padding_bottom: "10px")
-    css_rule(:padding_left, padding_left: "10px")
+    css_class(:padding_top, padding_top: "10px")
+    css_class(:padding_right, padding_right: "10px")
+    css_class(:padding_bottom, padding_bottom: "10px")
+    css_class(:padding_left, padding_left: "10px")
   end
 
   defmodule ShorthandOfLonghands do
     use LiveStyle
 
     # Shorthand of longhands (priority 2000)
-    css_rule(:margin_block, margin_block: "10px")
-    css_rule(:margin_inline, margin_inline: "10px")
-    css_rule(:padding_block, padding_block: "10px")
-    css_rule(:padding_inline, padding_inline: "10px")
+    css_class(:margin_block, margin_block: "10px")
+    css_class(:margin_inline, margin_inline: "10px")
+    css_class(:padding_block, padding_block: "10px")
+    css_class(:padding_inline, padding_inline: "10px")
 
     # Border shorthand of longhands
-    css_rule(:border_color, border_color: "red")
-    css_rule(:border_width, border_width: "1px")
-    css_rule(:border_style, border_style: "solid")
+    css_class(:border_color, border_color: "red")
+    css_class(:border_width, border_width: "1px")
+    css_class(:border_style, border_style: "solid")
   end
 
   # ============================================================================
@@ -73,23 +73,23 @@ defmodule LiveStyle.ShorthandTest do
     use LiveStyle
 
     # Border shorthand (priority 1000)
-    css_rule(:border_all, border: "1px solid red")
+    css_class(:border_all, border: "1px solid red")
 
     # Border side shorthands (priority 2000)
-    css_rule(:border_top, border_top: "1px solid red")
-    css_rule(:border_right, border_right: "1px solid red")
-    css_rule(:border_bottom, border_bottom: "1px solid red")
-    css_rule(:border_left, border_left: "1px solid red")
+    css_class(:border_top, border_top: "1px solid red")
+    css_class(:border_right, border_right: "1px solid red")
+    css_class(:border_bottom, border_bottom: "1px solid red")
+    css_class(:border_left, border_left: "1px solid red")
 
     # Border property shorthands (priority 2000)
-    css_rule(:border_color, border_color: "red")
-    css_rule(:border_width, border_width: "1px")
-    css_rule(:border_style, border_style: "solid")
+    css_class(:border_color, border_color: "red")
+    css_class(:border_width, border_width: "1px")
+    css_class(:border_style, border_style: "solid")
 
     # Border longhands (priority 4000)
-    css_rule(:border_top_color, border_top_color: "red")
-    css_rule(:border_top_width, border_top_width: "1px")
-    css_rule(:border_top_style, border_top_style: "solid")
+    css_class(:border_top_color, border_top_color: "red")
+    css_class(:border_top_width, border_top_width: "1px")
+    css_class(:border_top_style, border_top_style: "solid")
   end
 
   # ============================================================================
@@ -100,28 +100,28 @@ defmodule LiveStyle.ShorthandTest do
     use LiveStyle
 
     # Background (shorthand of shorthands - 1000)
-    css_rule(:background, background: "red")
+    css_class(:background, background: "red")
 
     # Font (shorthand of shorthands - 1000)
-    css_rule(:font, font: "16px/1.5 Arial")
+    css_class(:font, font: "16px/1.5 Arial")
 
     # Flex (shorthand of shorthands - 1000)
-    css_rule(:flex, flex: "1 1 auto")
+    css_class(:flex, flex: "1 1 auto")
 
     # Transition (shorthand of shorthands - 1000)
-    css_rule(:transition, transition: "all 0.3s ease")
+    css_class(:transition, transition: "all 0.3s ease")
 
     # Animation (shorthand of shorthands - 1000)
-    css_rule(:animation, animation: "fade 1s ease")
+    css_class(:animation, animation: "fade 1s ease")
 
     # Text decoration (shorthand of longhands - 2000)
-    css_rule(:text_decoration, text_decoration: "underline")
+    css_class(:text_decoration, text_decoration: "underline")
 
     # Outline (shorthand of longhands - 2000)
-    css_rule(:outline, outline: "1px solid blue")
+    css_class(:outline, outline: "1px solid blue")
 
     # Inset (shorthand of shorthands - 1000)
-    css_rule(:inset, inset: "10px")
+    css_class(:inset, inset: "10px")
   end
 
   # ============================================================================
@@ -324,19 +324,19 @@ defmodule LiveStyle.ShorthandTest do
     use LiveStyle
 
     # When longhand follows shorthand, longhand wins for that specific property
-    css_rule(:shorthand_then_longhand,
+    css_class(:shorthand_then_longhand,
       margin: "10px",
       margin_left: "20px"
     )
 
     # Shorthand should apply to all sides except the explicitly set longhand
-    css_rule(:longhand_then_shorthand,
+    css_class(:longhand_then_shorthand,
       margin_left: "20px",
       margin: "10px"
     )
 
     # Multiple longhands after shorthand
-    css_rule(:mixed,
+    css_class(:mixed,
       padding: "5px",
       padding_top: "10px",
       padding_bottom: "15px"
@@ -346,8 +346,8 @@ defmodule LiveStyle.ShorthandTest do
   defmodule MergeRuntime do
     use LiveStyle
 
-    css_rule(:base, margin: "10px")
-    css_rule(:override, margin_left: "20px")
+    css_class(:base, margin: "10px")
+    css_class(:override, margin_left: "20px")
 
     def test_css(args), do: css(args)
   end

@@ -3,27 +3,49 @@ defmodule LiveStyle.Include do
   Style include resolution for LiveStyle.
 
   Handles the `__include__` key in style declarations, allowing styles to be
-  composed from other styles in the same module or external modules.
+  composed from other styles in the same module or external modules. This follows
+  StyleX's style composition pattern with last-wins semantics.
 
-  ## Example
+  ## Usage
 
-      css_rule :base,
-        display: "flex",
-        padding: "8px"
+      defmodule MyApp.Button do
+        use LiveStyle.Sheet
 
-      css_rule :button,
-        __include__: [:base],
-        background_color: "blue",
-        color: "white"
+        css_class :base,
+          display: "flex",
+          padding: "8px"
 
-  The `:button` rule will include all declarations from `:base`, then merge
-  its own declarations on top (last-wins semantics).
+        css_class :primary,
+          __include__: [:base],
+          background_color: "blue",
+          color: "white"
+      end
 
-  ## Cross-module includes
+  The `:primary` class includes all declarations from `:base`, then merges
+  its own declarations on top. Properties in the including class override
+  properties from included classes (last-wins semantics).
 
-      css_rule :themed_button,
-        __include__: [{OtherModule, :base_button}],
-        color: css_var({Tokens, :text, :primary})
+  ## Cross-module Includes
+
+  Include styles from other modules using a tuple:
+
+      css_class :themed_button,
+        __include__: [{MyApp.BaseStyles, :btn_base}],
+        color: css_var({MyApp.Tokens, :semantic, :text_primary})
+
+  ## Multiple Includes
+
+  Include multiple classes - they are processed in order:
+
+      css_class :fancy_button,
+        __include__: [:base, :rounded, {SharedStyles, :animated}],
+        background: "linear-gradient(...)"
+
+  ## Important Notes
+
+  - Local includes must reference classes defined earlier in the same module
+  - External module includes require the referenced module to be compiled first
+  - Include resolution is recursive - included classes can themselves include other classes
   """
 
   alias LiveStyle.Manifest
@@ -74,10 +96,10 @@ defmodule LiveStyle.Include do
       nil ->
         raise CompileError,
           description: """
-          LiveStyle: Cannot include :#{rule_name} - rule not found.
+          LiveStyle: Cannot include :#{rule_name} - class not found.
 
-          Local includes must refer to rules defined earlier in the same module.
-          Make sure css_rule(:#{rule_name}, ...) is defined before it's included.
+          Local includes must refer to classes defined earlier in the same module.
+          Make sure css_class(:#{rule_name}, ...) is defined before it's included.
           """
     end
   end
@@ -95,10 +117,10 @@ defmodule LiveStyle.Include do
       nil ->
         raise CompileError,
           description: """
-          LiveStyle: Rule :#{rule_name} not found in #{inspect(module)}.
+          LiveStyle: Class :#{rule_name} not found in #{inspect(module)}.
 
           Make sure #{inspect(module)} is compiled before this module
-          and defines css_rule(:#{rule_name}, ...).
+          and defines css_class(:#{rule_name}, ...).
           """
     end
   end

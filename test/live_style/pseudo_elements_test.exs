@@ -23,7 +23,7 @@ defmodule LiveStyle.PseudoElementsTest do
   defmodule MarkerStyles do
     use LiveStyle
 
-    css_rule(:marker,
+    css_class(:marker,
       "::marker": [
         color: "red",
         font_size: "1.2em"
@@ -34,7 +34,7 @@ defmodule LiveStyle.PseudoElementsTest do
   defmodule SelectionStyles do
     use LiveStyle
 
-    css_rule(:selection,
+    css_class(:selection,
       "::selection": [
         background_color: "yellow",
         color: "black"
@@ -45,7 +45,7 @@ defmodule LiveStyle.PseudoElementsTest do
   defmodule BackdropStyles do
     use LiveStyle
 
-    css_rule(:backdrop,
+    css_class(:backdrop,
       "::backdrop": [
         background_color: "rgba(0,0,0,0.7)"
       ]
@@ -55,14 +55,14 @@ defmodule LiveStyle.PseudoElementsTest do
   defmodule FirstLetterLineStyles do
     use LiveStyle
 
-    css_rule(:first_letter,
+    css_class(:first_letter,
       "::first-letter": [
         font_size: "2em",
         font_weight: "bold"
       ]
     )
 
-    css_rule(:first_line,
+    css_class(:first_line,
       "::first-line": [
         font_weight: "bold",
         text_decoration: "underline"
@@ -73,7 +73,7 @@ defmodule LiveStyle.PseudoElementsTest do
   defmodule FileSelectorStyles do
     use LiveStyle
 
-    css_rule(:file_button,
+    css_class(:file_button,
       "::file-selector-button": [
         background_color: "blue",
         color: "white",
@@ -85,20 +85,20 @@ defmodule LiveStyle.PseudoElementsTest do
   defmodule WebkitScrollbarStyles do
     use LiveStyle
 
-    css_rule(:scrollbar,
+    css_class(:scrollbar,
       "::-webkit-scrollbar": [
         width: "8px"
       ]
     )
 
-    css_rule(:scrollbar_thumb,
+    css_class(:scrollbar_thumb,
       "::-webkit-scrollbar-thumb": [
         background_color: "gray",
         border_radius: "4px"
       ]
     )
 
-    css_rule(:scrollbar_track,
+    css_class(:scrollbar_track,
       "::-webkit-scrollbar-track": [
         background_color: "#f1f1f1"
       ]
@@ -108,7 +108,7 @@ defmodule LiveStyle.PseudoElementsTest do
   defmodule CueStyles do
     use LiveStyle
 
-    css_rule(:cue,
+    css_class(:cue,
       "::cue": [
         color: "white",
         background_color: "black"
@@ -123,7 +123,7 @@ defmodule LiveStyle.PseudoElementsTest do
   defmodule GrammarErrorStyles do
     use LiveStyle
 
-    css_rule(:grammar_error,
+    css_class(:grammar_error,
       "::grammar-error": [
         text_decoration: "underline wavy red"
       ]
@@ -133,7 +133,7 @@ defmodule LiveStyle.PseudoElementsTest do
   defmodule SpellingErrorStyles do
     use LiveStyle
 
-    css_rule(:spelling_error,
+    css_class(:spelling_error,
       "::spelling-error": [
         text_decoration: "underline wavy blue"
       ]
@@ -143,7 +143,7 @@ defmodule LiveStyle.PseudoElementsTest do
   defmodule TargetTextStyles do
     use LiveStyle
 
-    css_rule(:target_text,
+    css_class(:target_text,
       "::target-text": [
         background_color: "yellow"
       ]
@@ -158,7 +158,7 @@ defmodule LiveStyle.PseudoElementsTest do
     use LiveStyle
 
     # ::selection:window-inactive - selection in inactive window
-    css_rule(:selection_hover,
+    css_class(:selection_hover,
       "::selection": [
         background_color: [
           default: "blue",

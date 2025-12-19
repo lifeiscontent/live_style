@@ -14,8 +14,8 @@ defmodule LiveStyle.ValueNormalizationTest do
   defmodule WhitespaceNormalization do
     use LiveStyle
 
-    css_rule(:transform_spaces, transform: "  rotate(10deg)  translate3d( 0 , 0 , 0 )  ")
-    css_rule(:rgba_spaces, color: "rgba( 1, 222,  33 , 0.5)")
+    css_class(:transform_spaces, transform: "  rotate(10deg)  translate3d( 0 , 0 , 0 )  ")
+    css_class(:rgba_spaces, color: "rgba( 1, 222,  33 , 0.5)")
   end
 
   # ============================================================================
@@ -25,14 +25,14 @@ defmodule LiveStyle.ValueNormalizationTest do
   defmodule ZeroValues do
     use LiveStyle
 
-    css_rule(:zero_px, margin: "0px", margin_left: "1px")
-    css_rule(:zero_timing, transition_duration: "0ms")
-    css_rule(:zero_angle_rad, transform: "0rad")
-    css_rule(:zero_angle_turn, transform: "0turn")
-    css_rule(:zero_angle_grad, transform: "0grad")
+    css_class(:zero_px, margin: "0px", margin_left: "1px")
+    css_class(:zero_timing, transition_duration: "0ms")
+    css_class(:zero_angle_rad, transform: "0rad")
+    css_class(:zero_angle_turn, transform: "0turn")
+    css_class(:zero_angle_grad, transform: "0grad")
     # Integer 0 should normalize to "0" (not "0px")
     # StyleX: margin: 0 -> ".x1ghz6dp{margin:0}"
-    css_rule(:zero_integer, margin: 0, padding: 0)
+    css_class(:zero_integer, margin: 0, padding: 0)
   end
 
   # ============================================================================
@@ -42,12 +42,12 @@ defmodule LiveStyle.ValueNormalizationTest do
   defmodule CalcValues do
     use LiveStyle
 
-    css_rule(:calc_spaces, width: "calc((100% + 3% -   100px) / 7)")
+    css_class(:calc_spaces, width: "calc((100% + 3% -   100px) / 7)")
     # Nested calc functions
-    css_rule(:nested_calc, width: "calc(100% - calc(20px + 10px))")
-    css_rule(:deeply_nested_calc, height: "calc(50vh - calc(100% / calc(3 + 1)))")
+    css_class(:nested_calc, width: "calc(100% - calc(20px + 10px))")
+    css_class(:deeply_nested_calc, height: "calc(50vh - calc(100% / calc(3 + 1)))")
     # Nested functions in clamp
-    css_rule(:clamp_with_calc, padding: "clamp(10px, calc(1rem + 2vw), 30px)")
+    css_class(:clamp_with_calc, padding: "clamp(10px, calc(1rem + 2vw), 30px)")
   end
 
   # ============================================================================
@@ -57,8 +57,8 @@ defmodule LiveStyle.ValueNormalizationTest do
   defmodule LeadingZeros do
     use LiveStyle
 
-    css_rule(:decimal, transition_duration: "0.01s")
-    css_rule(:cubic_bezier, transition_timing_function: "cubic-bezier(.08,.52,.52,1)")
+    css_class(:decimal, transition_duration: "0.01s")
+    css_class(:cubic_bezier, transition_timing_function: "cubic-bezier(.08,.52,.52,1)")
   end
 
   # ============================================================================
@@ -68,10 +68,10 @@ defmodule LiveStyle.ValueNormalizationTest do
   defmodule TimingValues do
     use LiveStyle
 
-    css_rule(:ms_large, transition_duration: "1234ms")
-    css_rule(:ms_medium, transition_duration: "10ms")
-    css_rule(:ms_small, transition_duration: "1ms")
-    css_rule(:ms_500, transition_duration: "500ms")
+    css_class(:ms_large, transition_duration: "1234ms")
+    css_class(:ms_medium, transition_duration: "10ms")
+    css_class(:ms_small, transition_duration: "1ms")
+    css_class(:ms_500, transition_duration: "500ms")
   end
 
   # ============================================================================
@@ -82,14 +82,14 @@ defmodule LiveStyle.ValueNormalizationTest do
     use LiveStyle
 
     # These properties need px units added
-    css_rule(:with_units,
+    css_class(:with_units,
       height: 500,
       margin: 10,
       width: 500
     )
 
     # These properties are unitless
-    css_rule(:unitless,
+    css_class(:unitless,
       font_weight: 500,
       line_height: 1.5,
       opacity: 0.5,
@@ -105,7 +105,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     use LiveStyle
 
     # 100/3 = 33.333333... should round to 33.3333
-    css_rule(:rounded, height: 33.33333333)
+    css_class(:rounded, height: 33.33333333)
   end
 
   # ============================================================================
@@ -115,16 +115,16 @@ defmodule LiveStyle.ValueNormalizationTest do
   defmodule ContentProperty do
     use LiveStyle
 
-    css_rule(:empty, content: "")
-    css_rule(:with_text, content: "hello")
-    css_rule(:with_attr, content: "attr(data-count)")
-    css_rule(:open_quote, content: "open-quote")
-    css_rule(:close_quote, content: "close-quote")
-    css_rule(:no_open_quote, content: "no-open-quote")
-    css_rule(:no_close_quote, content: "no-close-quote")
-    css_rule(:counter_fn, content: "counter(section)")
-    css_rule(:counters_fn, content: "counters(section, '.')")
-    css_rule(:var_fn, content: "var(--my-content)")
+    css_class(:empty, content: "")
+    css_class(:with_text, content: "hello")
+    css_class(:with_attr, content: "attr(data-count)")
+    css_class(:open_quote, content: "open-quote")
+    css_class(:close_quote, content: "close-quote")
+    css_class(:no_open_quote, content: "no-open-quote")
+    css_class(:no_close_quote, content: "no-close-quote")
+    css_class(:counter_fn, content: "counter(section)")
+    css_class(:counters_fn, content: "counters(section, '.')")
+    css_class(:var_fn, content: "var(--my-content)")
   end
 
   # ============================================================================
@@ -134,9 +134,9 @@ defmodule LiveStyle.ValueNormalizationTest do
   defmodule HyphenateCharacter do
     use LiveStyle
 
-    css_rule(:auto, hyphenate_character: "auto")
-    css_rule(:dash, hyphenate_character: "-")
-    css_rule(:custom, hyphenate_character: "=")
+    css_class(:auto, hyphenate_character: "auto")
+    css_class(:dash, hyphenate_character: "-")
+    css_class(:custom, hyphenate_character: "=")
   end
 
   # ============================================================================
@@ -148,8 +148,8 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     # StyleX: quotes: "''" -> ".x169joja{quotes:\"\"}"
     # Single-quoted empty strings are normalized to double-quoted
-    css_rule(:empty_single, quotes: "''")
-    css_rule(:empty_double, quotes: "\"\"")
+    css_class(:empty_single, quotes: "''")
+    css_class(:empty_double, quotes: "\"\"")
   end
 
   # ============================================================================
@@ -160,13 +160,13 @@ defmodule LiveStyle.ValueNormalizationTest do
     use LiveStyle
 
     # Atom values (snake_case -> dash-case)
-    css_rule(:atom_single, transition_property: :background_color)
-    css_rule(:atom_opacity, transition_property: :opacity)
+    css_class(:atom_single, transition_property: :background_color)
+    css_class(:atom_opacity, transition_property: :opacity)
 
     # String values (snake_case -> dash-case for Elixir idiom)
-    css_rule(:string_snake, transition_property: "background_color")
-    css_rule(:string_multi, transition_property: "opacity, background_color, border_radius")
-    css_rule(:string_custom_prop, transition_property: "--my_custom_prop")
+    css_class(:string_snake, transition_property: "background_color")
+    css_class(:string_multi, transition_property: "opacity, background_color, border_radius")
+    css_class(:string_custom_prop, transition_property: "--my_custom_prop")
   end
 
   # ============================================================================
@@ -177,7 +177,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     use LiveStyle
 
     # StyleX removes space before !important: "red !important" -> "red!important"
-    css_rule(:important, color: "red !important")
+    css_class(:important, color: "red !important")
   end
 
   # ============================================================================

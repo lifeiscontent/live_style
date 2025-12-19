@@ -2,12 +2,51 @@ defmodule LiveStyle.PositionTry do
   @moduledoc """
   CSS Anchor Positioning `@position-try` rule support.
 
+  This module handles `@position-try` at-rules for CSS Anchor Positioning,
+  which provides fallback positioning for anchored elements.
+
+  ## Browser Support
+
+  CSS Anchor Positioning is available in Chromium 125+ (June 2024).
+  Firefox and Safari do not yet support this feature.
+
+  ## Usage
+
+  Define position-try rules in a tokens module or inline:
+
+      defmodule MyApp.Tokens do
+        use LiveStyle.Tokens
+
+        css_position_try :bottom_fallback,
+          top: "anchor(bottom)",
+          left: "anchor(center)"
+      end
+
+  Or use inline in a style class:
+
+      css_class :tooltip,
+        position: "absolute",
+        position_anchor: "--trigger",
+        position_try_fallbacks: css_position_try(
+          bottom: "anchor(top)",
+          left: "anchor(center)"
+        )
+
+  ## Allowed Properties
+
+  Only positioning-related properties are allowed in `@position-try` rules:
+
+  - **Position anchor**: `position_anchor`, `position_area`
+  - **Inset**: `top`, `right`, `bottom`, `left`, `inset`, `inset_block`, `inset_inline`
+  - **Margin**: `margin`, `margin_top`, `margin_inline_start`, etc.
+  - **Size**: `width`, `height`, `min_width`, `max_height`, `block_size`, `inline_size`
+  - **Self-alignment**: `align_self`, `justify_self`, `place_self`
+
+  ## RTL Handling
+
   Position-try rules use CSS properties that are either:
   - Physical (top, left, width, height) - no RTL transformation needed
   - Logical (inset-inline-start, margin-block) - browser handles RTL automatically
-
-  Since position-try doesn't typically use properties with logical VALUES
-  (like float: start), RTL variants are rarely needed.
   """
 
   alias LiveStyle.Hash

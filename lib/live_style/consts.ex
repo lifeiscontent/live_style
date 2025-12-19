@@ -16,8 +16,8 @@ defmodule LiveStyle.Consts do
         modal: "50",
         tooltip: "100"
 
-      # Reference in rules
-      css_rule :responsive,
+      # Reference in classes
+      css_class :responsive,
         css_const({:breakpoint, :sm}) => [display: "none"]
   """
 

@@ -63,20 +63,20 @@ defmodule MyAppWeb.Components.Button do
   use LiveStyle.Sheet
 
   # Define styles using keyword list syntax
-  css_rule :base,
+  css_class :base,
     display: "flex",
     align_items: "center",
     padding: "8px 16px",
     border_radius: "8px"
 
-  css_rule :primary,
+  css_class :primary,
     background_color: css_var({MyApp.Tokens, :fill, :primary}),
     color: "white"
 
   def button(assigns) do
     ~H"""
     <button class={css_class([:base, :primary])}>
-      {render_slot(@inner_block)}
+      <%= render_slot(@inner_block) %>
     </button>
     """
   end
@@ -134,19 +134,19 @@ defmodule MyApp.Button do
   use Phoenix.Component
   use LiveStyle.Sheet
 
-  css_rule :base,
+  css_class :base,
     display: "inline-flex",
     padding: "0.5rem 1rem",
     border_radius: "0.25rem"
 
-  css_rule :primary,
+  css_class :primary,
     background_color: css_var({MyApp.Tokens, :semantic, :fill_primary}),
     color: css_var({MyApp.Tokens, :semantic, :text_inverse})
 
   def button(assigns) do
     ~H"""
     <button class={css_class([:base, :primary])}>
-      <%= @label %>
+      <%= render_slot(@inner_block) %>
     </button>
     """
   end
@@ -159,12 +159,12 @@ LiveStyle supports both **keyword list syntax** (recommended) and **map syntax**
 
 ```elixir
 # Keyword list syntax (recommended - more idiomatic Elixir)
-css_rule :button,
+css_class :button,
   display: "flex",
   padding: "8px"
 
 # Map syntax (also supported)
-css_rule :button, %{
+css_class :button, %{
   display: "flex",
   padding: "8px"
 }
@@ -174,14 +174,14 @@ css_rule :button, %{
 
 ```elixir
 # Option 1: Map syntax with =>
-css_rule :responsive,
+css_class :responsive,
   font_size: %{
     :default => "1rem",
     css_const({MyApp.Tokens, :breakpoint, :lg}) => "1.5rem"
   }
 
 # Option 2: Tuple list syntax (more consistent with keyword style)
-css_rule :responsive,
+css_class :responsive,
   font_size: [
     {:default, "1rem"},
     {css_const({MyApp.Tokens, :breakpoint, :lg}), "1.5rem"}
@@ -195,7 +195,7 @@ Both produce identical CSS output. Use whichever style you prefer.
 Use `css_var/1` to reference CSS variables from other modules:
 
 ```elixir
-css_rule :container,
+css_class :container,
   padding: css_var({MyApp.Tokens, :space, :md}),
   background_color: css_var({MyApp.Tokens, :semantic, :fill_primary})
 ```
@@ -247,7 +247,7 @@ Use `css_theme/1` to apply a theme to a subtree:
 Components don't need to know about themes - they just reference semantic tokens:
 
 ```elixir
-css_rule :card,
+css_class :card,
   background: css_var({MyApp.Tokens, :semantic, :fill_page}),
   color: css_var({MyApp.Tokens, :semantic, :text_primary})
 ```
@@ -285,7 +285,7 @@ Use Elixir's boolean logic for conditional styles:
 def button(assigns) do
   ~H"""
   <button class={css_class([:base, @variant == :primary && :primary, @disabled && :disabled])}>
-    {render_slot(@inner_block)}
+    <%= render_slot(@inner_block) %>
   </button>
   """
 end
@@ -296,7 +296,7 @@ end
 LiveStyle uses the StyleX pattern of condition-in-value:
 
 ```elixir
-css_rule :link,
+css_class :link,
   color: [
     default: "blue",
     ":hover": "darkblue",
@@ -304,7 +304,7 @@ css_rule :link,
   ],
   text_decoration: "none"
 
-css_rule :container,
+css_class :container,
   padding: [
     default: "16px",
     "@media (min-width: 768px)": "32px"
@@ -314,7 +314,7 @@ css_rule :container,
 ## Pseudo-elements
 
 ```elixir
-css_rule :with_before,
+css_class :with_before,
   position: "relative",
   "::before": [
     content: "'*'",
@@ -333,7 +333,7 @@ Include styles from other modules or self-reference within the same module:
 defmodule MyApp.BaseStyles do
   use LiveStyle.Sheet
 
-  css_rule :button_base,
+  css_class :button_base,
     display: "inline-flex",
     padding: "8px 16px",
     cursor: "pointer"
@@ -342,7 +342,7 @@ end
 defmodule MyApp.Button do
   use LiveStyle.Sheet
 
-  css_rule :primary,
+  css_class :primary,
     __include__: [{MyApp.BaseStyles, :button_base}],
     background_color: css_var({MyApp.Tokens, :fill, :primary})
 end
@@ -351,11 +351,11 @@ end
 defmodule MyApp.Card do
   use LiveStyle.Sheet
 
-  css_rule :base,
+  css_class :base,
     border_radius: "8px",
     padding: "16px"
 
-  css_rule :elevated,
+  css_class :elevated,
     __include__: [:base],
     box_shadow: "0 4px 6px rgba(0,0,0,0.1)"
 end
@@ -363,17 +363,17 @@ end
 
 ## Dynamic Styles
 
-For styles that depend on runtime values, use a function in `css_rule/2`:
+For styles that depend on runtime values, use a function in `css_class/2`:
 
 ```elixir
 defmodule MyApp.Components do
   use LiveStyle.Sheet
 
-  css_rule :dynamic_opacity, fn opacity ->
+  css_class :dynamic_opacity, fn opacity ->
     [opacity: opacity]
   end
 
-  css_rule :dynamic_color, fn r, g, b ->
+  css_class :dynamic_color, fn r, g, b ->
     [color: "rgb(#{r}, #{g}, #{b})"]
   end
 end
@@ -426,7 +426,7 @@ end
 defmodule MyApp.Spinner do
   use LiveStyle.Sheet
 
-  css_rule :spinner,
+  css_class :spinner,
     animation: "#{css_keyframes({MyApp.Tokens, :spin})} 1s linear infinite"
 end
 ```
@@ -436,7 +436,7 @@ end
 Use `first_that_works/1` for CSS fallbacks:
 
 ```elixir
-css_rule :sticky_header,
+css_class :sticky_header,
   position: first_that_works(["sticky", "-webkit-sticky", "fixed"])
 ```
 
@@ -446,10 +446,11 @@ Style elements based on ancestor, descendant, or sibling state - like StyleX's `
 
 ```elixir
 defmodule MyApp.Card do
+  use Phoenix.Component
   use LiveStyle.Sheet
   alias LiveStyle.When
 
-  css_rule :card_content,
+  css_class :card_content,
     transform: %{
       :default => "translateX(0)",
       When.ancestor(":hover") => "translateX(10px)"
@@ -485,6 +486,7 @@ Use custom markers to create independent sets of contextual selectors:
 
 ```elixir
 defmodule MyApp.Table do
+  use Phoenix.Component
   use LiveStyle.Sheet
   alias LiveStyle.When
 
@@ -492,7 +494,7 @@ defmodule MyApp.Table do
   @row_hover When.ancestor(":hover", @row_marker)
   @col_hover When.ancestor(":has(td:nth-of-type(2):hover)")
 
-  css_rule :cell,
+  css_class :cell,
     opacity: [
       {:default, "1"},
       {When.ancestor(":hover"), "0.1"},     # Dim when container hovered
@@ -525,7 +527,7 @@ end
 Combine pseudo-classes with contextual selectors for precise targeting:
 
 ```elixir
-css_rule :cell,
+css_class :cell,
   background_color: [
     {:default, "transparent"},
     # Only apply to nth-child(2) when column 2 is hovered
@@ -619,13 +621,17 @@ For more advanced usage with transition types, see the [Phoenix LiveView View Tr
 
 ### Using in Templates
 
-Add `view-transition-name` to elements you want to animate:
+Add `view-transition-name` to elements you want to animate. The view transition name
+must be unique for each element you want to animate independently:
 
 ```heex
-<li style={"view-transition-name: #{css_view_transition({MyApp.Tokens, :todo})}-#{@id}"}>
+<li style={"view-transition-name: #{css_view_transition({MyApp.Tokens, :todo})}-#{@item.id}"}>
   <%= @item.text %>
 </li>
 ```
+
+Note: Append a unique identifier (like the item's ID) to create unique transition names
+for list items. This allows each item to animate independently during view transitions.
 
 ### Browser Support
 
@@ -724,7 +730,7 @@ The watcher monitors the LiveStyle manifest file and regenerates CSS whenever st
 
 | Macro | Description |
 |-------|-------------|
-| `css_rule/2` | Define a named style with CSS declarations |
+| `css_class/2` | Define a named style with CSS declarations |
 | `first_that_works/1` | Declare fallback values for a property |
 
 ### Reference Macros (available in both)
@@ -751,8 +757,8 @@ The watcher monitors the LiveStyle manifest file and regenerates CSS whenever st
 |----------|-------------|
 | `LiveStyle.default_marker/0` | Returns the default marker class for contextual selectors |
 | `LiveStyle.define_marker/1` | Creates a unique marker class for custom contexts |
-| `LiveStyle.css/2` | Get class string from another module: `LiveStyle.css(Module, :rule)` |
-| `LiveStyle.css_class/2` | Same as `css/2` |
+| `LiveStyle.get_css/2` | Get `%LiveStyle.Attrs{}` from another module: `LiveStyle.get_css(Module, :class)` |
+| `LiveStyle.get_css_class/2` | Get class string from another module: `LiveStyle.get_css_class(Module, :class)` |
 
 ### Compiler Functions (via `LiveStyle.Compiler`)
 
@@ -838,8 +844,8 @@ Certain shorthands are disallowed and raise compile-time errors. Use this mode f
 
 ```elixir
 # These raise compile errors in :reject_shorthands mode:
-css_rule :button, border: "1px solid red"      # Use border_width, border_style, border_color
-css_rule :card, background: "red url(...)"     # Use background_color, background_image
+css_class :button, border: "1px solid red"      # Use border_width, border_style, border_color
+css_class :card, background: "red url(...)"     # Use background_color, background_image
 ```
 
 ## CSS Anchor Positioning
@@ -850,7 +856,7 @@ LiveStyle supports [CSS Anchor Positioning](https://developer.mozilla.org/en-US/
 defmodule MyApp.Tooltip do
   use LiveStyle.Sheet
 
-  css_rule :tooltip,
+  css_class :tooltip,
     position: "absolute",
     position_anchor: "--trigger",
     top: "anchor(bottom)",

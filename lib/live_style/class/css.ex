@@ -1,6 +1,6 @@
-defmodule LiveStyle.Rule.CSS do
+defmodule LiveStyle.Class.CSS do
   @moduledoc """
-  CSS rule generation helpers for LiveStyle.
+  CSS class generation helpers for LiveStyle.
 
   This module handles the generation of CSS rule strings including:
   - LTR/RTL CSS generation

@@ -21,9 +21,9 @@ defmodule LiveStyle.StyleMergingTest do
   defmodule ColorCollision do
     use LiveStyle
 
-    css_rule(:red, color: "red")
-    css_rule(:blue, color: "blue")
-    css_rule(:green, color: "green")
+    css_class(:red, color: "red")
+    css_class(:blue, color: "blue")
+    css_class(:green, color: "green")
   end
 
   # ===========================================================================
@@ -33,10 +33,10 @@ defmodule LiveStyle.StyleMergingTest do
   defmodule NullStyles do
     use LiveStyle
 
-    css_rule(:colored, color: "red")
-    css_rule(:revert_color, color: nil)
-    css_rule(:styled, color: "blue", background_color: "white")
-    css_rule(:revert_bg, background_color: nil)
+    css_class(:colored, color: "red")
+    css_class(:revert_color, color: nil)
+    css_class(:styled, color: "blue", background_color: "white")
+    css_class(:revert_bg, background_color: nil)
   end
 
   # ===========================================================================
@@ -46,26 +46,26 @@ defmodule LiveStyle.StyleMergingTest do
   defmodule ShorthandStyles do
     use LiveStyle
 
-    css_rule(:padding_all, padding: 5)
-    css_rule(:padding_end_override, padding: 5, padding_end: 10)
-    css_rule(:padding_start_only, padding: 2, padding_start: 10)
-    css_rule(:margin_all, margin: 0)
+    css_class(:padding_all, padding: 5)
+    css_class(:padding_end_override, padding: 5, padding_end: 10)
+    css_class(:padding_start_only, padding: 2, padding_start: 10)
+    css_class(:margin_all, margin: 0)
 
-    css_rule(:margin_longhands,
+    css_class(:margin_longhands,
       margin_bottom: 15,
       margin_inline_end: 10,
       margin_inline_start: 20,
       margin_top: 5
     )
 
-    css_rule(:margin_override, margin: 0, margin_bottom: 100)
+    css_class(:margin_override, margin: 0, margin_bottom: 100)
   end
 
   defmodule NullLonghand do
     use LiveStyle
 
-    css_rule(:foo, padding: 5, padding_end: 10)
-    css_rule(:bar, padding: 2, padding_start: nil)
+    css_class(:foo, padding: 5, padding_end: 10)
+    css_class(:bar, padding: 2, padding_start: nil)
   end
 
   # ===========================================================================
@@ -75,19 +75,19 @@ defmodule LiveStyle.StyleMergingTest do
   defmodule ModuleA do
     use LiveStyle
 
-    css_rule(:base, color: "red")
+    css_class(:base, color: "red")
   end
 
   defmodule ModuleB do
     use LiveStyle
 
-    css_rule(:override, background_color: "blue")
+    css_class(:override, background_color: "blue")
   end
 
   defmodule ModuleC do
     use LiveStyle
 
-    css_rule(:color_override, color: "green")
+    css_class(:color_override, color: "green")
   end
 
   # ===========================================================================
@@ -97,7 +97,7 @@ defmodule LiveStyle.StyleMergingTest do
   defmodule PseudoStyles do
     use LiveStyle
 
-    css_rule(:link,
+    css_class(:link,
       color: %{
         :default => "blue",
         ":hover" => "red",
@@ -105,7 +105,7 @@ defmodule LiveStyle.StyleMergingTest do
       }
     )
 
-    css_rule(:override_hover,
+    css_class(:override_hover,
       color: %{
         ":hover" => "purple"
       }
@@ -119,7 +119,7 @@ defmodule LiveStyle.StyleMergingTest do
   defmodule MediaStyles do
     use LiveStyle
 
-    css_rule(:responsive,
+    css_class(:responsive,
       background_color: %{
         :default => "red",
         "@media (min-width: 1000px)" => "blue",
@@ -127,7 +127,7 @@ defmodule LiveStyle.StyleMergingTest do
       }
     )
 
-    css_rule(:override_large,
+    css_class(:override_large,
       background_color: %{
         "@media (min-width: 1000px)" => "green"
       }
@@ -141,13 +141,13 @@ defmodule LiveStyle.StyleMergingTest do
   defmodule DynamicStyles do
     use LiveStyle
 
-    css_rule(:static_color, color: "red")
+    css_class(:static_color, color: "red")
 
-    css_rule(:dynamic_bg, fn bg_color ->
+    css_class(:dynamic_bg, fn bg_color ->
       [background_color: bg_color]
     end)
 
-    css_rule(:dynamic_opacity, fn opacity ->
+    css_class(:dynamic_opacity, fn opacity ->
       [opacity: opacity]
     end)
   end
@@ -159,8 +159,8 @@ defmodule LiveStyle.StyleMergingTest do
   defmodule EdgeCaseStyles do
     use LiveStyle
 
-    css_rule(:empty, [])
-    css_rule(:single, color: "red")
+    css_class(:empty, [])
+    css_class(:single, color: "red")
   end
 
   # ===========================================================================
@@ -170,7 +170,7 @@ defmodule LiveStyle.StyleMergingTest do
   describe "property collision - last wins" do
     test "last style wins for same property" do
       # StyleX: stylex.props([styles.red, styles.blue]) -> className: "xju2f9n" (blue only)
-      class = LiveStyle.css_class(ColorCollision, [:red, :blue])
+      class = LiveStyle.get_css_class(ColorCollision, [:red, :blue])
 
       manifest = get_manifest()
 
@@ -190,7 +190,7 @@ defmodule LiveStyle.StyleMergingTest do
 
     test "reversed order gives different result" do
       # StyleX: stylex.props([styles.blue, styles.red]) -> className: "x1e2nbdu" (red only)
-      class = LiveStyle.css_class(ColorCollision, [:blue, :red])
+      class = LiveStyle.get_css_class(ColorCollision, [:blue, :red])
 
       manifest = get_manifest()
 
@@ -209,7 +209,7 @@ defmodule LiveStyle.StyleMergingTest do
     end
 
     test "three-way collision - only last survives" do
-      class = LiveStyle.css_class(ColorCollision, [:red, :blue, :green])
+      class = LiveStyle.get_css_class(ColorCollision, [:red, :blue, :green])
 
       manifest = get_manifest()
 
@@ -231,7 +231,7 @@ defmodule LiveStyle.StyleMergingTest do
   describe "null value handling" do
     test "null removes property from merged result" do
       # StyleX: stylex.props([styles.red, styles.revert]) -> {} (empty)
-      class = LiveStyle.css_class(NullStyles, [:colored, :revert_color])
+      class = LiveStyle.get_css_class(NullStyles, [:colored, :revert_color])
 
       # Class should be empty or only whitespace
       classes =
@@ -244,7 +244,7 @@ defmodule LiveStyle.StyleMergingTest do
 
     test "null after non-null removes, non-null after null adds back" do
       # StyleX: stylex.props([styles.revert, styles.red]) -> className: "x1e2nbdu"
-      class = LiveStyle.css_class(NullStyles, [:revert_color, :colored])
+      class = LiveStyle.get_css_class(NullStyles, [:revert_color, :colored])
 
       manifest = get_manifest()
 
@@ -263,7 +263,7 @@ defmodule LiveStyle.StyleMergingTest do
     test "selective null removes only that property" do
       # styled has color and background-color
       # revert_bg only nulls background-color
-      class = LiveStyle.css_class(NullStyles, [:styled, :revert_bg])
+      class = LiveStyle.get_css_class(NullStyles, [:styled, :revert_bg])
 
       manifest = get_manifest()
 
@@ -289,7 +289,7 @@ defmodule LiveStyle.StyleMergingTest do
   describe "shorthand/longhand conflicts" do
     test "shorthand then shorthand - last shorthand wins" do
       # When merging two shorthands, the last one wins completely
-      class = LiveStyle.css_class(ShorthandStyles, [:padding_all, :padding_start_only])
+      class = LiveStyle.get_css_class(ShorthandStyles, [:padding_all, :padding_start_only])
 
       classes =
         class
@@ -307,7 +307,7 @@ defmodule LiveStyle.StyleMergingTest do
       #   margin from override applies
       #   margin_bottom from override overrides the one from longhands
 
-      class = LiveStyle.css_class(ShorthandStyles, [:margin_longhands, :margin_override])
+      class = LiveStyle.get_css_class(ShorthandStyles, [:margin_longhands, :margin_override])
 
       manifest = get_manifest()
 
@@ -341,7 +341,7 @@ defmodule LiveStyle.StyleMergingTest do
       # padding: 5, paddingEnd: 10 merged with padding: 2, paddingStart: null
       # -> paddingEnd survives, padding changes to 2, paddingStart is removed
 
-      class = LiveStyle.css_class(NullLonghand, [:foo, :bar])
+      class = LiveStyle.get_css_class(NullLonghand, [:foo, :bar])
 
       classes =
         class
@@ -360,8 +360,8 @@ defmodule LiveStyle.StyleMergingTest do
   describe "cross-module style merging" do
     test "styles from different modules can be merged" do
       # Get classes from both modules
-      class_a = LiveStyle.css_class(ModuleA, [:base])
-      class_b = LiveStyle.css_class(ModuleB, [:override])
+      class_a = LiveStyle.get_css_class(ModuleA, [:base])
+      class_b = LiveStyle.get_css_class(ModuleB, [:override])
 
       # Both should be non-empty
       assert class_a != ""
@@ -376,8 +376,8 @@ defmodule LiveStyle.StyleMergingTest do
     test "cross-module collision - manual merge requires proper handling" do
       # When manually concatenating classes from different modules,
       # CSS specificity rules apply (both classes will be in DOM)
-      class_a = LiveStyle.css_class(ModuleA, [:base])
-      class_c = LiveStyle.css_class(ModuleC, [:color_override])
+      class_a = LiveStyle.get_css_class(ModuleA, [:base])
+      class_c = LiveStyle.get_css_class(ModuleC, [:color_override])
 
       # Both classes will be present - CSS cascade determines winner
       combined = "#{class_a} #{class_c}"
@@ -394,7 +394,7 @@ defmodule LiveStyle.StyleMergingTest do
 
   describe "pseudo-selector style merging" do
     test "pseudo-selector styles are merged correctly" do
-      class = LiveStyle.css_class(PseudoStyles, [:link])
+      class = LiveStyle.get_css_class(PseudoStyles, [:link])
 
       classes =
         class
@@ -406,7 +406,7 @@ defmodule LiveStyle.StyleMergingTest do
     end
 
     test "pseudo-selector can be overridden" do
-      class = LiveStyle.css_class(PseudoStyles, [:link, :override_hover])
+      class = LiveStyle.get_css_class(PseudoStyles, [:link, :override_hover])
 
       manifest = get_manifest()
 
@@ -433,7 +433,7 @@ defmodule LiveStyle.StyleMergingTest do
 
   describe "media query style merging" do
     test "media query styles are all included" do
-      class = LiveStyle.css_class(MediaStyles, [:responsive])
+      class = LiveStyle.get_css_class(MediaStyles, [:responsive])
 
       classes =
         class
@@ -445,7 +445,7 @@ defmodule LiveStyle.StyleMergingTest do
     end
 
     test "media query can be overridden" do
-      class = LiveStyle.css_class(MediaStyles, [:responsive, :override_large])
+      class = LiveStyle.get_css_class(MediaStyles, [:responsive, :override_large])
 
       manifest = get_manifest()
 
@@ -474,7 +474,7 @@ defmodule LiveStyle.StyleMergingTest do
   describe "dynamic style merging" do
     test "static and dynamic styles can be merged" do
       # Get static class
-      static_class = LiveStyle.css_class(DynamicStyles, [:static_color])
+      static_class = LiveStyle.get_css_class(DynamicStyles, [:static_color])
 
       # Get dynamic result - pass the value directly, not as a map
       dynamic_result = DynamicStyles.__dynamic_dynamic_bg__("blue")
@@ -509,13 +509,13 @@ defmodule LiveStyle.StyleMergingTest do
 
   describe "edge cases" do
     test "empty style list returns empty class" do
-      class = LiveStyle.css_class(EdgeCaseStyles, [])
+      class = LiveStyle.get_css_class(EdgeCaseStyles, [])
 
       assert class == "" or class == nil
     end
 
     test "list with only nil/false values returns empty" do
-      class = LiveStyle.css_class(EdgeCaseStyles, [nil, nil, false])
+      class = LiveStyle.get_css_class(EdgeCaseStyles, [nil, nil, false])
 
       classes =
         (class || "")
@@ -526,7 +526,7 @@ defmodule LiveStyle.StyleMergingTest do
     end
 
     test "duplicate refs are deduplicated" do
-      class = LiveStyle.css_class(EdgeCaseStyles, [:single, :single, :single])
+      class = LiveStyle.get_css_class(EdgeCaseStyles, [:single, :single, :single])
 
       classes =
         class
@@ -538,7 +538,7 @@ defmodule LiveStyle.StyleMergingTest do
     end
 
     test "mixed valid and invalid refs" do
-      class = LiveStyle.css_class(EdgeCaseStyles, [nil, :single, false, :single, nil])
+      class = LiveStyle.get_css_class(EdgeCaseStyles, [nil, :single, false, :single, nil])
 
       classes =
         class

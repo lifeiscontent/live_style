@@ -1,9 +1,13 @@
 defmodule Mix.Tasks.LiveStyle.Gen.Css do
   @moduledoc """
-  Generates the LiveStyle CSS file from the compile-time manifest.
+  Generates the LiveStyle CSS file with a forced recompilation.
 
-  This task forces a recompilation and generates CSS. For regular usage,
-  prefer `mix live_style default` which uses the profile configuration.
+  This task clears the manifest, forces a recompilation of all modules,
+  and generates fresh CSS. Use this when you need to ensure the CSS is
+  fully regenerated from scratch.
+
+  For regular development, the LiveStyle compiler (`mix compile`) or the
+  watcher (in `config/dev.exs`) handles CSS generation automatically.
 
   ## Usage
 
@@ -11,9 +15,9 @@ defmodule Mix.Tasks.LiveStyle.Gen.Css do
 
   ## Options
 
-      --output, -o  Output file path (default: uses configured output_path)
+  - `--output`, `-o` - Output file path (overrides configured `output_path`)
 
-  ## Example
+  ## Examples
 
       # Generate CSS to default location
       mix live_style.gen.css
@@ -21,9 +25,17 @@ defmodule Mix.Tasks.LiveStyle.Gen.Css do
       # Generate to custom location
       mix live_style.gen.css -o assets/css/styles.css
 
+  ## When to Use
+
+  Use this task when:
+  - Setting up LiveStyle for the first time
+  - CSS appears stale or incorrect
+  - Debugging CSS generation issues
+  - Building for production (though `mix compile` usually suffices)
+
   ## Configuration
 
-  Configure in your `config/config.exs`:
+  Configure the default output path in your `config/config.exs`:
 
       config :live_style,
         default: [

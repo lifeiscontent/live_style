@@ -2,12 +2,32 @@ defmodule LiveStyle.Shorthand do
   @moduledoc """
   CSS shorthand property expansion.
 
-  This module handles expanding CSS shorthand properties to their constituent longhand
-  properties. It follows StyleX's `application-order.js` pattern where shorthands are
-  kept but conflicting longhands are reset to `nil` to ensure deterministic styling.
+  This is an internal module that handles expanding CSS shorthand properties to their
+  constituent longhand properties. It follows StyleX's `application-order.js` pattern
+  where shorthands are kept but conflicting longhands are reset to `nil` to ensure
+  deterministic styling.
 
-  Uses compile-time generated function clauses for optimized expansion lookups.
-  Simple expansions are generated from data/simple_expansions.txt.
+  ## How It Works
+
+  When you use a shorthand like `margin: "10px"`, LiveStyle:
+  1. Keeps the shorthand as the main value
+  2. Resets all related longhands to `nil` (e.g., `margin_top`, `margin_left`, etc.)
+
+  This ensures that later longhands properly override earlier shorthands.
+
+  ## Shorthand Strategies
+
+  Configure the strategy in `config/config.exs`:
+
+      config :live_style,
+        shorthand_strategy: :keep_shorthands  # default
+
+  Available strategies:
+  - `:keep_shorthands` - Keep shorthands, add null resets for cascade control
+  - `:expand_to_longhands` - Expand all shorthands to longhand properties
+  - `:reject_shorthands` - Raise errors for disallowed shorthand properties
+
+  See `LiveStyle.Config` for more details on configuration.
   """
 
   alias LiveStyle.Data

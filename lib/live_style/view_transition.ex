@@ -5,6 +5,66 @@ defmodule LiveStyle.ViewTransition do
   View transitions enable smooth animations between different DOM states.
   This module handles the generation and storage of view transition rules
   with content-based hashing (StyleX-compatible).
+
+  ## Browser Support
+
+  View Transitions are supported in Chrome 111+, Edge 111+, and Safari 18+.
+  Animations gracefully degrade in unsupported browsers.
+
+  ## Usage
+
+  Define view transitions in a tokens module:
+
+      defmodule MyApp.Tokens do
+        use LiveStyle.Tokens
+
+        css_keyframes :scale_in,
+          from: [opacity: "0", transform: "scale(0.8)"],
+          to: [opacity: "1", transform: "scale(1)"]
+
+        css_keyframes :scale_out,
+          from: [opacity: "1", transform: "scale(1)"],
+          to: [opacity: "0", transform: "scale(0.8)"]
+
+        css_view_transition :card,
+          old: [
+            animation_name: css_keyframes(:scale_out),
+            animation_duration: "200ms"
+          ],
+          new: [
+            animation_name: css_keyframes(:scale_in),
+            animation_duration: "200ms"
+          ]
+      end
+
+  Apply in templates using `view-transition-name`:
+
+      <li style={"view-transition-name: \#{css_view_transition({MyApp.Tokens, :card})}-\#{@id}"}>
+        <%= @item.text %>
+      </li>
+
+  ## Available Pseudo-element Keys
+
+  - `:old` - `::view-transition-old(name)`
+  - `:new` - `::view-transition-new(name)`
+  - `:group` - `::view-transition-group(name)`
+  - `:image_pair` - `::view-transition-image-pair(name)`
+
+  ## Phoenix LiveView Integration
+
+  For Phoenix LiveView 1.1.18+, enable view transitions with `onDocumentPatch`:
+
+      const liveSocket = new LiveSocket("/live", Socket, {
+        dom: {
+          onDocumentPatch(proceed) {
+            if (document.startViewTransition) {
+              document.startViewTransition(proceed)
+            } else {
+              proceed()
+            }
+          }
+        }
+      })
   """
 
   alias LiveStyle.Hash
