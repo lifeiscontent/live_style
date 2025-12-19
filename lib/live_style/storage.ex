@@ -61,6 +61,9 @@ defmodule LiveStyle.Storage do
 
   @doc """
   Reads the manifest from file.
+
+  Returns an empty manifest if the file doesn't exist or can't be parsed.
+  Logs warnings for parse errors to help diagnose issues.
   """
   def read(opts \\ []) do
     file_path = Keyword.get(opts, :path, path())
@@ -72,10 +75,15 @@ defmodule LiveStyle.Storage do
             manifest = :erlang.binary_to_term(binary)
             LiveStyle.Manifest.ensure_keys(manifest)
           rescue
-            _ -> LiveStyle.Manifest.empty()
+            e ->
+              require Logger
+              Logger.warning("LiveStyle: Failed to parse manifest at #{file_path}: #{inspect(e)}")
+              LiveStyle.Manifest.empty()
           end
 
-        _ ->
+        {:error, reason} ->
+          require Logger
+          Logger.warning("LiveStyle: Failed to read manifest at #{file_path}: #{inspect(reason)}")
           LiveStyle.Manifest.empty()
       end
     else

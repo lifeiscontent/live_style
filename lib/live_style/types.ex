@@ -288,27 +288,33 @@ defmodule LiveStyle.Types do
 
   This is the low-level function used by `css_prop/3` macro.
 
+  ## Options
+
+  - `:inherits` - Whether the custom property inherits (default: `false`)
+
   ## Examples
 
       typed_var(:color, "blue")
       typed_var(:angle, "0deg")
       typed_var("<color>#", "red, blue, green")  # Advanced syntax
-      typed_var(:length, "1rem", true)  # inherits: true
+      typed_var(:length, "1rem", inherits: true)
 
   ## Syntax
 
   - Atoms like `:color`, `:angle`, `:length` are converted to CSS syntax strings
   - Strings are used as-is for advanced CSS syntax like `"<color>#"`
   """
-  @spec typed_var(atom() | String.t(), String.t() | map(), boolean()) :: typed_value()
-  def typed_var(syntax, value, inherits \\ false)
+  @spec typed_var(atom() | String.t(), String.t() | map(), keyword()) :: typed_value()
+  def typed_var(syntax, value, opts \\ [])
 
-  def typed_var(syntax, value, inherits) when is_atom(syntax) do
+  def typed_var(syntax, value, opts) when is_atom(syntax) do
+    inherits = Keyword.get(opts, :inherits, false)
     css_syntax = atom_to_syntax(syntax)
     %{__type__: :typed_var, syntax: css_syntax, value: value, inherits: inherits}
   end
 
-  def typed_var(syntax, value, inherits) when is_binary(syntax) do
+  def typed_var(syntax, value, opts) when is_binary(syntax) do
+    inherits = Keyword.get(opts, :inherits, false)
     %{__type__: :typed_var, syntax: syntax, value: value, inherits: inherits}
   end
 

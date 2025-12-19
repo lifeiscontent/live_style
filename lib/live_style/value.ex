@@ -77,6 +77,13 @@ defmodule LiveStyle.Value do
     end
   end
 
+  # nil is not a valid CSS value - catch this explicitly rather than letting
+  # it fall through to to_string(nil) which would produce "nil"
+  def to_css(nil, property) do
+    raise ArgumentError,
+          "Invalid property value: `nil` is not a valid CSS value for property `#{property}`"
+  end
+
   # Boolean values are not valid CSS values - StyleX throws ILLEGAL_PROP_VALUE
   def to_css(true, _property) do
     raise ArgumentError, "Invalid property value: boolean `true` is not a valid CSS value"

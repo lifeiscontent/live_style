@@ -798,8 +798,7 @@ defmodule LiveStyle do
     to: LiveStyle.Runtime
 
   @doc false
-  def normalize_to_map(list) when is_list(list), do: Map.new(list)
-  def normalize_to_map(map) when is_map(map), do: map
+  defdelegate normalize_to_map(value), to: LiveStyle.Utils
 
   @doc """
   Returns the default marker class name for use with `LiveStyle.When` selectors.

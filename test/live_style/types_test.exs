@@ -327,7 +327,7 @@ defmodule LiveStyle.TypesTest do
     end
 
     test "supports inherits option" do
-      result = Types.typed_var(:length, "1rem", true)
+      result = Types.typed_var(:length, "1rem", inherits: true)
       assert result.inherits == true
     end
 
