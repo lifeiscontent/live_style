@@ -163,11 +163,7 @@ defmodule LiveStyle.PositionTry do
       |> Enum.reject(&MapSet.member?(allowed, &1))
 
     if Enum.empty?(invalid_props) do
-      normalized =
-        declarations
-        |> Enum.map(fn {k, v} -> {k, normalize_value(v)} end)
-        |> Map.new()
-
+      normalized = Map.new(declarations, fn {k, v} -> {k, normalize_value(v)} end)
       {:ok, normalized}
     else
       {:error, invalid_props}

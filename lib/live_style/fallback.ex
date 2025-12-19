@@ -57,7 +57,6 @@ defmodule LiveStyle.Fallback do
     build_result(css_prop, class_name, transformed, ltr_css, rtl_css, priority)
   end
 
-  @doc false
   @spec build_result(
           String.t(),
           String.t(),
@@ -67,7 +66,7 @@ defmodule LiveStyle.Fallback do
           non_neg_integer()
         ) ::
           {String.t(), map()}
-  def build_result(css_prop, class_name, transformed, ltr_css, rtl_css, priority) do
+  defp build_result(css_prop, class_name, transformed, ltr_css, rtl_css, priority) do
     result_value =
       case transformed do
         [single] -> single
@@ -92,17 +91,15 @@ defmodule LiveStyle.Fallback do
     {css_prop, result}
   end
 
-  @doc false
   @spec css_var?(term()) :: boolean()
-  def css_var?(value) when is_binary(value) do
+  defp css_var?(value) when is_binary(value) do
     String.starts_with?(value, "var(") and String.ends_with?(value, ")")
   end
 
-  def css_var?(_), do: false
+  defp css_var?(_), do: false
 
-  @doc false
   @spec extract_var_name(String.t()) :: String.t()
-  def extract_var_name(value) do
+  defp extract_var_name(value) do
     value
     |> String.trim_leading("var(")
     |> String.trim_trailing(")")

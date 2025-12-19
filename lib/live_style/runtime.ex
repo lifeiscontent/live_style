@@ -139,22 +139,16 @@ defmodule LiveStyle.Runtime do
         declarations = apply(module, compute_fn_name, [values_list])
 
         # Build CSS variables from the resulting declarations
-        declarations
-        |> Enum.map(fn {prop, value} ->
-          var_name = "--x-#{Value.to_css_property(prop)}"
-          formatted_value = format_css_value(value)
-          {var_name, formatted_value}
+        Map.new(declarations, fn {prop, value} ->
+          {"--x-#{Value.to_css_property(prop)}", format_css_value(value)}
         end)
-        |> Map.new()
       else
         # Simple bindings - map params to props directly
-        Enum.zip(all_props, values_list)
-        |> Enum.map(fn {prop, value} ->
-          var_name = "--x-#{Value.to_css_property(prop)}"
-          formatted_value = format_css_value(value)
-          {var_name, formatted_value}
+        all_props
+        |> Enum.zip(values_list)
+        |> Map.new(fn {prop, value} ->
+          {"--x-#{Value.to_css_property(prop)}", format_css_value(value)}
         end)
-        |> Map.new()
       end
 
     {class_string, var_map}

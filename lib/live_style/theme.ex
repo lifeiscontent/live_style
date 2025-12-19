@@ -94,12 +94,9 @@ defmodule LiveStyle.Theme do
 
     # Convert override keys to CSS var names using the var group's module and namespace
     css_overrides =
-      overrides
-      |> Enum.map(fn {var_name, value} ->
-        css_var_name = Hash.var_name(var_group_module, namespace, var_name)
-        {css_var_name, value}
+      Map.new(overrides, fn {var_name, value} ->
+        {Hash.var_name(var_group_module, namespace, var_name), value}
       end)
-      |> Map.new()
 
     entry = %{
       css_name: css_name,

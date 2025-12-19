@@ -27,6 +27,7 @@ defmodule LiveStyle.Storage do
 
   @default_path "_build/live_style_manifest.etf"
   @default_lock_timeout 30_000
+  @lock_retry_interval 10
   @path_key :live_style_manifest_path
 
   @doc """
@@ -180,8 +181,8 @@ defmodule LiveStyle.Storage do
 
       {:error, :eexist} ->
         # Lock exists, wait and retry
-        Process.sleep(10)
-        acquire_lock(lock_path, timeout - 10)
+        Process.sleep(@lock_retry_interval)
+        acquire_lock(lock_path, timeout - @lock_retry_interval)
 
       {:error, reason} ->
         raise RuntimeError,
