@@ -20,7 +20,7 @@ defmodule LiveStyle.CSS.ViewTransitions do
   ```
   """
 
-  alias LiveStyle.Value
+  alias LiveStyle.Utils
 
   # Map view transition keys (snake_case atoms) to CSS pseudo-elements
   @pseudo_element_map %{
@@ -59,19 +59,8 @@ defmodule LiveStyle.CSS.ViewTransitions do
       normalized_key = Map.get(@string_to_atom_keys, pseudo_key, pseudo_key)
       pseudo_element = Map.get(@pseudo_element_map, normalized_key, to_string(pseudo_key))
       selector = "::#{pseudo_element}(*.#{css_name})"
-      decl_str = format_declarations_minified(declarations)
+      decl_str = Utils.format_declarations(declarations)
       "#{selector}{#{decl_str}}"
-    end)
-  end
-
-  # Format declarations in minified format (prop:value;)
-  defp format_declarations_minified(declarations) do
-    declarations
-    |> Enum.sort_by(fn {k, _} -> to_string(k) end)
-    |> Enum.map_join("", fn {k, v} ->
-      css_prop = Value.to_css_property(k)
-      css_value = Value.to_css(v, css_prop)
-      "#{css_prop}:#{css_value};"
     end)
   end
 end

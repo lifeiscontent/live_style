@@ -20,7 +20,7 @@ defmodule LiveStyle.CSS.PositionTry do
      ```
   """
 
-  alias LiveStyle.Value
+  alias LiveStyle.Utils
 
   @doc """
   Generates all @position-try CSS rules from the manifest.
@@ -48,21 +48,7 @@ defmodule LiveStyle.CSS.PositionTry do
 
   # Legacy format with css_name and declarations (from css_position_try macro)
   defp generate_entry(%{css_name: css_name, declarations: declarations}) do
-    generate_from_declarations(css_name, declarations)
-  end
-
-  # Generate position-try rules from declarations in minified format
-  # Note: We keep logical properties as-is (browser handles RTL automatically)
-  defp generate_from_declarations(css_name, declarations) do
-    decl_str =
-      declarations
-      |> Enum.sort_by(fn {k, _} -> to_string(k) end)
-      |> Enum.map_join("", fn {k, v} ->
-        css_prop = Value.to_css_property(k)
-        css_value = to_string(v)
-        "#{css_prop}:#{css_value};"
-      end)
-
+    decl_str = Utils.format_declarations(declarations)
     ["@position-try #{css_name}{#{decl_str}}"]
   end
 end
