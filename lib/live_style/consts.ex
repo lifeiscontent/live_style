@@ -22,13 +22,14 @@ defmodule LiveStyle.Consts do
   """
 
   alias LiveStyle.Manifest
+  alias LiveStyle.Utils
 
   @doc """
   Defines compile-time constants under a namespace.
   """
   @spec define(module(), atom(), map() | keyword()) :: :ok
   def define(module, namespace, consts) do
-    consts = normalize_to_map(consts)
+    consts = Utils.normalize_to_map(consts)
 
     Enum.each(consts, fn {name, value} ->
       key = Manifest.namespaced_key(module, namespace, name)
@@ -75,8 +76,4 @@ defmodule LiveStyle.Consts do
         value
     end
   end
-
-  # Normalize keyword list or map to map
-  defp normalize_to_map(value) when is_map(value), do: value
-  defp normalize_to_map(value) when is_list(value), do: Map.new(value)
 end

@@ -138,23 +138,10 @@ defmodule LiveStyle.Storage do
 
   @doc """
   Checks if the manifest has any styles.
+
+  Delegates to `LiveStyle.Manifest.has_styles?/1`.
   """
-  def has_styles?(manifest) do
-    has_map_entries?(manifest, :var_groups) or
-      has_map_entries?(manifest, :keyframes) or
-      has_map_entries?(manifest, :classes) or
-      has_map_entries?(manifest, :properties) or
-      has_map_entries?(manifest, :position_try) or
-      has_list_entries?(manifest, :view_transition_css)
-  end
-
-  defp has_map_entries?(manifest, key) do
-    map_size(manifest[key] || %{}) > 0
-  end
-
-  defp has_list_entries?(manifest, key) do
-    not Enum.empty?(manifest[key] || [])
-  end
+  defdelegate has_styles?(manifest), to: LiveStyle.Manifest
 
   # Simple file-based locking using mkdir (atomic on most filesystems)
   defp with_lock(lock_path, fun) do
@@ -178,7 +165,8 @@ defmodule LiveStyle.Storage do
         acquire_lock(lock_path, timeout - 10)
 
       {:error, reason} ->
-        raise "Failed to acquire lock at #{lock_path}: #{inspect(reason)}"
+        raise RuntimeError,
+          message: "Failed to acquire lock at #{lock_path}: #{inspect(reason)}"
     end
   end
 

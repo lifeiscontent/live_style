@@ -11,13 +11,14 @@ defmodule LiveStyle.Vars do
 
   alias LiveStyle.Hash
   alias LiveStyle.Manifest
+  alias LiveStyle.Utils
 
   @doc """
   Defines CSS custom properties under a namespace.
   """
   @spec define(module(), atom(), map() | keyword()) :: :ok
   def define(module, namespace, vars) do
-    vars = normalize_to_map(vars)
+    vars = Utils.normalize_to_map(vars)
 
     Enum.each(vars, fn {name, value} ->
       key = Manifest.namespaced_key(module, namespace, name)
@@ -100,61 +101,4 @@ defmodule LiveStyle.Vars do
   defp extract_var_value(value) when is_number(value) do
     {to_string(value), nil}
   end
-
-  @doc """
-  Validates all CSS variable references in the manifest.
-
-  Checks that all `var(--v...)` references in rule declarations
-  point to defined variables. Currently logs warnings for undefined
-  references since vars might come from external CSS.
-  """
-  @spec validate_references!() :: :ok
-  def validate_references! do
-    manifest = LiveStyle.Storage.read()
-
-    # Collect all defined var keys
-    defined_vars = Map.keys(manifest.vars) |> MapSet.new()
-
-    # Check each class's declarations for var() references
-    Enum.each(manifest.classes, fn {class_key, class_entry} ->
-      declarations = Map.get(class_entry, :declarations, %{})
-
-      Enum.each(declarations, fn {_prop, value} ->
-        validate_value_refs!(value, defined_vars, class_key)
-      end)
-    end)
-
-    :ok
-  end
-
-  defp validate_value_refs!(value, defined_vars, _rule_key) when is_binary(value) do
-    # Extract var references from value like "var(--v12345678)"
-    ~r/var\((--v[a-f0-9]+)\)/
-    |> Regex.scan(value)
-    |> Enum.each(fn [_match, var_name] ->
-      validate_var_reference(var_name, defined_vars)
-    end)
-  end
-
-  defp validate_value_refs!(value, defined_vars, rule_key) when is_map(value) do
-    Enum.each(value, fn {_k, v} -> validate_value_refs!(v, defined_vars, rule_key) end)
-  end
-
-  defp validate_value_refs!(_value, _defined_vars, _rule_key), do: :ok
-
-  defp validate_var_reference(var_name, defined_vars) do
-    manifest = LiveStyle.Storage.read()
-
-    var_exists? =
-      Enum.any?(defined_vars, fn key ->
-        match?(%{css_name: ^var_name}, Manifest.get_var(manifest, key))
-      end)
-
-    # This is a no-op warning check - vars might come from external CSS
-    if var_exists?, do: :ok, else: :ok
-  end
-
-  # Normalize keyword list or map to map
-  defp normalize_to_map(value) when is_map(value), do: value
-  defp normalize_to_map(value) when is_list(value), do: Map.new(value)
 end

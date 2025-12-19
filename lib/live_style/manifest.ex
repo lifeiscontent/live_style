@@ -121,6 +121,26 @@ defmodule LiveStyle.Manifest do
     "#{inspect(module)}.#{name}"
   end
 
+  @doc """
+  Checks if the manifest contains any styles to generate CSS from.
+
+  Returns true if there are any vars, keyframes, classes, position-try rules,
+  or view transitions defined.
+  """
+  @spec has_styles?(t()) :: boolean()
+  def has_styles?(manifest) do
+    has_entries?(manifest, :vars) or
+      has_entries?(manifest, :keyframes) or
+      has_entries?(manifest, :classes) or
+      has_entries?(manifest, :position_try) or
+      has_entries?(manifest, :view_transitions) or
+      has_entries?(manifest, :themes)
+  end
+
+  defp has_entries?(manifest, key) do
+    map_size(Map.get(manifest, key, %{})) > 0
+  end
+
   # Generate put_* and get_* functions for each section
   for {name, key, description} <- @sections do
     put_fn = :"put_#{name}"

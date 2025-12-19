@@ -28,9 +28,8 @@ defmodule Mix.Tasks.Compile.LiveStyle do
 
   ## What It Does
 
-  1. Validates all CSS variable references
-  2. Writes the generated CSS to the configured output path
-  3. Reports statistics (vars, keyframes, rules)
+  1. Writes the generated CSS to the configured output path
+  2. Reports statistics (vars, keyframes, rules)
 
   ## Output
 
@@ -48,8 +47,6 @@ defmodule Mix.Tasks.Compile.LiveStyle do
 
   @impl true
   def run(_args) do
-    LiveStyle.Compiler.validate_var_references!()
-
     case LiveStyle.Compiler.write_css(log: &log_write/1) do
       :ok -> {:ok, []}
       {:error, reason} -> {:error, [reason]}

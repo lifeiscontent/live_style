@@ -41,7 +41,6 @@ defmodule LiveStyle.Compiler do
   - `run/2` - Run CSS generation for a profile (with optional `--watch` flag)
   - `install_and_run/2` - Alias for `run/2` (Tailwind API compatibility)
   - `write_css/1` - Write CSS to the configured output path
-  - `validate_var_references!/0` - Validate CSS variable references
   """
 
   alias LiveStyle.Config
@@ -138,13 +137,6 @@ defmodule LiveStyle.Compiler do
         {:error, reason}
     end
   end
-
-  @doc """
-  Validates all CSS variable references in the manifest.
-
-  Delegates to `LiveStyle.Vars.validate_references!/0`.
-  """
-  defdelegate validate_var_references!, to: LiveStyle.Vars, as: :validate_references!
 
   defp run_once(output) do
     case write_css(output_path: output, log: &log_run/1) do

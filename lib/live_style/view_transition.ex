@@ -69,6 +69,7 @@ defmodule LiveStyle.ViewTransition do
 
   alias LiveStyle.Hash
   alias LiveStyle.Manifest
+  alias LiveStyle.Utils
   alias LiveStyle.Value
 
   # Valid view transition keys: snake_case atoms or CSS-format strings
@@ -113,7 +114,7 @@ defmodule LiveStyle.ViewTransition do
   @spec define(module(), atom(), map() | keyword(), String.t()) :: :ok
   def define(module, name, styles, css_name) do
     key = Manifest.simple_key(module, name)
-    styles = normalize_to_map(styles)
+    styles = Utils.normalize_to_map(styles)
 
     entry = %{
       css_name: css_name,
@@ -221,8 +222,4 @@ defmodule LiveStyle.ViewTransition do
       "::view-transition-#{css_pseudo}:#{decl_str};"
     end)
   end
-
-  # Normalize keyword list or map to map
-  defp normalize_to_map(value) when is_map(value), do: value
-  defp normalize_to_map(value) when is_list(value), do: Map.new(value)
 end

@@ -81,6 +81,7 @@ defmodule LiveStyle.Theme do
 
   alias LiveStyle.Hash
   alias LiveStyle.Manifest
+  alias LiveStyle.Utils
 
   @doc """
   Defines a theme with variable overrides and stores it in the manifest.
@@ -89,7 +90,7 @@ defmodule LiveStyle.Theme do
   def define(var_group_module, namespace, theme_name, overrides, css_name, theme_module \\ nil) do
     theme_module = theme_module || var_group_module
     key = Manifest.namespaced_key(theme_module, namespace, theme_name)
-    overrides = normalize_to_map(overrides)
+    overrides = Utils.normalize_to_map(overrides)
 
     # Convert override keys to CSS var names using the var group's module and namespace
     css_overrides =
@@ -147,8 +148,4 @@ defmodule LiveStyle.Theme do
         """
     end
   end
-
-  # Normalize keyword list or map to map
-  defp normalize_to_map(value) when is_map(value), do: value
-  defp normalize_to_map(value) when is_list(value), do: Map.new(value)
 end
