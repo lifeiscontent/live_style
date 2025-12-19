@@ -100,7 +100,7 @@ defmodule Mix.Tasks.LiveStyle.Gen.Css do
     vars_count = map_size(manifest.vars)
     consts_count = map_size(manifest.consts)
     keyframes_count = map_size(manifest.keyframes)
-    rules_count = map_size(manifest.rules)
+    classes_count = map_size(manifest.classes)
     themes_count = map_size(manifest.themes)
     vt_count = map_size(manifest.view_transitions)
     pt_count = map_size(manifest.position_try)
@@ -110,7 +110,7 @@ defmodule Mix.Tasks.LiveStyle.Gen.Css do
         {vars_count, "vars"},
         {consts_count, "consts"},
         {keyframes_count, "keyframes"},
-        {rules_count, "rules"},
+        {classes_count, "classes"},
         {themes_count, "themes"},
         {vt_count, "view transitions"},
         {pt_count, "position-try"}

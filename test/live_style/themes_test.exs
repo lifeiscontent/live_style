@@ -273,22 +273,19 @@ defmodule LiveStyle.ThemesTest do
 
   describe "basic themes" do
     test "theme is stored in manifest" do
-      manifest = get_manifest()
-      theme_key = "LiveStyle.ThemesTest.BasicTheme.colors.custom"
-      theme = manifest.themes[theme_key]
+      theme = LiveStyle.get_metadata(BasicTheme, {:theme, :colors, :custom})
 
       assert theme != nil
       assert theme.css_name != nil
     end
 
     test "theme has overrides for all specified variables" do
-      manifest = get_manifest()
-      theme = manifest.themes["LiveStyle.ThemesTest.BasicTheme.colors.custom"]
+      theme = LiveStyle.get_metadata(BasicTheme, {:theme, :colors, :custom})
 
       # Get original variable names
-      color_var = manifest.vars["LiveStyle.ThemesTest.BaseVars.colors.color"]
-      other_color_var = manifest.vars["LiveStyle.ThemesTest.BaseVars.colors.other_color"]
-      radius_var = manifest.vars["LiveStyle.ThemesTest.BaseVars.colors.radius"]
+      color_var = LiveStyle.get_metadata(BaseVars, {:var, :colors, :color})
+      other_color_var = LiveStyle.get_metadata(BaseVars, {:var, :colors, :other_color})
+      radius_var = LiveStyle.get_metadata(BaseVars, {:var, :colors, :radius})
 
       # Theme should override all three
       assert theme.overrides[color_var.css_name] == "green"
@@ -297,8 +294,7 @@ defmodule LiveStyle.ThemesTest do
     end
 
     test "theme generates unique class name" do
-      manifest = get_manifest()
-      theme = manifest.themes["LiveStyle.ThemesTest.BasicTheme.colors.custom"]
+      theme = LiveStyle.get_metadata(BasicTheme, {:theme, :colors, :custom})
 
       # Class name should be a hashed value (LiveStyle uses 't' prefix for themes)
       assert theme.css_name =~ ~r/^t[a-z0-9]+$/
@@ -311,17 +307,15 @@ defmodule LiveStyle.ThemesTest do
 
   describe "themes with media query conditionals" do
     test "theme stores conditional overrides" do
-      manifest = get_manifest()
-      theme = manifest.themes["LiveStyle.ThemesTest.ConditionalTheme.colors.green_theme"]
+      theme = LiveStyle.get_metadata(ConditionalTheme, {:theme, :colors, :green_theme})
 
       assert theme != nil
       assert theme.overrides != nil
     end
 
     test "theme with conditionals generates appropriate CSS" do
-      manifest = get_manifest()
-      css = LiveStyle.CSS.generate(manifest)
-      theme = manifest.themes["LiveStyle.ThemesTest.ConditionalTheme.colors.green_theme"]
+      css = generate_css()
+      theme = LiveStyle.get_metadata(ConditionalTheme, {:theme, :colors, :green_theme})
 
       # Theme class should appear in CSS
       assert css =~ theme.css_name
@@ -334,8 +328,7 @@ defmodule LiveStyle.ThemesTest do
 
   describe "themes with nested @-rules" do
     test "theme stores nested conditional overrides" do
-      manifest = get_manifest()
-      theme = manifest.themes["LiveStyle.ThemesTest.NestedTheme.colors.nested"]
+      theme = LiveStyle.get_metadata(NestedTheme, {:theme, :colors, :nested})
 
       assert theme != nil
       # The nested structure should be preserved
@@ -349,25 +342,18 @@ defmodule LiveStyle.ThemesTest do
 
   describe "multiple themes for same variable set" do
     test "each theme gets unique class name" do
-      manifest = get_manifest()
-
-      dark = manifest.themes["LiveStyle.ThemesTest.DarkTheme.brand.dark"]
-
-      high_contrast =
-        manifest.themes["LiveStyle.ThemesTest.HighContrastTheme.brand.high_contrast"]
-
-      warm = manifest.themes["LiveStyle.ThemesTest.WarmTheme.brand.warm"]
+      dark = LiveStyle.get_metadata(DarkTheme, {:theme, :brand, :dark})
+      high_contrast = LiveStyle.get_metadata(HighContrastTheme, {:theme, :brand, :high_contrast})
+      warm = LiveStyle.get_metadata(WarmTheme, {:theme, :brand, :warm})
 
       names = [dark.css_name, high_contrast.css_name, warm.css_name]
       assert length(Enum.uniq(names)) == 3
     end
 
     test "all themes are stored in manifest" do
-      manifest = get_manifest()
-
-      assert manifest.themes["LiveStyle.ThemesTest.DarkTheme.brand.dark"] != nil
-      assert manifest.themes["LiveStyle.ThemesTest.HighContrastTheme.brand.high_contrast"] != nil
-      assert manifest.themes["LiveStyle.ThemesTest.WarmTheme.brand.warm"] != nil
+      assert LiveStyle.get_metadata(DarkTheme, {:theme, :brand, :dark}) != nil
+      assert LiveStyle.get_metadata(HighContrastTheme, {:theme, :brand, :high_contrast}) != nil
+      assert LiveStyle.get_metadata(WarmTheme, {:theme, :brand, :warm}) != nil
     end
 
     test "themes can be retrieved via LiveStyle.Theme.lookup!/3" do
@@ -390,13 +376,12 @@ defmodule LiveStyle.ThemesTest do
 
   describe "partial theme overrides" do
     test "partial theme only has overrides for specified vars" do
-      manifest = get_manifest()
-      theme = manifest.themes["LiveStyle.ThemesTest.PartialTheme.ui.partial"]
+      theme = LiveStyle.get_metadata(PartialTheme, {:theme, :ui, :partial})
 
-      text_var = manifest.vars["LiveStyle.ThemesTest.FullVars.ui.text_color"]
-      bg_var = manifest.vars["LiveStyle.ThemesTest.FullVars.ui.bg_color"]
-      border_var = manifest.vars["LiveStyle.ThemesTest.FullVars.ui.border_color"]
-      shadow_var = manifest.vars["LiveStyle.ThemesTest.FullVars.ui.shadow_color"]
+      text_var = LiveStyle.get_metadata(FullVars, {:var, :ui, :text_color})
+      bg_var = LiveStyle.get_metadata(FullVars, {:var, :ui, :bg_color})
+      border_var = LiveStyle.get_metadata(FullVars, {:var, :ui, :border_color})
+      shadow_var = LiveStyle.get_metadata(FullVars, {:var, :ui, :shadow_color})
 
       # Should have overrides for text and bg
       assert theme.overrides[text_var.css_name] == "blue"
@@ -414,20 +399,18 @@ defmodule LiveStyle.ThemesTest do
 
   describe "theme CSS output format" do
     test "theme CSS contains class selector" do
-      manifest = get_manifest()
-      css = LiveStyle.CSS.generate(manifest)
-      theme = manifest.themes["LiveStyle.ThemesTest.CSSFormatTheme.test.format_test"]
+      css = generate_css()
+      theme = LiveStyle.get_metadata(CSSFormatTheme, {:theme, :test, :format_test})
 
       # StyleX format: .x10yrbfs, .x10yrbfs:root{...}
       assert css =~ ".#{theme.css_name}"
     end
 
     test "theme CSS sets CSS variable values" do
-      manifest = get_manifest()
-      css = LiveStyle.CSS.generate(manifest)
+      css = generate_css()
 
-      color_var = manifest.vars["LiveStyle.ThemesTest.CSSFormatVars.test.color"]
-      size_var = manifest.vars["LiveStyle.ThemesTest.CSSFormatVars.test.size"]
+      color_var = LiveStyle.get_metadata(CSSFormatVars, {:var, :test, :color})
+      size_var = LiveStyle.get_metadata(CSSFormatVars, {:var, :test, :size})
 
       # Should have variable assignments in theme CSS
       assert css =~ "#{color_var.css_name}:blue"
@@ -441,13 +424,12 @@ defmodule LiveStyle.ThemesTest do
 
   describe "cross-module theme references" do
     test "can create theme for variables in another module" do
-      manifest = get_manifest()
-      theme = manifest.themes["LiveStyle.ThemesTest.ExternalTheme.external.alt"]
+      theme = LiveStyle.get_metadata(ExternalTheme, {:theme, :external, :alt})
 
       assert theme != nil
 
       # Should reference the correct variable
-      main_var = manifest.vars["LiveStyle.ThemesTest.ExternalVars.external.main_color"]
+      main_var = LiveStyle.get_metadata(ExternalVars, {:var, :external, :main_color})
       assert theme.overrides[main_var.css_name] == "teal"
     end
   end
@@ -458,14 +440,13 @@ defmodule LiveStyle.ThemesTest do
 
   describe "theme with typed variables" do
     test "theme can override typed variables" do
-      manifest = get_manifest()
-      theme = manifest.themes["LiveStyle.ThemesTest.TypedTheme.typed.animated"]
+      theme = LiveStyle.get_metadata(TypedTheme, {:theme, :typed, :animated})
 
       assert theme != nil
 
-      color_var = manifest.vars["LiveStyle.ThemesTest.TypedBaseVars.typed.primary_color"]
-      rotation_var = manifest.vars["LiveStyle.ThemesTest.TypedBaseVars.typed.rotation"]
-      duration_var = manifest.vars["LiveStyle.ThemesTest.TypedBaseVars.typed.duration"]
+      color_var = LiveStyle.get_metadata(TypedBaseVars, {:var, :typed, :primary_color})
+      rotation_var = LiveStyle.get_metadata(TypedBaseVars, {:var, :typed, :rotation})
+      duration_var = LiveStyle.get_metadata(TypedBaseVars, {:var, :typed, :duration})
 
       # Theme should have overrides
       assert theme.overrides[color_var.css_name] == "red"
@@ -474,11 +455,9 @@ defmodule LiveStyle.ThemesTest do
     end
 
     test "typed variables retain their type even when themed" do
-      manifest = get_manifest()
-
-      color_var = manifest.vars["LiveStyle.ThemesTest.TypedBaseVars.typed.primary_color"]
-      rotation_var = manifest.vars["LiveStyle.ThemesTest.TypedBaseVars.typed.rotation"]
-      duration_var = manifest.vars["LiveStyle.ThemesTest.TypedBaseVars.typed.duration"]
+      color_var = LiveStyle.get_metadata(TypedBaseVars, {:var, :typed, :primary_color})
+      rotation_var = LiveStyle.get_metadata(TypedBaseVars, {:var, :typed, :rotation})
+      duration_var = LiveStyle.get_metadata(TypedBaseVars, {:var, :typed, :duration})
 
       # Original types should still be present
       assert color_var.type.syntax == "<color>"
@@ -493,25 +472,22 @@ defmodule LiveStyle.ThemesTest do
 
   describe "edge cases" do
     test "theme can override empty string values" do
-      manifest = get_manifest()
-      theme = manifest.themes["LiveStyle.ThemesTest.EdgeTheme.edge.edge_theme"]
-      var = manifest.vars["LiveStyle.ThemesTest.EdgeVars.edge.empty_string"]
+      theme = LiveStyle.get_metadata(EdgeTheme, {:theme, :edge, :edge_theme})
+      var = LiveStyle.get_metadata(EdgeVars, {:var, :edge, :empty_string})
 
       assert theme.overrides[var.css_name] == "not-empty"
     end
 
     test "theme can override zero values" do
-      manifest = get_manifest()
-      theme = manifest.themes["LiveStyle.ThemesTest.EdgeTheme.edge.edge_theme"]
-      var = manifest.vars["LiveStyle.ThemesTest.EdgeVars.edge.zero"]
+      theme = LiveStyle.get_metadata(EdgeTheme, {:theme, :edge, :edge_theme})
+      var = LiveStyle.get_metadata(EdgeVars, {:var, :edge, :zero})
 
       assert theme.overrides[var.css_name] == "1"
     end
 
     test "theme can override complex CSS values" do
-      manifest = get_manifest()
-      theme = manifest.themes["LiveStyle.ThemesTest.EdgeTheme.edge.edge_theme"]
-      var = manifest.vars["LiveStyle.ThemesTest.EdgeVars.edge.complex_value"]
+      theme = LiveStyle.get_metadata(EdgeTheme, {:theme, :edge, :edge_theme})
+      var = LiveStyle.get_metadata(EdgeVars, {:var, :edge, :complex_value})
 
       assert theme.overrides[var.css_name] == "hsla(0, 100%, 50%, 0.75)"
     end

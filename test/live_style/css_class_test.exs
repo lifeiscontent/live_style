@@ -100,8 +100,7 @@ defmodule LiveStyle.CSSClassTest do
       #   ["xrkmrrc", {ltr: ".xrkmrrc{background-color:red}", rtl: null}, 3000]
       #   ["xju2f9n", {ltr: ".xju2f9n{color:blue}", rtl: null}, 3000]
 
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.CSSRuleTest.BasicStyles.root"]
+      rule = LiveStyle.get_metadata(BasicStyles, {:class, :root})
 
       assert rule != nil
 
@@ -131,11 +130,9 @@ defmodule LiveStyle.CSSClassTest do
 
     test "multiple style objects generate unique class names" do
       # StyleX test: "style object (multiple)"
-      manifest = get_manifest()
-
-      root_rule = manifest.rules["LiveStyle.CSSRuleTest.MultipleRules.root"]
-      other_rule = manifest.rules["LiveStyle.CSSRuleTest.MultipleRules.other"]
-      bar_baz_rule = manifest.rules["LiveStyle.CSSRuleTest.MultipleRules.bar_baz"]
+      root_rule = LiveStyle.get_metadata(MultipleRules, {:class, :root})
+      other_rule = LiveStyle.get_metadata(MultipleRules, {:class, :other})
+      bar_baz_rule = LiveStyle.get_metadata(MultipleRules, {:class, :bar_baz})
 
       # root: backgroundColor: 'red'
       assert root_rule.atomic_classes["background-color"].class == "xrkmrrc"
@@ -160,8 +157,7 @@ defmodule LiveStyle.CSSClassTest do
       # - Not add units to numeric values (10 stays 10, not 10px)
       # Expected priority: 1 (custom properties have lowest priority)
 
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.CSSRuleTest.CustomProperties.root"]
+      rule = LiveStyle.get_metadata(CustomProperties, {:class, :root})
 
       # --background-color: red
       bg_meta = rule.atomic_classes["--background-color"]
@@ -189,8 +185,7 @@ defmodule LiveStyle.CSSClassTest do
     # - Physical longhands: 4000
 
     test "custom properties have lowest priority (1)" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.CSSRuleTest.CustomProperties.root"]
+      rule = LiveStyle.get_metadata(CustomProperties, {:class, :root})
 
       # All custom property rules should have priority 1
       for {prop, meta} <- rule.atomic_classes do
@@ -202,8 +197,7 @@ defmodule LiveStyle.CSSClassTest do
     end
 
     test "regular longhands have priority 3000" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.CSSRuleTest.BasicStyles.root"]
+      rule = LiveStyle.get_metadata(BasicStyles, {:class, :root})
 
       # color and background-color are both longhands with priority 3000
       assert rule.atomic_classes["color"].priority == 3000
@@ -221,8 +215,7 @@ defmodule LiveStyle.CSSClassTest do
       # Input: { userSelect: 'none' }
       # Expected: ["x87ps6o", {ltr: ".x87ps6o{user-select:none}", rtl: null}, 3000]
 
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.CSSRuleTest.VendorPrefixStyles.user_select"]
+      rule = LiveStyle.get_metadata(VendorPrefixStyles, {:class, :user_select})
 
       user_select_meta = rule.atomic_classes["user-select"]
       assert user_select_meta.class == "x87ps6o"
@@ -242,8 +235,7 @@ defmodule LiveStyle.CSSClassTest do
       # Input: { position: ['sticky', 'fixed'] }
       # Expected: ["x1ruww2u", {ltr: ".x1ruww2u{position:sticky;position:fixed}", rtl: null}, 3000]
 
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.CSSRuleTest.ArrayFallbackStyles.position_fallback"]
+      rule = LiveStyle.get_metadata(ArrayFallbackStyles, {:class, :position_fallback})
 
       position_meta = rule.atomic_classes["position"]
       assert position_meta.class == "x1ruww2u"
@@ -262,8 +254,7 @@ defmodule LiveStyle.CSSClassTest do
       # StyleX: transitionProperty: 'margin-top' -> ".x1cfch2b{transition-property:margin-top}"
       # LiveStyle: transition_property: "margin-top" -> ".x1cfch2b{transition-property:margin-top}"
 
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.CSSRuleTest.TransitionPropertyStyles.kebab_case"]
+      rule = LiveStyle.get_metadata(TransitionPropertyStyles, {:class, :kebab_case})
 
       tp_meta = rule.atomic_classes["transition-property"]
       assert tp_meta.class == "x1cfch2b"
@@ -273,8 +264,7 @@ defmodule LiveStyle.CSSClassTest do
 
     test "custom property names pass through unchanged" do
       # Custom properties (--foo) should not be modified
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.CSSRuleTest.TransitionPropertyStyles.custom_prop"]
+      rule = LiveStyle.get_metadata(TransitionPropertyStyles, {:class, :custom_prop})
 
       tp_meta = rule.atomic_classes["transition-property"]
       assert tp_meta.ltr =~ "transition-property:--foo"
@@ -284,8 +274,7 @@ defmodule LiveStyle.CSSClassTest do
       # StyleX: transitionProperty: 'opacity,inset-inline-start'
       # -> ".xh6nlrc{transition-property:opacity,inset-inline-start}"
 
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.CSSRuleTest.TransitionPropertyStyles.multi_value"]
+      rule = LiveStyle.get_metadata(TransitionPropertyStyles, {:class, :multi_value})
 
       tp_meta = rule.atomic_classes["transition-property"]
       assert tp_meta.class == "xh6nlrc"
@@ -298,8 +287,7 @@ defmodule LiveStyle.CSSClassTest do
       # StyleX: willChange: 'inset-inline-start' -> ".x1n5prqt{will-change:inset-inline-start}"
       # LiveStyle: will_change: "inset-inline-start" -> ".x1n5prqt{will-change:inset-inline-start}"
 
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.CSSRuleTest.WillChangeStyles.kebab_case"]
+      rule = LiveStyle.get_metadata(WillChangeStyles, {:class, :kebab_case})
 
       wc_meta = rule.atomic_classes["will-change"]
       assert wc_meta.class == "x1n5prqt"

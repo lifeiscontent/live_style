@@ -187,12 +187,8 @@ defmodule LiveStyle.ValueNormalizationTest do
   describe "whitespace normalization" do
     test "normalizes whitespace in transform values" do
       # StyleX: ".x18qx21s{transform:rotate(10deg) translate3d(0,0,0)}"
-      manifest = get_manifest()
-
       rule =
-        manifest.rules[
-          "LiveStyle.ValueNormalizationTest.WhitespaceNormalization.transform_spaces"
-        ]
+        LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.WhitespaceNormalization, {:class, :transform_spaces})
 
       meta = rule.atomic_classes["transform"]
       assert meta.class == "x18qx21s"
@@ -203,10 +199,8 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "normalizes whitespace in rgba values" do
       # StyleX: ".xe1l9yr{color:rgba(1,222,33,.5)}"
-      manifest = get_manifest()
-
       rule =
-        manifest.rules["LiveStyle.ValueNormalizationTest.WhitespaceNormalization.rgba_spaces"]
+        LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.WhitespaceNormalization, {:class, :rgba_spaces})
 
       meta = rule.atomic_classes["color"]
       assert meta.class == "xe1l9yr"
@@ -219,8 +213,7 @@ defmodule LiveStyle.ValueNormalizationTest do
   describe "zero values" do
     test "removes units from 0 length values" do
       # StyleX: ".x1ghz6dp{margin:0}" and ".xgsvwom{margin-left:1px}"
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.ZeroValues.zero_px"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.ZeroValues, {:class, :zero_px})
 
       # margin: 0 (units removed)
       margin_meta = rule.atomic_classes["margin"]
@@ -237,8 +230,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "converts 0ms timing to 0s" do
       # StyleX: ".x1mq3mr6{transition-duration:0s}"
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.ZeroValues.zero_timing"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.ZeroValues, {:class, :zero_timing})
 
       meta = rule.atomic_classes["transition-duration"]
       assert meta.class == "x1mq3mr6"
@@ -248,8 +240,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "converts 0rad to 0deg" do
       # StyleX: ".x1jpfit1{transform:0deg}"
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.ZeroValues.zero_angle_rad"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.ZeroValues, {:class, :zero_angle_rad})
 
       meta = rule.atomic_classes["transform"]
       assert meta.class == "x1jpfit1"
@@ -259,8 +250,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "converts 0turn to 0deg" do
       # StyleX: ".x1jpfit1{transform:0deg}"
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.ZeroValues.zero_angle_turn"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.ZeroValues, {:class, :zero_angle_turn})
 
       meta = rule.atomic_classes["transform"]
       assert meta.class == "x1jpfit1"
@@ -270,8 +260,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "converts 0grad to 0deg" do
       # StyleX: ".x1jpfit1{transform:0deg}"
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.ZeroValues.zero_angle_grad"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.ZeroValues, {:class, :zero_angle_grad})
 
       meta = rule.atomic_classes["transform"]
       assert meta.class == "x1jpfit1"
@@ -282,8 +271,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "integer 0 normalizes to 0 without unit suffix" do
       # StyleX: margin: 0 -> ".x1ghz6dp{margin:0}" (not "0px")
       # This ensures numeric 0 values don't get px suffix before normalization
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.ZeroValues.zero_integer"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.ZeroValues, {:class, :zero_integer})
 
       # margin: 0 -> "0" (not "0px")
       margin_meta = rule.atomic_classes["margin"]
@@ -302,8 +290,7 @@ defmodule LiveStyle.ValueNormalizationTest do
   describe "calc() values" do
     test "preserves spaces around + and - in calc()" do
       # StyleX: ".x1hauit9{width:calc((100% + 3% - 100px) / 7)}"
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.CalcValues.calc_spaces"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.CalcValues, {:class, :calc_spaces})
 
       meta = rule.atomic_classes["width"]
       assert meta.class == "x1hauit9"
@@ -312,24 +299,22 @@ defmodule LiveStyle.ValueNormalizationTest do
     end
 
     test "nested calc() functions are preserved" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.CalcValues.nested_calc"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.CalcValues, {:class, :nested_calc})
 
       meta = rule.atomic_classes["width"]
       assert meta.ltr =~ "calc(100% - calc(20px + 10px))"
     end
 
     test "deeply nested calc() functions are preserved" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.CalcValues.deeply_nested_calc"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.CalcValues, {:class, :deeply_nested_calc})
 
       meta = rule.atomic_classes["height"]
       assert meta.ltr =~ "calc(50vh - calc(100% / calc(3 + 1)))"
     end
 
     test "calc() inside clamp() is preserved" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.CalcValues.clamp_with_calc"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.CalcValues, {:class, :clamp_with_calc})
 
       meta = rule.atomic_classes["padding"]
       assert meta.ltr =~ "clamp(10px,calc(1rem + 2vw),30px)"
@@ -339,8 +324,7 @@ defmodule LiveStyle.ValueNormalizationTest do
   describe "leading zeros" do
     test "strips leading zeros from decimal values" do
       # StyleX: ".xpvlhck{transition-duration:.01s}"
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.LeadingZeros.decimal"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.LeadingZeros, {:class, :decimal})
 
       meta = rule.atomic_classes["transition-duration"]
       assert meta.class == "xpvlhck"
@@ -350,8 +334,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "cubic-bezier values strip leading zeros" do
       # StyleX: ".xxziih7{transition-timing-function:cubic-bezier(.08,.52,.52,1)}"
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.LeadingZeros.cubic_bezier"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.LeadingZeros, {:class, :cubic_bezier})
 
       meta = rule.atomic_classes["transition-timing-function"]
       assert meta.class == "xxziih7"
@@ -363,8 +346,7 @@ defmodule LiveStyle.ValueNormalizationTest do
   describe "timing values" do
     test "converts 1234ms to 1.234s" do
       # StyleX: ".xsa3hc2{transition-duration:1.234s}"
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.TimingValues.ms_large"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.TimingValues, {:class, :ms_large})
 
       meta = rule.atomic_classes["transition-duration"]
       assert meta.class == "xsa3hc2"
@@ -374,8 +356,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "converts 10ms to .01s" do
       # StyleX: ".xpvlhck{transition-duration:.01s}"
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.TimingValues.ms_medium"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.TimingValues, {:class, :ms_medium})
 
       meta = rule.atomic_classes["transition-duration"]
       assert meta.class == "xpvlhck"
@@ -385,8 +366,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "keeps 1ms as is (below 10ms threshold)" do
       # StyleX: ".xjd9b36{transition-duration:1ms}"
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.TimingValues.ms_small"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.TimingValues, {:class, :ms_small})
 
       meta = rule.atomic_classes["transition-duration"]
       assert meta.class == "xjd9b36"
@@ -396,8 +376,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "converts 500ms to .5s" do
       # StyleX: ".x1wsgiic{transition-duration:.5s}"
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.TimingValues.ms_500"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.TimingValues, {:class, :ms_500})
 
       meta = rule.atomic_classes["transition-duration"]
       assert meta.class == "x1wsgiic"
@@ -409,8 +388,7 @@ defmodule LiveStyle.ValueNormalizationTest do
   describe "unitless vs unit-requiring properties" do
     test "adds px to height numeric value" do
       # StyleX: ".x1egiwwb{height:500px}" with priority 4000
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.UnitlessValues.with_units"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.UnitlessValues, {:class, :with_units})
 
       meta = rule.atomic_classes["height"]
       assert meta.class == "x1egiwwb"
@@ -420,8 +398,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "adds px to margin numeric value" do
       # StyleX: ".x1oin6zd{margin:10px}" with priority 1000
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.UnitlessValues.with_units"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.UnitlessValues, {:class, :with_units})
 
       meta = rule.atomic_classes["margin"]
       assert meta.class == "x1oin6zd"
@@ -431,8 +408,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "adds px to width numeric value" do
       # StyleX: ".xvue9z{width:500px}" with priority 4000
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.UnitlessValues.with_units"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.UnitlessValues, {:class, :with_units})
 
       meta = rule.atomic_classes["width"]
       assert meta.class == "xvue9z"
@@ -442,8 +418,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "does not add units to font-weight" do
       # StyleX: ".xk50ysn{font-weight:500}"
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.UnitlessValues.unitless"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.UnitlessValues, {:class, :unitless})
 
       meta = rule.atomic_classes["font-weight"]
       assert meta.class == "xk50ysn"
@@ -453,8 +428,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "does not add units to line-height" do
       # StyleX: ".x1evy7pa{line-height:1.5}"
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.UnitlessValues.unitless"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.UnitlessValues, {:class, :unitless})
 
       meta = rule.atomic_classes["line-height"]
       assert meta.class == "x1evy7pa"
@@ -465,8 +439,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "strips leading zero from opacity and does not add units" do
       # StyleX: ".xbyyjgo{opacity:.5}"
       # Note: StyleX produces xbyyjgo but we might have different hash
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.UnitlessValues.unitless"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.UnitlessValues, {:class, :unitless})
 
       meta = rule.atomic_classes["opacity"]
       # Opacity 0.5 should become .5 (leading zero stripped)
@@ -476,8 +449,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "does not add units to zoom" do
       # StyleX: ".xy2o3ld{zoom:2}"
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.UnitlessValues.unitless"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.UnitlessValues, {:class, :unitless})
 
       meta = rule.atomic_classes["zoom"]
       assert meta.class == "xy2o3ld"
@@ -489,8 +461,7 @@ defmodule LiveStyle.ValueNormalizationTest do
   describe "number rounding" do
     test "rounds numbers to 4 decimal places" do
       # StyleX: ".x1vvwc6p{height:33.3333px}" with priority 4000
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.NumberRounding.rounded"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.NumberRounding, {:class, :rounded})
 
       meta = rule.atomic_classes["height"]
       assert meta.class == "x1vvwc6p"
@@ -502,8 +473,7 @@ defmodule LiveStyle.ValueNormalizationTest do
   describe "content property" do
     test "wraps empty content in quotes" do
       # StyleX: ".x14axycx{content:\"\"}"
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.ContentProperty.empty"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.ContentProperty, {:class, :empty})
 
       meta = rule.atomic_classes["content"]
       assert meta.class == "x14axycx"
@@ -513,8 +483,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "wraps text content in quotes" do
       # StyleX: ".x1r2f195{content:\"hello\"}"
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.ContentProperty.with_text"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.ContentProperty, {:class, :with_text})
 
       meta = rule.atomic_classes["content"]
       assert meta.class == "x1r2f195"
@@ -524,8 +493,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "does not wrap attr() function in quotes" do
       # StyleX does not wrap special functions like attr()
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.ContentProperty.with_attr"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.ContentProperty, {:class, :with_attr})
 
       meta = rule.atomic_classes["content"]
       assert meta.class == "xli7a2p"
@@ -534,56 +502,53 @@ defmodule LiveStyle.ValueNormalizationTest do
     end
 
     test "does not wrap open-quote keyword in quotes" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.ContentProperty.open_quote"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.ContentProperty, {:class, :open_quote})
 
       meta = rule.atomic_classes["content"]
       assert meta.ltr =~ ~r/content:open-quote\}/
     end
 
     test "does not wrap close-quote keyword in quotes" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.ContentProperty.close_quote"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.ContentProperty, {:class, :close_quote})
 
       meta = rule.atomic_classes["content"]
       assert meta.ltr =~ ~r/content:close-quote\}/
     end
 
     test "does not wrap no-open-quote keyword in quotes" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.ContentProperty.no_open_quote"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.ContentProperty, {:class, :no_open_quote})
 
       meta = rule.atomic_classes["content"]
       assert meta.ltr =~ ~r/content:no-open-quote\}/
     end
 
     test "does not wrap no-close-quote keyword in quotes" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.ContentProperty.no_close_quote"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.ContentProperty, {:class, :no_close_quote})
 
       meta = rule.atomic_classes["content"]
       assert meta.ltr =~ ~r/content:no-close-quote\}/
     end
 
     test "does not wrap counter() function in quotes" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.ContentProperty.counter_fn"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.ContentProperty, {:class, :counter_fn})
 
       meta = rule.atomic_classes["content"]
       assert meta.ltr =~ ~r/content:counter\(section\)\}/
     end
 
     test "does not wrap counters() function in quotes" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.ContentProperty.counters_fn"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.ContentProperty, {:class, :counters_fn})
 
       meta = rule.atomic_classes["content"]
       assert meta.ltr =~ ~r/content:counters\(section/
     end
 
     test "does not wrap var() function in quotes" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.ContentProperty.var_fn"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.ContentProperty, {:class, :var_fn})
 
       meta = rule.atomic_classes["content"]
       assert meta.ltr =~ ~r/content:var\(--my-content\)\}/
@@ -592,24 +557,21 @@ defmodule LiveStyle.ValueNormalizationTest do
 
   describe "hyphenate-character property" do
     test "auto keyword is not quoted" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.HyphenateCharacter.auto"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.HyphenateCharacter, {:class, :auto})
 
       meta = rule.atomic_classes["hyphenate-character"]
       assert meta.ltr =~ ~r/hyphenate-character:auto\}/
     end
 
     test "dash character is quoted" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.HyphenateCharacter.dash"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.HyphenateCharacter, {:class, :dash})
 
       meta = rule.atomic_classes["hyphenate-character"]
       assert meta.ltr =~ ~r/hyphenate-character:"-"\}/
     end
 
     test "custom character is quoted" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.HyphenateCharacter.custom"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.HyphenateCharacter, {:class, :custom})
 
       meta = rule.atomic_classes["hyphenate-character"]
       assert meta.ltr =~ ~r/hyphenate-character:"="\}/
@@ -619,8 +581,8 @@ defmodule LiveStyle.ValueNormalizationTest do
   describe "quotes property normalization" do
     test "single-quoted empty string normalizes to double quotes" do
       # StyleX: quotes: "''" -> ".x169joja{quotes:\"\"}"
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.QuotesProperty.empty_single"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.QuotesProperty, {:class, :empty_single})
 
       meta = rule.atomic_classes["quotes"]
       assert meta.class == "x169joja"
@@ -629,8 +591,8 @@ defmodule LiveStyle.ValueNormalizationTest do
     end
 
     test "double-quoted empty string stays as double quotes" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.QuotesProperty.empty_double"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.QuotesProperty, {:class, :empty_double})
 
       meta = rule.atomic_classes["quotes"]
       assert meta.class == "x169joja"
@@ -641,40 +603,32 @@ defmodule LiveStyle.ValueNormalizationTest do
 
   describe "transition-property value conversion" do
     test "converts atom snake_case to dash-case" do
-      manifest = get_manifest()
-
       rule =
-        manifest.rules["LiveStyle.ValueNormalizationTest.TransitionPropertyValues.atom_single"]
+        LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.TransitionPropertyValues, {:class, :atom_single})
 
       meta = rule.atomic_classes["transition-property"]
       assert meta.ltr =~ ~r/transition-property:background-color\}/
     end
 
     test "preserves simple atom values" do
-      manifest = get_manifest()
-
       rule =
-        manifest.rules["LiveStyle.ValueNormalizationTest.TransitionPropertyValues.atom_opacity"]
+        LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.TransitionPropertyValues, {:class, :atom_opacity})
 
       meta = rule.atomic_classes["transition-property"]
       assert meta.ltr =~ ~r/transition-property:opacity\}/
     end
 
     test "converts string snake_case to dash-case" do
-      manifest = get_manifest()
-
       rule =
-        manifest.rules["LiveStyle.ValueNormalizationTest.TransitionPropertyValues.string_snake"]
+        LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.TransitionPropertyValues, {:class, :string_snake})
 
       meta = rule.atomic_classes["transition-property"]
       assert meta.ltr =~ ~r/transition-property:background-color\}/
     end
 
     test "converts multiple comma-separated snake_case values" do
-      manifest = get_manifest()
-
       rule =
-        manifest.rules["LiveStyle.ValueNormalizationTest.TransitionPropertyValues.string_multi"]
+        LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.TransitionPropertyValues, {:class, :string_multi})
 
       meta = rule.atomic_classes["transition-property"]
       # Should be "opacity,background-color,border-radius"
@@ -682,12 +636,8 @@ defmodule LiveStyle.ValueNormalizationTest do
     end
 
     test "preserves custom properties (does not convert underscores)" do
-      manifest = get_manifest()
-
       rule =
-        manifest.rules[
-          "LiveStyle.ValueNormalizationTest.TransitionPropertyValues.string_custom_prop"
-        ]
+        LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.TransitionPropertyValues, {:class, :string_custom_prop})
 
       meta = rule.atomic_classes["transition-property"]
       # Custom props starting with -- should preserve underscores
@@ -699,8 +649,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "removes space before !important" do
       # StyleX: ".xzw3067{color:red!important}"
       # No space before !important
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.ValueNormalizationTest.ImportantValues.important"]
+      rule = LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.ImportantValues, {:class, :important})
 
       meta = rule.atomic_classes["color"]
       assert meta.class == "xzw3067"

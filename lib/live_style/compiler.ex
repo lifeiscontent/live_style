@@ -125,8 +125,8 @@ defmodule LiveStyle.Compiler do
         if log_fn do
           var_count = map_size(manifest.vars)
           keyframe_count = map_size(manifest.keyframes)
-          rule_count = map_size(manifest.rules)
-          log_fn.({:written, var_count, keyframe_count, rule_count, output})
+          class_count = map_size(manifest.classes)
+          log_fn.({:written, var_count, keyframe_count, class_count, output})
         end
 
         :ok

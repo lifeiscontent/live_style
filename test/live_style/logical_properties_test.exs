@@ -90,8 +90,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
   describe "logical values - float property" do
     test "float: inline-start generates LTR (left) and RTL (right)" do
       # StyleX: ltr: ".x1kmio9f{float:left}", rtl: ".x1kmio9f{float:right}"
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.LogicalPropertiesTest.LogicalValues.float_start"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.LogicalPropertiesTest.LogicalValues,
+          {:class, :float_start}
+        )
 
       meta = rule.atomic_classes["float"]
       assert meta.class == "x1kmio9f"
@@ -102,8 +105,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
 
     test "float: inline-end generates LTR (right) and RTL (left)" do
       # StyleX: ltr: ".x1h0q493{float:right}", rtl: ".x1h0q493{float:left}"
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.LogicalPropertiesTest.LogicalValues.float_end"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.LogicalPropertiesTest.LogicalValues,
+          {:class, :float_end}
+        )
 
       meta = rule.atomic_classes["float"]
       assert meta.class == "x1h0q493"
@@ -116,8 +122,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
   describe "logical values - clear property" do
     test "clear: inline-start generates LTR (left) and RTL (right)" do
       # StyleX: ltr: ".x18lmvvi{clear:left}", rtl: ".x18lmvvi{clear:right}"
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.LogicalPropertiesTest.LogicalValues.clear_start"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.LogicalPropertiesTest.LogicalValues,
+          {:class, :clear_start}
+        )
 
       meta = rule.atomic_classes["clear"]
       assert meta.class == "x18lmvvi"
@@ -128,8 +137,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
 
     test "clear: inline-end generates LTR (right) and RTL (left)" do
       # StyleX: ltr: ".xof8tvn{clear:right}", rtl: ".xof8tvn{clear:left}"
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.LogicalPropertiesTest.LogicalValues.clear_end"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.LogicalPropertiesTest.LogicalValues,
+          {:class, :clear_end}
+        )
 
       meta = rule.atomic_classes["clear"]
       assert meta.class == "xof8tvn"
@@ -142,8 +154,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
   describe "logical values - text-align property" do
     test "text-align: start is NOT transformed (browser handles RTL)" do
       # StyleX: ltr: ".x1yc453h{text-align:start}" (NO RTL override)
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.LogicalPropertiesTest.LogicalValues.text_align_start"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.LogicalPropertiesTest.LogicalValues,
+          {:class, :text_align_start}
+        )
 
       meta = rule.atomic_classes["text-align"]
       assert meta.class == "x1yc453h"
@@ -154,8 +169,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
 
     test "text-align: end is NOT transformed (browser handles RTL)" do
       # StyleX: ltr: ".xp4054r{text-align:end}" (NO RTL override)
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.LogicalPropertiesTest.LogicalValues.text_align_end"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.LogicalPropertiesTest.LogicalValues,
+          {:class, :text_align_end}
+        )
 
       meta = rule.atomic_classes["text-align"]
       assert meta.class == "xp4054r"
@@ -171,12 +189,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
 
     test "border-inline-color stays as logical property" do
       # StyleX: ".x1v09clb{border-inline-color:0}" with priority 2000
-      manifest = get_manifest()
-
       rule =
-        manifest.rules[
-          "LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern.border_inline_color"
-        ]
+        LiveStyle.get_metadata(
+          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
+          {:class, :border_inline_color}
+        )
 
       meta = rule.atomic_classes["border-inline-color"]
       assert meta.ltr =~ "border-inline-color:red"
@@ -185,12 +202,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
 
     test "border-inline-start-color stays as logical property" do
       # StyleX: ".x1t19a1o{border-inline-start-color:0}" with priority 3000
-      manifest = get_manifest()
-
       rule =
-        manifest.rules[
-          "LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern.border_inline_start_color"
-        ]
+        LiveStyle.get_metadata(
+          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
+          {:class, :border_inline_start_color}
+        )
 
       meta = rule.atomic_classes["border-inline-start-color"]
       assert meta.ltr =~ "border-inline-start-color:red"
@@ -200,12 +216,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
 
     test "border-inline-end-color stays as logical property" do
       # StyleX: ".x14mj1wy{border-inline-end-color:0}" with priority 3000
-      manifest = get_manifest()
-
       rule =
-        manifest.rules[
-          "LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern.border_inline_end_color"
-        ]
+        LiveStyle.get_metadata(
+          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
+          {:class, :border_inline_end_color}
+        )
 
       meta = rule.atomic_classes["border-inline-end-color"]
       assert meta.ltr =~ "border-inline-end-color:red"
@@ -215,10 +230,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
 
     test "margin-inline stays as logical property" do
       # StyleX: ".xrxpjvj{margin-inline:0}" with priority 2000
-      manifest = get_manifest()
-
       rule =
-        manifest.rules["LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern.margin_inline"]
+        LiveStyle.get_metadata(
+          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
+          {:class, :margin_inline}
+        )
 
       meta = rule.atomic_classes["margin-inline"]
       assert meta.ltr =~ "margin-inline:10px"
@@ -227,12 +243,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
 
     test "margin-inline-start stays as logical property" do
       # StyleX: ".x1lziwak{margin-inline-start:0}" with priority 3000
-      manifest = get_manifest()
-
       rule =
-        manifest.rules[
-          "LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern.margin_inline_start"
-        ]
+        LiveStyle.get_metadata(
+          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
+          {:class, :margin_inline_start}
+        )
 
       meta = rule.atomic_classes["margin-inline-start"]
       assert meta.ltr =~ "margin-inline-start:10px"
@@ -242,12 +257,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
 
     test "margin-inline-end stays as logical property" do
       # StyleX: ".x14z9mp{margin-inline-end:0}" with priority 3000
-      manifest = get_manifest()
-
       rule =
-        manifest.rules[
-          "LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern.margin_inline_end"
-        ]
+        LiveStyle.get_metadata(
+          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
+          {:class, :margin_inline_end}
+        )
 
       meta = rule.atomic_classes["margin-inline-end"]
       assert meta.ltr =~ "margin-inline-end:10px"
@@ -256,10 +270,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
     end
 
     test "padding-inline stays as logical property" do
-      manifest = get_manifest()
-
       rule =
-        manifest.rules["LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern.padding_inline"]
+        LiveStyle.get_metadata(
+          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
+          {:class, :padding_inline}
+        )
 
       meta = rule.atomic_classes["padding-inline"]
       assert meta.ltr =~ "padding-inline:10px"
@@ -267,12 +282,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
     end
 
     test "padding-inline-start stays as logical property" do
-      manifest = get_manifest()
-
       rule =
-        manifest.rules[
-          "LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern.padding_inline_start"
-        ]
+        LiveStyle.get_metadata(
+          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
+          {:class, :padding_inline_start}
+        )
 
       meta = rule.atomic_classes["padding-inline-start"]
       assert meta.ltr =~ "padding-inline-start:10px"
@@ -280,10 +294,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
     end
 
     test "inset-inline stays as logical property" do
-      manifest = get_manifest()
-
       rule =
-        manifest.rules["LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern.inset_inline"]
+        LiveStyle.get_metadata(
+          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
+          {:class, :inset_inline}
+        )
 
       meta = rule.atomic_classes["inset-inline"]
       assert meta.ltr =~ "inset-inline:10px"
@@ -291,12 +306,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
     end
 
     test "inset-inline-start stays as logical property" do
-      manifest = get_manifest()
-
       rule =
-        manifest.rules[
-          "LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern.inset_inline_start"
-        ]
+        LiveStyle.get_metadata(
+          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
+          {:class, :inset_inline_start}
+        )
 
       meta = rule.atomic_classes["inset-inline-start"]
       assert meta.ltr =~ "inset-inline-start:10px"
@@ -304,10 +318,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
     end
 
     test "inset-inline-end stays as logical property" do
-      manifest = get_manifest()
-
       rule =
-        manifest.rules["LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern.inset_inline_end"]
+        LiveStyle.get_metadata(
+          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
+          {:class, :inset_inline_end}
+        )
 
       meta = rule.atomic_classes["inset-inline-end"]
       assert meta.ltr =~ "inset-inline-end:10px"
@@ -318,10 +333,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
   describe "block properties - shorthand stays, longhands convert to physical" do
     test "margin-block stays as logical shorthand" do
       # StyleX: ".x10im51j{margin-block:0}" with priority 2000
-      manifest = get_manifest()
-
       rule =
-        manifest.rules["LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern.margin_block"]
+        LiveStyle.get_metadata(
+          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
+          {:class, :margin_block}
+        )
 
       meta = rule.atomic_classes["margin-block"]
       assert meta.ltr =~ "margin-block:10px"
@@ -330,12 +346,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
 
     test "margin-block-start becomes margin-top (physical)" do
       # StyleX: ".xdj266r{margin-top:0}" with priority 4000
-      manifest = get_manifest()
-
       rule =
-        manifest.rules[
-          "LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern.margin_block_start"
-        ]
+        LiveStyle.get_metadata(
+          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
+          {:class, :margin_block_start}
+        )
 
       meta = rule.atomic_classes["margin-top"]
       assert meta.ltr =~ "margin-top:10px"
@@ -345,10 +360,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
 
     test "margin-block-end becomes margin-bottom (physical)" do
       # StyleX: ".xat24cr{margin-bottom:0}" with priority 4000
-      manifest = get_manifest()
-
       rule =
-        manifest.rules["LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern.margin_block_end"]
+        LiveStyle.get_metadata(
+          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
+          {:class, :margin_block_end}
+        )
 
       meta = rule.atomic_classes["margin-bottom"]
       assert meta.ltr =~ "margin-bottom:10px"
@@ -365,33 +381,32 @@ defmodule LiveStyle.LogicalPropertiesTest do
     # - Physical longhands (margin-top, margin-left): 4000
 
     test "margin-inline has shorthand priority" do
-      manifest = get_manifest()
-
       rule =
-        manifest.rules["LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern.margin_inline"]
+        LiveStyle.get_metadata(
+          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
+          {:class, :margin_inline}
+        )
 
       # margin-inline is a shorthand -> priority 1000 or 2000
       assert rule.atomic_classes["margin-inline"].priority in [1000, 2000]
     end
 
     test "margin-inline-start has logical longhand priority (3000)" do
-      manifest = get_manifest()
-
       rule =
-        manifest.rules[
-          "LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern.margin_inline_start"
-        ]
+        LiveStyle.get_metadata(
+          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
+          {:class, :margin_inline_start}
+        )
 
       assert rule.atomic_classes["margin-inline-start"].priority == 3000
     end
 
     test "margin-block-start becomes margin-top with physical priority (4000)" do
-      manifest = get_manifest()
-
       rule =
-        manifest.rules[
-          "LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern.margin_block_start"
-        ]
+        LiveStyle.get_metadata(
+          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
+          {:class, :margin_block_start}
+        )
 
       assert rule.atomic_classes["margin-top"].priority == 4000
     end

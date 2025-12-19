@@ -123,7 +123,7 @@ defmodule LiveStyle.Runtime do
     manifest = LiveStyle.Storage.read()
 
     class_string =
-      case Manifest.get_rule(manifest, key) do
+      case Manifest.get_class(manifest, key) do
         %{class_string: cs} -> cs
         nil -> ""
       end

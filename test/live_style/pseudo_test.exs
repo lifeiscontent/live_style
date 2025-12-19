@@ -114,8 +114,7 @@ defmodule LiveStyle.PseudoTest do
     test "generates CSS with :hover pseudo-class" do
       # StyleX: ".x1gykpug:hover{background-color:red}" with priority 3130
       # StyleX: ".x17z2mba:hover{color:blue}" with priority 3130
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoTest.PseudoClasses.hover"]
+      rule = LiveStyle.get_metadata(LiveStyle.PseudoTest.PseudoClasses, {:class, :hover})
 
       # background-color:hover
       bg_meta = rule.atomic_classes["background-color"].classes[":hover"]
@@ -134,8 +133,7 @@ defmodule LiveStyle.PseudoTest do
 
     test "generates CSS with :focus pseudo-class" do
       # StyleX: ".x1wvtd7d:focus{color:yellow}" with priority 3150
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoTest.PseudoClasses.focus"]
+      rule = LiveStyle.get_metadata(LiveStyle.PseudoTest.PseudoClasses, {:class, :focus})
 
       meta = rule.atomic_classes["color"].classes[":focus"]
       assert meta.class == "x1wvtd7d"
@@ -146,8 +144,7 @@ defmodule LiveStyle.PseudoTest do
 
     test "generates CSS with :active pseudo-class" do
       # StyleX: ".x96fq8s:active{color:red}" with priority 3170
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoTest.PseudoClasses.active"]
+      rule = LiveStyle.get_metadata(LiveStyle.PseudoTest.PseudoClasses, {:class, :active})
 
       meta = rule.atomic_classes["color"].classes[":active"]
       assert meta.class == "x96fq8s"
@@ -161,8 +158,8 @@ defmodule LiveStyle.PseudoTest do
       # :hover = 3130
       # :focus = 3150
       # :active = 3170
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoTest.PseudoClasses.multiple_pseudos"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.PseudoTest.PseudoClasses, {:class, :multiple_pseudos})
 
       classes = rule.atomic_classes["color"].classes
 
@@ -200,8 +197,7 @@ defmodule LiveStyle.PseudoTest do
       #   class = "xa2ikkt"
       #   ltr = ".xa2ikkt:active:hover{color:red}"  (sorted alphabetically!)
       #   priority = 3300 (3000 + 130 + 170)
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoTest.NestedPseudoClasses.nested"]
+      rule = LiveStyle.get_metadata(LiveStyle.PseudoTest.NestedPseudoClasses, {:class, :nested})
 
       # The nested :hover -> :active produces combined selector
       # StyleX sorts pseudo-classes alphabetically: :active:hover (not :hover:active)
@@ -216,8 +212,7 @@ defmodule LiveStyle.PseudoTest do
   describe "pseudo-elements" do
     test "generates CSS with ::before pseudo-element" do
       # StyleX: ".x16oeupf::before{color:red}" with priority 8000
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoTest.PseudoElements.before"]
+      rule = LiveStyle.get_metadata(LiveStyle.PseudoTest.PseudoElements, {:class, :before})
 
       # Key format is "property::pseudo-element"
       meta = rule.atomic_classes["color::before"]
@@ -229,8 +224,7 @@ defmodule LiveStyle.PseudoTest do
 
     test "generates CSS with ::after pseudo-element" do
       # StyleX: ".xdaarc3::after{color:blue}" with priority 8000
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoTest.PseudoElements.after"]
+      rule = LiveStyle.get_metadata(LiveStyle.PseudoTest.PseudoElements, {:class, :after})
 
       color_meta = rule.atomic_classes["color::after"]
       assert color_meta.class == "xdaarc3"
@@ -248,8 +242,7 @@ defmodule LiveStyle.PseudoTest do
 
     test "generates CSS with ::placeholder pseudo-element" do
       # StyleX: ".x6yu8oj::placeholder{color:gray}" with priority 8000
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoTest.PseudoElements.placeholder"]
+      rule = LiveStyle.get_metadata(LiveStyle.PseudoTest.PseudoElements, {:class, :placeholder})
 
       meta = rule.atomic_classes["color::placeholder"]
       assert meta.class == "x6yu8oj"
@@ -266,8 +259,11 @@ defmodule LiveStyle.PseudoTest do
       # Expected:
       #   x16oeupf: { ltr: ".x16oeupf::before{color:red}", priority: 8000 }
       #   xeb2lg0: { ltr: ".xeb2lg0::before:hover{color:blue}", priority: 8130 }
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoTest.PseudoElementWithPseudoClass.before_hover"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoTest.PseudoElementWithPseudoClass,
+          {:class, :before_hover}
+        )
 
       # ::before default color
       default_meta = rule.atomic_classes["color::before"]
@@ -306,16 +302,19 @@ defmodule LiveStyle.PseudoTest do
 
     test "::thumb has correct priority (9000 for width)" do
       # Priority = 5000 (pseudo-element) + 4000 (width is longhand physical) = 9000
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoTest.ThumbPseudoElement.slider_thumb"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.PseudoTest.ThumbPseudoElement, {:class, :slider_thumb})
 
       meta = rule.atomic_classes["width::thumb"]
       assert meta.priority == 9000
     end
 
     test "::thumb works with multiple properties" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoTest.ThumbPseudoElement.slider_thumb_styled"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoTest.ThumbPseudoElement,
+          {:class, :slider_thumb_styled}
+        )
 
       # All properties should have ::thumb pseudo-element
       assert rule.atomic_classes["width::thumb"] != nil
@@ -357,9 +356,7 @@ defmodule LiveStyle.PseudoTest do
     end
 
     test "pseudo-element base priority is 8000" do
-      # Check via the manifest
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoTest.PseudoElements.before"]
+      rule = LiveStyle.get_metadata(LiveStyle.PseudoTest.PseudoElements, {:class, :before})
 
       meta = rule.atomic_classes["color::before"]
       assert meta.priority == 8000

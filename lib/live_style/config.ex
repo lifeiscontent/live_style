@@ -20,13 +20,13 @@ defmodule LiveStyle.Config do
     * `:manifest_path` - path where the manifest file is stored
       (default: `"_build/live_style_manifest.etf"`)
 
-    * `:shorthand_strategy` - the shorthand expansion strategy
-      (default: `LiveStyle.Shorthand.Strategy.KeepShorthands`)
+    * `:shorthand_behavior` - the shorthand expansion behavior
+      (default: `LiveStyle.ShorthandBehavior.AcceptShorthands`)
 
       Can be specified as:
-      - An atom: `:keep_shorthands`, `:expand_to_longhands`, `:reject_shorthands`
-      - A module: `LiveStyle.Shorthand.Strategy.KeepShorthands`
-      - A tuple with options: `{MyCustomStrategy, some_option: true}`
+      - An atom: `:accept_shorthands`, `:flatten_shorthands`, `:forbid_shorthands`
+      - A module: `LiveStyle.ShorthandBehavior.AcceptShorthands`
+      - A tuple with options: `{MyCustomBehavior, some_option: true}`
 
     * `:class_name_prefix` - prefix for generated class names
       (default: "x")
@@ -68,12 +68,12 @@ defmodule LiveStyle.Config do
 
   ## Per-Process Overrides
 
-      LiveStyle.Config.put(:shorthand_strategy, :reject_shorthands)
-      # ... run code with :reject_shorthands mode ...
+      LiveStyle.Config.put(:shorthand_behavior, :forbid_shorthands)
+      # ... run code with :forbid_shorthands mode ...
       LiveStyle.Config.reset_all()
   """
 
-  @default_shorthand_strategy LiveStyle.Shorthand.Strategy.KeepShorthands
+  @default_shorthand_behavior LiveStyle.ShorthandBehavior.AcceptShorthands
   @default_class_name_prefix "x"
   @default_debug_class_names false
   @default_font_size_px_to_rem false
@@ -160,71 +160,71 @@ defmodule LiveStyle.Config do
   end
 
   @doc """
-  Returns the configured shorthand expansion strategy and options.
+  Returns the configured shorthand expansion behavior and options.
 
   Returns a tuple of `{module, opts}` where opts is a keyword list.
 
   ## Examples
 
       # Default
-      shorthand_strategy() #=> {LiveStyle.Shorthand.Strategy.KeepShorthands, []}
+      shorthand_behavior() #=> {LiveStyle.ShorthandBehavior.AcceptShorthands, []}
 
       # Using atom shortcut
-      shorthand_strategy() #=> {LiveStyle.Shorthand.Strategy.ExpandToLonghands, []}
+      shorthand_behavior() #=> {LiveStyle.ShorthandBehavior.FlattenShorthands, []}
 
-      # Custom strategy with options
-      shorthand_strategy() #=> {MyCustomStrategy, [strict: true]}
+      # Custom behavior with options
+      shorthand_behavior() #=> {MyCustomBehavior, [strict: true]}
   """
-  @atom_to_strategy_module %{
-    keep_shorthands: LiveStyle.Shorthand.Strategy.KeepShorthands,
-    expand_to_longhands: LiveStyle.Shorthand.Strategy.ExpandToLonghands,
-    reject_shorthands: LiveStyle.Shorthand.Strategy.RejectShorthands
+  @atom_to_behavior_module %{
+    accept_shorthands: LiveStyle.ShorthandBehavior.AcceptShorthands,
+    flatten_shorthands: LiveStyle.ShorthandBehavior.FlattenShorthands,
+    forbid_shorthands: LiveStyle.ShorthandBehavior.ForbidShorthands
   }
 
-  def shorthand_strategy do
+  def shorthand_behavior do
     value =
-      get_override(:shorthand_strategy) ||
-        Application.get_env(:live_style, :shorthand_strategy, @default_shorthand_strategy)
+      get_override(:shorthand_behavior) ||
+        Application.get_env(:live_style, :shorthand_behavior, @default_shorthand_behavior)
 
-    case normalize_shorthand_strategy(value) do
+    case normalize_shorthand_behavior(value) do
       {:ok, result} ->
         result
 
       :error ->
         raise ArgumentError, """
-        Invalid shorthand_strategy: #{inspect(value)}
+        Invalid shorthand_behavior: #{inspect(value)}
 
         Valid formats are:
-        - An atom: :keep_shorthands, :expand_to_longhands, :reject_shorthands
-        - A module: LiveStyle.Shorthand.Strategy.KeepShorthands
-        - A tuple: {MyCustomStrategy, some_option: true}
+        - An atom: :accept_shorthands, :flatten_shorthands, :forbid_shorthands
+        - A module: LiveStyle.ShorthandBehavior.AcceptShorthands
+        - A tuple: {MyCustomBehavior, some_option: true}
         """
     end
   end
 
-  defp normalize_shorthand_strategy(atom) when is_map_key(@atom_to_strategy_module, atom) do
-    {:ok, {Map.fetch!(@atom_to_strategy_module, atom), []}}
+  defp normalize_shorthand_behavior(atom) when is_map_key(@atom_to_behavior_module, atom) do
+    {:ok, {Map.fetch!(@atom_to_behavior_module, atom), []}}
   end
 
-  defp normalize_shorthand_strategy({module, opts}) when is_atom(module) and is_list(opts) do
-    if valid_strategy_module?(module) do
+  defp normalize_shorthand_behavior({module, opts}) when is_atom(module) and is_list(opts) do
+    if valid_behavior_module?(module) do
       {:ok, {module, opts}}
     else
       :error
     end
   end
 
-  defp normalize_shorthand_strategy(module) when is_atom(module) do
-    if valid_strategy_module?(module) do
+  defp normalize_shorthand_behavior(module) when is_atom(module) do
+    if valid_behavior_module?(module) do
       {:ok, {module, []}}
     else
       :error
     end
   end
 
-  defp normalize_shorthand_strategy(_), do: :error
+  defp normalize_shorthand_behavior(_), do: :error
 
-  defp valid_strategy_module?(module) do
+  defp valid_behavior_module?(module) do
     Code.ensure_loaded?(module) and
       function_exported?(module, :expand_declaration, 3) and
       function_exported?(module, :expand_shorthand_conditions, 4)

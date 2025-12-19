@@ -399,9 +399,7 @@ defmodule LiveStyle.WhenTest do
 
   describe "integration with css_class" do
     test "ancestor generates correct CSS in rules" do
-      manifest = get_manifest()
-      key = LiveStyle.Manifest.simple_key(WhenAncestorExample, :card)
-      rule = LiveStyle.Manifest.get_rule(manifest, key)
+      rule = LiveStyle.get_metadata(WhenAncestorExample, {:class, :card})
 
       assert rule != nil
       assert rule.class_string != ""
@@ -411,54 +409,42 @@ defmodule LiveStyle.WhenTest do
     end
 
     test "sibling_before generates correct CSS in rules" do
-      manifest = get_manifest()
-      key = LiveStyle.Manifest.simple_key(WhenSiblingBeforeExample, :label)
-      rule = LiveStyle.Manifest.get_rule(manifest, key)
+      rule = LiveStyle.get_metadata(WhenSiblingBeforeExample, {:class, :label})
 
       assert rule != nil
       assert rule.class_string != ""
     end
 
     test "sibling_after generates correct CSS in rules" do
-      manifest = get_manifest()
-      key = LiveStyle.Manifest.simple_key(WhenSiblingAfterExample, :hint)
-      rule = LiveStyle.Manifest.get_rule(manifest, key)
+      rule = LiveStyle.get_metadata(WhenSiblingAfterExample, {:class, :hint})
 
       assert rule != nil
       assert rule.class_string != ""
     end
 
     test "any_sibling generates correct CSS in rules" do
-      manifest = get_manifest()
-      key = LiveStyle.Manifest.simple_key(WhenAnySiblingExample, :tab)
-      rule = LiveStyle.Manifest.get_rule(manifest, key)
+      rule = LiveStyle.get_metadata(WhenAnySiblingExample, {:class, :tab})
 
       assert rule != nil
       assert rule.class_string != ""
     end
 
     test "descendant generates correct CSS in rules" do
-      manifest = get_manifest()
-      key = LiveStyle.Manifest.simple_key(WhenDescendantExample, :container)
-      rule = LiveStyle.Manifest.get_rule(manifest, key)
+      rule = LiveStyle.get_metadata(WhenDescendantExample, {:class, :container})
 
       assert rule != nil
       assert rule.class_string != ""
     end
 
     test "ancestor with custom marker generates correct CSS" do
-      manifest = get_manifest()
-      key = LiveStyle.Manifest.simple_key(WhenWithCustomMarkerExample, :child)
-      rule = LiveStyle.Manifest.get_rule(manifest, key)
+      rule = LiveStyle.get_metadata(WhenWithCustomMarkerExample, {:class, :child})
 
       assert rule != nil
       assert rule.class_string != ""
     end
 
     test "multiple when conditions work together" do
-      manifest = get_manifest()
-      key = LiveStyle.Manifest.simple_key(WhenMultipleConditionsExample, :item)
-      rule = LiveStyle.Manifest.get_rule(manifest, key)
+      rule = LiveStyle.get_metadata(WhenMultipleConditionsExample, {:class, :item})
 
       assert rule != nil
       assert rule.class_string != ""
@@ -469,9 +455,7 @@ defmodule LiveStyle.WhenTest do
     end
 
     test "when selectors work with media queries" do
-      manifest = get_manifest()
-      key = LiveStyle.Manifest.simple_key(WhenWithMediaQueryExample, :responsive_card)
-      rule = LiveStyle.Manifest.get_rule(manifest, key)
+      rule = LiveStyle.get_metadata(WhenWithMediaQueryExample, {:class, :responsive_card})
 
       assert rule != nil
       assert rule.class_string != ""

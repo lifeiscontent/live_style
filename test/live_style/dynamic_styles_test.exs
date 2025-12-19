@@ -62,29 +62,25 @@ defmodule LiveStyle.DynamicStylesTest do
 
   describe "basic dynamic styles" do
     test "single parameter dynamic rule is marked as dynamic" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.DynamicStylesTest.BasicDynamic.opacity"]
+      rule = LiveStyle.get_metadata(LiveStyle.DynamicStylesTest.BasicDynamic, {:class, :opacity})
 
       assert rule.dynamic == true
     end
 
     test "single parameter dynamic rule has param_names" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.DynamicStylesTest.BasicDynamic.opacity"]
+      rule = LiveStyle.get_metadata(LiveStyle.DynamicStylesTest.BasicDynamic, {:class, :opacity})
 
       assert rule.param_names == [:opacity]
     end
 
     test "single parameter dynamic rule has all_props" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.DynamicStylesTest.BasicDynamic.opacity"]
+      rule = LiveStyle.get_metadata(LiveStyle.DynamicStylesTest.BasicDynamic, {:class, :opacity})
 
       assert :opacity in rule.all_props
     end
 
     test "dynamic rule has class_string" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.DynamicStylesTest.BasicDynamic.opacity"]
+      rule = LiveStyle.get_metadata(LiveStyle.DynamicStylesTest.BasicDynamic, {:class, :opacity})
 
       assert is_binary(rule.class_string)
       assert rule.class_string != ""
@@ -92,8 +88,7 @@ defmodule LiveStyle.DynamicStylesTest do
 
     test "dynamic rule atomic_classes reference CSS variables" do
       # StyleX: .xl8spv7{background-color:var(--x-backgroundColor)}
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.DynamicStylesTest.BasicDynamic.opacity"]
+      rule = LiveStyle.get_metadata(LiveStyle.DynamicStylesTest.BasicDynamic, {:class, :opacity})
 
       # Check that opacity class uses var(--x-opacity)
       opacity_class = rule.atomic_classes["opacity"]
@@ -103,9 +98,11 @@ defmodule LiveStyle.DynamicStylesTest do
     end
 
     test "different dynamic rules have different class names" do
-      manifest = get_manifest()
-      opacity_rule = manifest.rules["LiveStyle.DynamicStylesTest.BasicDynamic.opacity"]
-      color_rule = manifest.rules["LiveStyle.DynamicStylesTest.BasicDynamic.color"]
+      opacity_rule =
+        LiveStyle.get_metadata(LiveStyle.DynamicStylesTest.BasicDynamic, {:class, :opacity})
+
+      color_rule =
+        LiveStyle.get_metadata(LiveStyle.DynamicStylesTest.BasicDynamic, {:class, :color})
 
       assert opacity_rule.class_string != color_rule.class_string
     end
@@ -113,23 +110,23 @@ defmodule LiveStyle.DynamicStylesTest do
 
   describe "multi-parameter dynamic styles" do
     test "multi-param dynamic rule has correct param_names" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.DynamicStylesTest.MultiParamDynamic.size"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.DynamicStylesTest.MultiParamDynamic, {:class, :size})
 
       assert rule.param_names == [:width, :height]
     end
 
     test "multi-param dynamic rule has all properties" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.DynamicStylesTest.MultiParamDynamic.size"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.DynamicStylesTest.MultiParamDynamic, {:class, :size})
 
       assert :width in rule.all_props
       assert :height in rule.all_props
     end
 
     test "multi-param dynamic rule generates multiple CSS variable references" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.DynamicStylesTest.MultiParamDynamic.size"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.DynamicStylesTest.MultiParamDynamic, {:class, :size})
 
       width_class = rule.atomic_classes["width"]
       height_class = rule.atomic_classes["height"]
@@ -142,8 +139,7 @@ defmodule LiveStyle.DynamicStylesTest do
     end
 
     test "three-param dynamic rule works correctly" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.DynamicStylesTest.MultiParamDynamic.box"]
+      rule = LiveStyle.get_metadata(LiveStyle.DynamicStylesTest.MultiParamDynamic, {:class, :box})
 
       assert rule.param_names == [:width, :height, :margin]
       assert :width in rule.all_props
@@ -154,22 +150,31 @@ defmodule LiveStyle.DynamicStylesTest do
 
   describe "static vs dynamic rules" do
     test "static rule is not marked as dynamic" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.DynamicStylesTest.MixedStaticDynamic.static_box"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.DynamicStylesTest.MixedStaticDynamic,
+          {:class, :static_box}
+        )
 
       assert rule.dynamic == false
     end
 
     test "dynamic rule is marked as dynamic" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.DynamicStylesTest.MixedStaticDynamic.dynamic_color"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.DynamicStylesTest.MixedStaticDynamic,
+          {:class, :dynamic_color}
+        )
 
       assert rule.dynamic == true
     end
 
     test "static rule has declarations" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.DynamicStylesTest.MixedStaticDynamic.static_box"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.DynamicStylesTest.MixedStaticDynamic,
+          {:class, :static_box}
+        )
 
       assert rule.declarations != nil
     end
@@ -239,16 +244,15 @@ defmodule LiveStyle.DynamicStylesTest do
   describe "CSS variable naming" do
     test "CSS variable names use --x- prefix" do
       # StyleX uses --x-propertyName format for dynamic values
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.DynamicStylesTest.BasicDynamic.opacity"]
+      rule = LiveStyle.get_metadata(LiveStyle.DynamicStylesTest.BasicDynamic, {:class, :opacity})
 
       opacity_class = rule.atomic_classes["opacity"]
       assert opacity_class.var =~ "--x-opacity"
     end
 
     test "CSS variable names convert property names correctly" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.DynamicStylesTest.BasicDynamic.background"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.DynamicStylesTest.BasicDynamic, {:class, :background})
 
       bg_class = rule.atomic_classes["background-color"]
       assert bg_class.var =~ "--x-background-color"
@@ -274,8 +278,7 @@ defmodule LiveStyle.DynamicStylesTest do
 
   describe "edge cases" do
     test "dynamic transform property works" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.DynamicStylesTest.EdgeCases.transform"]
+      rule = LiveStyle.get_metadata(LiveStyle.DynamicStylesTest.EdgeCases, {:class, :transform})
 
       assert rule.dynamic == true
       transform_class = rule.atomic_classes["transform"]
@@ -284,8 +287,7 @@ defmodule LiveStyle.DynamicStylesTest do
     end
 
     test "dynamic shorthand property works" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.DynamicStylesTest.EdgeCases.margin"]
+      rule = LiveStyle.get_metadata(LiveStyle.DynamicStylesTest.EdgeCases, {:class, :margin})
 
       assert rule.dynamic == true
       margin_class = rule.atomic_classes["margin"]
@@ -294,8 +296,7 @@ defmodule LiveStyle.DynamicStylesTest do
     end
 
     test "dynamic custom property works" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.DynamicStylesTest.EdgeCases.custom"]
+      rule = LiveStyle.get_metadata(LiveStyle.DynamicStylesTest.EdgeCases, {:class, :custom})
 
       assert rule.dynamic == true
       custom_class = rule.atomic_classes["--custom-var"]
@@ -310,8 +311,7 @@ defmodule LiveStyle.DynamicStylesTest do
 
   describe "dynamic style structure" do
     test "dynamic styles have class names" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.DynamicStylesTest.BasicDynamic.opacity"]
+      rule = LiveStyle.get_metadata(LiveStyle.DynamicStylesTest.BasicDynamic, {:class, :opacity})
 
       opacity_class = rule.atomic_classes["opacity"]
       assert is_binary(opacity_class.class)
@@ -319,8 +319,8 @@ defmodule LiveStyle.DynamicStylesTest do
     end
 
     test "dynamic width/height have class names" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.DynamicStylesTest.MultiParamDynamic.size"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.DynamicStylesTest.MultiParamDynamic, {:class, :size})
 
       width_class = rule.atomic_classes["width"]
       height_class = rule.atomic_classes["height"]
@@ -330,8 +330,7 @@ defmodule LiveStyle.DynamicStylesTest do
     end
 
     test "dynamic shorthand has class name" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.DynamicStylesTest.EdgeCases.margin"]
+      rule = LiveStyle.get_metadata(LiveStyle.DynamicStylesTest.EdgeCases, {:class, :margin})
 
       margin_class = rule.atomic_classes["margin"]
       assert is_binary(margin_class.class)
@@ -355,8 +354,7 @@ defmodule LiveStyle.DynamicStylesTest do
     end
 
     test "class_string contains valid class names" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.DynamicStylesTest.BasicDynamic.opacity"]
+      rule = LiveStyle.get_metadata(LiveStyle.DynamicStylesTest.BasicDynamic, {:class, :opacity})
 
       # The class_string should be a valid CSS class name
       assert is_binary(rule.class_string)

@@ -238,10 +238,6 @@ defmodule LiveStyle.APIContractTest.Tests do
     WhenModule
   }
 
-  # Helper to build manifest key from module
-  defp key(module, name), do: "#{inspect(module)}.#{name}"
-  defp key(module, namespace, name), do: "#{inspect(module)}.#{namespace}.#{name}"
-
   describe "css_vars/2 API" do
     test "defines CSS variables accessible via css_var/1" do
       # css_var should return var(--hash) format
@@ -250,8 +246,7 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
 
     test "typed variables include type information" do
-      manifest = get_manifest()
-      var_entry = LiveStyle.Manifest.get_var(manifest, key(TokensModule, :anim, :angle))
+      var_entry = LiveStyle.get_metadata(TokensModule, {:var, :anim, :angle})
 
       assert var_entry != nil
       assert var_entry.type != nil
@@ -261,8 +256,7 @@ defmodule LiveStyle.APIContractTest.Tests do
 
   describe "css_consts/2 API" do
     test "defines constants accessible at compile time" do
-      manifest = get_manifest()
-      const_value = LiveStyle.Manifest.get_const(manifest, key(TokensModule, :breakpoint, :lg))
+      const_value = LiveStyle.get_metadata(TokensModule, {:const, :breakpoint, :lg})
 
       assert const_value == "@media (min-width: 1025px)"
     end
@@ -270,8 +264,7 @@ defmodule LiveStyle.APIContractTest.Tests do
 
   describe "css_keyframes/2 API" do
     test "defines keyframes with content-hashed name" do
-      manifest = get_manifest()
-      keyframes = LiveStyle.Manifest.get_keyframes(manifest, key(TokensModule, :spin))
+      keyframes = LiveStyle.get_metadata(TokensModule, {:keyframes, :spin})
 
       assert keyframes != nil
       # StyleX keyframes naming pattern: x<hash>-B
@@ -283,8 +276,7 @@ defmodule LiveStyle.APIContractTest.Tests do
 
   describe "css_class/2 API" do
     test "static rules generate atomic classes" do
-      manifest = get_manifest()
-      rule = LiveStyle.Manifest.get_rule(manifest, key(StylesModule, :button))
+      rule = LiveStyle.get_metadata(StylesModule, {:class, :button})
 
       assert rule != nil
       assert rule.class_string != ""
@@ -294,8 +286,7 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
 
     test "conditional rules generate multiple classes per property" do
-      manifest = get_manifest()
-      rule = LiveStyle.Manifest.get_rule(manifest, key(StylesModule, :link))
+      rule = LiveStyle.get_metadata(StylesModule, {:class, :link})
 
       # color should have classes map with :default, :hover, etc.
       color_classes = rule.atomic_classes["color"].classes
@@ -305,15 +296,13 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
 
     test "dynamic rules are marked as dynamic" do
-      manifest = get_manifest()
-      rule = LiveStyle.Manifest.get_rule(manifest, key(StylesModule, :dynamic_opacity))
+      rule = LiveStyle.get_metadata(StylesModule, {:class, :dynamic_opacity})
 
       assert rule.dynamic == true
     end
 
     test "array fallbacks generate multiple declarations" do
-      manifest = get_manifest()
-      rule = LiveStyle.Manifest.get_rule(manifest, key(StylesModule, :sticky))
+      rule = LiveStyle.get_metadata(StylesModule, {:class, :sticky})
 
       position = rule.atomic_classes["position"]
       # Should have multiple values in LTR
@@ -324,8 +313,7 @@ defmodule LiveStyle.APIContractTest.Tests do
 
   describe "css_theme/3 API" do
     test "defines theme with overrides" do
-      manifest = get_manifest()
-      theme = LiveStyle.Manifest.get_theme(manifest, key(TokensModule, :color, :dark))
+      theme = LiveStyle.get_metadata(TokensModule, {:theme, :color, :dark})
 
       assert theme != nil
       # Theme names follow a pattern (may or may not start with x)
@@ -337,10 +325,7 @@ defmodule LiveStyle.APIContractTest.Tests do
 
   describe "css_position_try/2 API" do
     test "defines position-try rules" do
-      manifest = get_manifest()
-
-      position_try =
-        LiveStyle.Manifest.get_position_try(manifest, key(PositionTryModule, :bottom_fallback))
+      position_try = LiveStyle.get_metadata(PositionTryModule, {:position_try, :bottom_fallback})
 
       assert position_try != nil
       assert position_try.css_name =~ ~r/^--x[a-z0-9]+$/
@@ -349,13 +334,7 @@ defmodule LiveStyle.APIContractTest.Tests do
 
   describe "css_view_transition/2 API" do
     test "defines view transition with content-hashed name" do
-      manifest = get_manifest()
-
-      vt =
-        LiveStyle.Manifest.get_view_transition(
-          manifest,
-          key(ViewTransitionModule, :card_transition)
-        )
+      vt = LiveStyle.get_metadata(ViewTransitionModule, {:view_transition, :card_transition})
 
       assert vt != nil
       assert vt.css_name =~ ~r/^x[a-z0-9]+$/
@@ -364,8 +343,7 @@ defmodule LiveStyle.APIContractTest.Tests do
 
   describe "__include__ feature" do
     test "extended rule includes base rule declarations" do
-      manifest = get_manifest()
-      rule = LiveStyle.Manifest.get_rule(manifest, key(IncludeModule, :extended))
+      rule = LiveStyle.get_metadata(IncludeModule, {:class, :extended})
 
       # Should have display from base
       assert Map.has_key?(rule.atomic_classes, "display")
@@ -463,8 +441,7 @@ defmodule LiveStyle.APIContractTest.Tests do
 
   describe "LiveStyle.When contextual selectors API" do
     test "ancestor/2 is available and generates correct selector" do
-      manifest = get_manifest()
-      rule = LiveStyle.Manifest.get_rule(manifest, key(WhenModule, :with_ancestor))
+      rule = LiveStyle.get_metadata(WhenModule, {:class, :with_ancestor})
 
       assert rule != nil
       # The rule should have a color class
@@ -472,8 +449,7 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
 
     test "descendant/2 is available and generates correct selector" do
-      manifest = get_manifest()
-      rule = LiveStyle.Manifest.get_rule(manifest, key(WhenModule, :with_descendant))
+      rule = LiveStyle.get_metadata(WhenModule, {:class, :with_descendant})
 
       assert rule != nil
     end
@@ -578,8 +554,7 @@ defmodule LiveStyle.APIContractTest.Tests do
 
   describe "LiveStyle.CSS public API" do
     test "generate/1 returns CSS string" do
-      manifest = get_manifest()
-      css = LiveStyle.CSS.generate(manifest)
+      css = generate_css()
 
       assert is_binary(css)
       # Should contain actual CSS
@@ -591,8 +566,7 @@ defmodule LiveStyle.APIContractTest.Tests do
   describe "Cross-module references" do
     test "css_var can reference variables from other modules" do
       # This is tested by StylesModule.themed which references TokensModule
-      manifest = get_manifest()
-      rule = LiveStyle.Manifest.get_rule(manifest, key(StylesModule, :themed))
+      rule = LiveStyle.get_metadata(StylesModule, {:class, :themed})
 
       # color should reference the var from TokensModule
       color = rule.atomic_classes["color"]
@@ -600,8 +574,7 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
 
     test "css_keyframes can reference keyframes from other modules" do
-      manifest = get_manifest()
-      rule = LiveStyle.Manifest.get_rule(manifest, key(StylesModule, :themed))
+      rule = LiveStyle.get_metadata(StylesModule, {:class, :themed})
 
       # animation-name should reference keyframes from TokensModule
       animation = rule.atomic_classes["animation-name"]
@@ -611,8 +584,7 @@ defmodule LiveStyle.APIContractTest.Tests do
 
   describe "Atomic class output format" do
     test "class names follow StyleX pattern (x prefix)" do
-      manifest = get_manifest()
-      rule = LiveStyle.Manifest.get_rule(manifest, key(StylesModule, :button))
+      rule = LiveStyle.get_metadata(StylesModule, {:class, :button})
 
       # All class names should start with 'x'
       Enum.each(rule.atomic_classes, fn {_prop, meta} ->
@@ -625,23 +597,21 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
 
     test "LTR output follows .classname{property:value} format" do
-      manifest = get_manifest()
-      rule = LiveStyle.Manifest.get_rule(manifest, key(StylesModule, :button))
+      rule = LiveStyle.get_metadata(StylesModule, {:class, :button})
 
       display = rule.atomic_classes["display"]
       assert display.ltr =~ ~r/^\.[a-z0-9]+\{display:[^}]+\}$/
     end
 
     test "priorities follow StyleX convention" do
-      manifest = get_manifest()
-      rule = LiveStyle.Manifest.get_rule(manifest, key(StylesModule, :button))
+      rule = LiveStyle.get_metadata(StylesModule, {:class, :button})
 
       # Regular properties should have priority 3000
       display = rule.atomic_classes["display"]
       assert display.priority == 3000
 
       # Custom properties should have priority 1
-      custom_rule = LiveStyle.Manifest.get_rule(manifest, key(StylesModule, :custom_props))
+      custom_rule = LiveStyle.get_metadata(StylesModule, {:class, :custom_props})
       custom_prop = custom_rule.atomic_classes["--my-color"]
       assert custom_prop.priority == 1
     end

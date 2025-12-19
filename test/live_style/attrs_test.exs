@@ -50,8 +50,7 @@ defmodule LiveStyle.AttrsTest do
 
     test "applying single style returns correct class with correct metadata" do
       # StyleX: { color: "x1e2nbdu" } -> metadata: [x1e2nbdu, {ltr: ".x1e2nbdu{color:red}", rtl: null}, 3000]
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.AttrsTest.BasicStyles.red"]
+      rule = LiveStyle.get_metadata(LiveStyle.AttrsTest.BasicStyles, {:class, :red})
 
       # Check the atomic_class metadata
       color = rule.atomic_classes["color"]
@@ -78,9 +77,8 @@ defmodule LiveStyle.AttrsTest do
     test "later styles override earlier styles for same property" do
       # StyleX: stylex.props(styles.primary, styles.secondary)
       # -> only secondary's color is applied (later wins)
-      manifest = get_manifest()
-      primary_rule = manifest.rules["LiveStyle.AttrsTest.ConflictingStyles.primary"]
-      secondary_rule = manifest.rules["LiveStyle.AttrsTest.ConflictingStyles.secondary"]
+      primary_rule = LiveStyle.get_metadata(LiveStyle.AttrsTest.ConflictingStyles, {:class, :primary})
+      secondary_rule = LiveStyle.get_metadata(LiveStyle.AttrsTest.ConflictingStyles, {:class, :secondary})
 
       class = LiveStyle.get_css_class(ConflictingStyles, [:primary, :secondary])
       classes = String.split(class, " ")
@@ -99,8 +97,7 @@ defmodule LiveStyle.AttrsTest do
 
     test "multiple style overrides - last wins" do
       # StyleX: stylex.props(styles.primary, styles.secondary, styles.warning)
-      manifest = get_manifest()
-      warning_rule = manifest.rules["LiveStyle.AttrsTest.ConflictingStyles.warning"]
+      warning_rule = LiveStyle.get_metadata(LiveStyle.AttrsTest.ConflictingStyles, {:class, :warning})
 
       class = LiveStyle.get_css_class(ConflictingStyles, [:primary, :secondary, :warning])
       classes = String.split(class, " ")

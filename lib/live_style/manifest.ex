@@ -8,7 +8,7 @@ defmodule LiveStyle.Manifest do
   - keyframes: @keyframes animations
   - position_try: @position-try rules
   - view_transitions: View transition classes
-  - rules: Style rules (atomic classes)
+  - classes: Style classes (atomic CSS)
   - themes: Variable override themes
 
   Each entry is keyed by a fully-qualified name like "MyApp.Tokens.color.white"
@@ -38,7 +38,7 @@ defmodule LiveStyle.Manifest do
           styles: map()
         }
 
-  @type rule_entry :: %{
+  @type class_entry :: %{
           class_string: String.t(),
           atomic_classes: map(),
           declarations: map()
@@ -55,7 +55,7 @@ defmodule LiveStyle.Manifest do
           keyframes: %{String.t() => keyframes_entry()},
           position_try: %{String.t() => position_try_entry()},
           view_transitions: %{String.t() => view_transition_entry()},
-          rules: %{String.t() => rule_entry()},
+          classes: %{String.t() => class_entry()},
           themes: %{String.t() => theme_entry()}
         }
 
@@ -64,9 +64,9 @@ defmodule LiveStyle.Manifest do
     {:var, :vars, "CSS variable"},
     {:const, :consts, "constant"},
     {:keyframes, :keyframes, "keyframes"},
-    {:position_try, :position_try, "position-try rule"},
+    {:position_try, :position_try, "position-try"},
     {:view_transition, :view_transitions, "view transition"},
-    {:rule, :rules, "style rule"},
+    {:class, :classes, "style class"},
     {:theme, :themes, "theme"}
   ]
 
@@ -81,7 +81,7 @@ defmodule LiveStyle.Manifest do
       keyframes: %{},
       position_try: %{},
       view_transitions: %{},
-      rules: %{},
+      classes: %{},
       themes: %{}
     }
   end

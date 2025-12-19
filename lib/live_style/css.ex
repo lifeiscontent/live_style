@@ -129,10 +129,10 @@ defmodule LiveStyle.CSS do
   defp collect_stats(manifest) do
     vars_count = map_size(manifest.vars)
     keyframes_count = map_size(manifest.keyframes)
-    rules_count = map_size(manifest.rules)
+    classes_count = map_size(manifest.classes)
     themes_count = map_size(manifest.themes)
 
-    "#{vars_count} vars, #{keyframes_count} keyframes, #{rules_count} rules, #{themes_count} themes"
+    "#{vars_count} vars, #{keyframes_count} keyframes, #{classes_count} classes, #{themes_count} themes"
   end
 
   defp generate_properties(manifest) do
@@ -433,7 +433,7 @@ defmodule LiveStyle.CSS do
     # Collect all unique atomic classes (both simple and conditional)
     # Format: {class_name, property, value, selector_suffix, pseudo_element, fallback_values, at_rule, priority}
     all_classes =
-      manifest.rules
+      manifest.classes
       |> Enum.flat_map(fn {_key, entry} ->
         Enum.flat_map(entry.atomic_classes, &extract_class_tuples/1)
       end)

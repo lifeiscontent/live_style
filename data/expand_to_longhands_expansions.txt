@@ -1,0 +1,33 @@
+# expand_to_longhands_expansions.txt
+# ExpandToLonghands strategy: defines how shorthand properties expand to longhands with value parsing
+#
+# Format: property ; pattern ; longhand-1, longhand-2, ...
+# Where pattern is:
+#   - "4-value" = CSS box model (top, right, bottom, left)
+#   - "2-value" = Two values (row/x, column/y)
+#   - "list-style" = list-style special parsing
+#   - "border-radius" = border-radius with slash support
+#
+# Properties not listed here don't support multi-value expansion.
+
+# 4-value box model shorthands (top, right, bottom, left)
+margin ; 4-value ; margin-top, margin-right, margin-bottom, margin-left
+padding ; 4-value ; padding-top, padding-right, padding-bottom, padding-left
+border-width ; 4-value ; border-top-width, border-right-width, border-bottom-width, border-left-width
+border-style ; 4-value ; border-top-style, border-right-style, border-bottom-style, border-left-style
+border-color ; 4-value ; border-top-color, border-right-color, border-bottom-color, border-left-color
+inset ; 4-value ; top, right, bottom, left
+
+# 2-value shorthands (first, second)
+gap ; 2-value ; row-gap, column-gap
+overflow ; 2-value ; overflow-x, overflow-y
+margin-block ; 2-value ; margin-top, margin-bottom
+margin-inline ; 2-value ; margin-left, margin-right
+padding-block ; 2-value ; padding-top, padding-bottom
+padding-inline ; 2-value ; padding-left, padding-right
+
+# Border radius (special handling for slash syntax)
+border-radius ; border-radius ; border-top-left-radius, border-top-right-radius, border-bottom-right-radius, border-bottom-left-radius
+
+# List style (special parsing for type/position/image)
+list-style ; list-style ; list-style-type, list-style-position, list-style-image

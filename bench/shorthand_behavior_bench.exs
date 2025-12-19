@@ -1,11 +1,11 @@
-# Benchmark for shorthand_strategy modes
+# Benchmark for shorthand_behavior modes
 #
-# Run with: mix run bench/shorthand_strategy_bench.exs
+# Run with: mix run bench/shorthand_behavior_bench.exs
 #
-# This benchmarks the three shorthand expansion strategies:
-# - :keep_shorthands (default) - Pass through with null resets for cascade control
-# - :reject_shorthands - Pass through, error on disallowed shorthands
-# - :expand_to_longhands - Expand shorthands to longhands
+# This benchmarks the three shorthand expansion behaviors:
+# - :accept_shorthands (default) - Pass through with null resets for cascade control
+# - :forbid_shorthands - Pass through, error on disallowed shorthands
+# - :flatten_shorthands - Expand shorthands to longhands
 
 # Sample style declarations to benchmark
 sample_styles = %{
@@ -61,10 +61,10 @@ sample_styles = %{
   ]
 }
 
-# Function to benchmark style processing for a given strategy
+# Function to benchmark style processing for a given behavior
 defmodule BenchHelper do
-  def process_styles(styles, strategy) do
-    Application.put_env(:live_style, :shorthand_strategy, strategy)
+  def process_styles(styles, behavior) do
+    Application.put_env(:live_style, :shorthand_behavior, behavior)
     LiveStyle.Storage.clear()
 
     # Create a unique module name for each invocation
@@ -87,15 +87,15 @@ defmodule BenchHelper do
 end
 
 IO.puts("=" |> String.duplicate(70))
-IO.puts("LiveStyle Shorthand Strategy Benchmark")
+IO.puts("LiveStyle Shorthand Behavior Benchmark")
 IO.puts("=" |> String.duplicate(70))
 IO.puts("")
 
 # Warm up
 IO.puts("Warming up...")
 
-Enum.each([:reject_shorthands, :keep_shorthands, :expand_to_longhands], fn strategy ->
-  BenchHelper.process_styles(sample_styles.simple, strategy)
+Enum.each([:forbid_shorthands, :accept_shorthands, :flatten_shorthands], fn behavior ->
+  BenchHelper.process_styles(sample_styles.simple, behavior)
 end)
 
 IO.puts("Done warming up.\n")
@@ -108,14 +108,14 @@ Enum.each(sample_styles, fn {style_name, styles} ->
 
   Benchee.run(
     %{
-      "reject_shorthands" => fn ->
-        BenchHelper.process_styles(styles, :reject_shorthands)
+      "forbid_shorthands" => fn ->
+        BenchHelper.process_styles(styles, :forbid_shorthands)
       end,
-      "keep_shorthands" => fn ->
-        BenchHelper.process_styles(styles, :keep_shorthands)
+      "accept_shorthands" => fn ->
+        BenchHelper.process_styles(styles, :accept_shorthands)
       end,
-      "expand_to_longhands" => fn ->
-        BenchHelper.process_styles(styles, :expand_to_longhands)
+      "flatten_shorthands" => fn ->
+        BenchHelper.process_styles(styles, :flatten_shorthands)
       end
     },
     warmup: 1,
@@ -131,4 +131,4 @@ Enum.each(sample_styles, fn {style_name, styles} ->
 end)
 
 # Reset to default
-Application.put_env(:live_style, :shorthand_strategy, :keep_shorthands)
+Application.put_env(:live_style, :shorthand_behavior, :accept_shorthands)

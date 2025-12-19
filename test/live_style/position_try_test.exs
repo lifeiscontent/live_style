@@ -66,11 +66,10 @@ defmodule LiveStyle.PositionTryTest do
       # From StyleX test: transform-stylex-positionTry-test.js
       # Input: {positionAnchor: '--anchor', top: '0', left: '0', width: '100px', height: '100px'}
       # Expected output: --xhs37kq
-      manifest = get_manifest()
 
       # BasicPositionTry has the same declarations as the StyleX test
-      entry = manifest.position_try["LiveStyle.PositionTryTest.BasicPositionTry.bottom_fallback"]
-      assert entry.css_name == "--xhs37kq"
+      position_try = LiveStyle.get_metadata(BasicPositionTry, {:position_try, :bottom_fallback})
+      assert position_try.css_name == "--xhs37kq"
     end
 
     test "position-try name is content-hashed" do
@@ -91,9 +90,9 @@ defmodule LiveStyle.PositionTryTest do
 
     test "position-try has priority 0" do
       # StyleX: @position-try has priority 0 (like @keyframes)
-      manifest = get_manifest()
-
-      assert map_size(manifest.position_try) > 0
+      # Verify we can retrieve position-try metadata
+      position_try = LiveStyle.get_metadata(BasicPositionTry, {:position_try, :bottom_fallback})
+      assert position_try != nil
     end
   end
 
@@ -138,15 +137,13 @@ defmodule LiveStyle.PositionTryTest do
 
   describe "multiple position-try rules" do
     test "different content produces different names" do
-      manifest = get_manifest()
-
       # Should have multiple position-try entries with different names
-      names =
-        manifest.position_try
-        |> Map.keys()
-        |> Enum.uniq()
+      fallback_top = LiveStyle.get_metadata(MultiplePositionTry, {:position_try, :fallback_top})
 
-      assert length(names) == map_size(manifest.position_try)
+      fallback_bottom =
+        LiveStyle.get_metadata(MultiplePositionTry, {:position_try, :fallback_bottom})
+
+      assert fallback_top.css_name != fallback_bottom.css_name
     end
 
     test "can reference position-try in styles" do

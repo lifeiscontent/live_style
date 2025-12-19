@@ -168,8 +168,8 @@ defmodule LiveStyle.Sheet do
           first_that_works: 1
         ]
 
-      # Accumulate rule definitions for @before_compile
-      Module.register_attribute(__MODULE__, :__live_style_rules__, accumulate: true)
+      # Accumulate class definitions for @before_compile
+      Module.register_attribute(__MODULE__, :__live_style_classes__, accumulate: true)
 
       @before_compile LiveStyle
     end

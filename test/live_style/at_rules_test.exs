@@ -113,8 +113,7 @@ defmodule LiveStyle.AtRulesTest do
       # ["xrkmrrc", {ltr: ".xrkmrrc{background-color:red}", rtl: null}, 3000]
       # ["xw6up8c", {ltr: "@media ...{.xw6up8c.xw6up8c{background-color:blue}}", rtl: null}, 3200]
       # ["x1ssfqz5", {ltr: "@media ...{.x1ssfqz5.x1ssfqz5{background-color:purple}}", rtl: null}, 3200]
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.AtRulesTest.MediaQueries.responsive"]
+      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.MediaQueries, {:class, :responsive})
 
       assert rule != nil
       classes = rule.atomic_classes["background-color"].classes
@@ -153,8 +152,11 @@ defmodule LiveStyle.AtRulesTest do
       # ["x1jchvi3", {ltr: ".x1jchvi3{font-size:1rem}", rtl: null}, 3000]
       # ["x1w3nbkt", {ltr: "@media (min-width: 800px){.x1w3nbkt.x1w3nbkt{font-size:2rem}}", rtl: null}, 3200]
       # ["xicay7j", {ltr: "@media (min-width: 800px){.xicay7j.xicay7j:hover{font-size:2.2rem}}", rtl: null}, 3330]
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.AtRulesTest.MediaQueryWithPseudo.hover_in_media"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.AtRulesTest.MediaQueryWithPseudo,
+          {:class, :hover_in_media}
+        )
 
       classes = rule.atomic_classes["font-size"].classes
 
@@ -189,8 +191,8 @@ defmodule LiveStyle.AtRulesTest do
       # ["xrkmrrc", {ltr: ".xrkmrrc{background-color:red}", rtl: null}, 3000]
       # ["x6m3b6q", {ltr: "@supports ...{.x6m3b6q.x6m3b6q{background-color:blue}}", rtl: null}, 3030]
       # ["x6um648", {ltr: "@supports not ...{.x6um648.x6um648{background-color:purple}}", rtl: null}, 3030]
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.AtRulesTest.SupportsQueries.hover_support"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.AtRulesTest.SupportsQueries, {:class, :hover_support})
 
       classes = rule.atomic_classes["background-color"].classes
 
@@ -221,8 +223,7 @@ defmodule LiveStyle.AtRulesTest do
 
     test "generates CSS with @supports selector() syntax" do
       # @supports selector(:has(*)) - feature detection for :has() selector support
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.AtRulesTest.SupportsQueries.has_support"]
+      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.SupportsQueries, {:class, :has_support})
 
       classes = rule.atomic_classes["display"].classes
 
@@ -242,8 +243,7 @@ defmodule LiveStyle.AtRulesTest do
   describe "container queries" do
     test "generates CSS with @container rules and correct priorities" do
       # @container priority should be 3000 + 300 = 3300
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.AtRulesTest.ContainerQueries.container"]
+      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.ContainerQueries, {:class, :container})
 
       classes = rule.atomic_classes["font-size"].classes
 
@@ -259,8 +259,7 @@ defmodule LiveStyle.AtRulesTest do
     end
 
     test "@container rules have doubled class selector" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.AtRulesTest.ContainerQueries.container"]
+      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.ContainerQueries, {:class, :container})
 
       container = rule.atomic_classes["font-size"].classes["@container (min-width: 400px)"]
 
@@ -414,7 +413,9 @@ defmodule LiveStyle.AtRulesTest do
       # @supports wraps @media (innermost at-rule becomes outermost wrapper)
       css = generate_css()
 
-      color_var = get_manifest().vars["LiveStyle.AtRulesTest.NestedAtRules.colors.color"]
+      color_var =
+        LiveStyle.get_metadata(LiveStyle.AtRulesTest.NestedAtRules, {:var, :colors, :color})
+
       var_name = color_var.css_name
 
       # Should have default value in :root
@@ -435,8 +436,7 @@ defmodule LiveStyle.AtRulesTest do
     test "triple nesting generates properly wrapped at-rules with pseudo-class" do
       # Triple nested: @media -> @supports -> :hover
       # StyleX nests at-rules: @media{@supports{.selector:hover{...}}}
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.AtRulesTest.TripleNested.triple_nested"]
+      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.TripleNested, {:class, :triple_nested})
 
       classes = rule.atomic_classes["color"].classes
 
@@ -482,8 +482,9 @@ defmodule LiveStyle.AtRulesTest do
 
   describe "multiple media queries" do
     test "generates bounded media queries for consecutive min-width values" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.AtRulesTest.MultipleMediaQueries.responsive"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.AtRulesTest.MultipleMediaQueries, {:class, :responsive})
+
       classes = rule.atomic_classes["padding"].classes
 
       # Default: 8px
@@ -514,8 +515,7 @@ defmodule LiveStyle.AtRulesTest do
 
   describe "media query types" do
     test "@media print generates correct CSS" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.AtRulesTest.MediaQueryTypes.print"]
+      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.MediaQueryTypes, {:class, :print})
       classes = rule.atomic_classes["display"].classes
 
       print_class = classes["@media print"]
@@ -525,8 +525,7 @@ defmodule LiveStyle.AtRulesTest do
     end
 
     test "@media (prefers-color-scheme: dark) generates correct CSS" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.AtRulesTest.MediaQueryTypes.dark_mode"]
+      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.MediaQueryTypes, {:class, :dark_mode})
       classes = rule.atomic_classes["background-color"].classes
 
       dark_class = classes["@media (prefers-color-scheme: dark)"]
@@ -536,8 +535,9 @@ defmodule LiveStyle.AtRulesTest do
     end
 
     test "@media (prefers-reduced-motion: reduce) generates correct CSS" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.AtRulesTest.MediaQueryTypes.reduced_motion"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.AtRulesTest.MediaQueryTypes, {:class, :reduced_motion})
+
       classes = rule.atomic_classes["transition"].classes
 
       motion_class = classes["@media (prefers-reduced-motion: reduce)"]
@@ -547,8 +547,7 @@ defmodule LiveStyle.AtRulesTest do
     end
 
     test "@media (max-width: ...) generates correct CSS" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.AtRulesTest.MediaQueryTypes.max_width"]
+      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.MediaQueryTypes, {:class, :max_width})
       classes = rule.atomic_classes["font-size"].classes
 
       max_width_class = classes["@media (max-width: 640px)"]
@@ -560,8 +559,9 @@ defmodule LiveStyle.AtRulesTest do
 
   describe "supports query types" do
     test "@supports (display: grid) generates correct CSS" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.AtRulesTest.SupportsQueryTypes.grid_support"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.AtRulesTest.SupportsQueryTypes, {:class, :grid_support})
+
       classes = rule.atomic_classes["display"].classes
 
       grid_class = classes["@supports (display: grid)"]
@@ -571,8 +571,9 @@ defmodule LiveStyle.AtRulesTest do
     end
 
     test "@supports (gap: ...) generates correct CSS" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.AtRulesTest.SupportsQueryTypes.gap_support"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.AtRulesTest.SupportsQueryTypes, {:class, :gap_support})
+
       classes = rule.atomic_classes["margin"].classes
 
       gap_class = classes["@supports (gap: 10px)"]
@@ -582,8 +583,12 @@ defmodule LiveStyle.AtRulesTest do
     end
 
     test "@supports (aspect-ratio: ...) generates correct CSS" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.AtRulesTest.SupportsQueryTypes.aspect_ratio_support"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.AtRulesTest.SupportsQueryTypes,
+          {:class, :aspect_ratio_support}
+        )
+
       classes = rule.atomic_classes["padding-bottom"].classes
 
       aspect_class = classes["@supports (aspect-ratio: 16 / 9)"]
@@ -595,8 +600,9 @@ defmodule LiveStyle.AtRulesTest do
 
   describe "container query types" do
     test "@container (inline-size > ...) generates correct CSS" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.AtRulesTest.ContainerQueryTypes.inline_size"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.AtRulesTest.ContainerQueryTypes, {:class, :inline_size})
+
       classes = rule.atomic_classes["font-size"].classes
 
       inline_class = classes["@container (inline-size > 300px)"]
@@ -606,8 +612,12 @@ defmodule LiveStyle.AtRulesTest do
     end
 
     test "@container with named container generates correct CSS" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.AtRulesTest.ContainerQueryTypes.named_container"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.AtRulesTest.ContainerQueryTypes,
+          {:class, :named_container}
+        )
+
       classes = rule.atomic_classes["padding"].classes
 
       named_class = classes["@container sidebar (min-width: 200px)"]

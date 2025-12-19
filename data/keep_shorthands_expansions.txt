@@ -1,0 +1,272 @@
+# keep_shorthands_expansions.txt
+# KeepShorthands strategy: defines how shorthand properties expand with nil resets
+#
+# Format: source-property ; target-property:value-type, target-property:value-type, ...
+# Where value-type is:
+#   - "value" = use the input value
+#   - "nil" = reset to nil (for cascade control)
+#
+# All property names use CSS kebab-case format
+#
+# Note: Properties requiring complex runtime parsing (like overscroll-behavior,
+# contain-intrinsic-size) are handled in code, not here.
+
+# =============================================================================
+# Margin
+# =============================================================================
+margin ; margin:value, margin-inline:nil, margin-inline-start:nil, margin-left:nil, margin-inline-end:nil, margin-right:nil, margin-block:nil, margin-top:nil, margin-bottom:nil
+margin-horizontal ; margin-inline:value, margin-inline-start:nil, margin-left:nil, margin-inline-end:nil, margin-right:nil
+margin-vertical ; margin-block:value, margin-top:nil, margin-bottom:nil
+margin-start ; margin-inline-start:value, margin-left:nil, margin-right:nil
+margin-end ; margin-inline-end:value, margin-left:nil, margin-right:nil
+margin-left ; margin-left:value, margin-inline-start:nil, margin-inline-end:nil
+margin-right ; margin-right:value, margin-inline-start:nil, margin-inline-end:nil
+margin-block-start ; margin-top:value
+margin-block-end ; margin-bottom:value
+
+# =============================================================================
+# Padding
+# =============================================================================
+padding ; padding:value, padding-inline:nil, padding-start:nil, padding-left:nil, padding-end:nil, padding-right:nil, padding-block:nil, padding-top:nil, padding-bottom:nil
+padding-horizontal ; padding-inline:value, padding-start:nil, padding-left:nil, padding-end:nil, padding-right:nil
+padding-vertical ; padding-block:value, padding-top:nil, padding-bottom:nil
+padding-start ; padding-inline-start:value, padding-left:nil, padding-right:nil
+padding-end ; padding-inline-end:value, padding-left:nil, padding-right:nil
+padding-left ; padding-left:value, padding-inline-start:nil, padding-inline-end:nil
+padding-right ; padding-right:value, padding-inline-start:nil, padding-inline-end:nil
+padding-block-start ; padding-top:value
+padding-block-end ; padding-bottom:value
+
+# =============================================================================
+# Gap
+# =============================================================================
+gap ; gap:value, row-gap:nil, column-gap:nil
+grid-row-gap ; row-gap:value
+grid-column-gap ; column-gap:value
+
+# =============================================================================
+# Overflow
+# =============================================================================
+overflow ; overflow:value, overflow-x:nil, overflow-y:nil
+overflow-block ; overflow-y:value
+overflow-inline ; overflow-x:value
+
+# =============================================================================
+# Border Radius
+# =============================================================================
+border-radius ; border-radius:value, border-start-start-radius:nil, border-start-end-radius:nil, border-end-start-radius:nil, border-end-end-radius:nil, border-top-left-radius:nil, border-top-right-radius:nil, border-bottom-left-radius:nil, border-bottom-right-radius:nil
+border-top-start-radius ; border-start-start-radius:value
+border-top-end-radius ; border-start-end-radius:value
+border-bottom-start-radius ; border-end-start-radius:value
+border-bottom-end-radius ; border-end-end-radius:value
+border-start-start-radius ; border-start-start-radius:value, border-top-left-radius:nil, border-top-right-radius:nil
+border-start-end-radius ; border-start-end-radius:value, border-top-left-radius:nil, border-top-right-radius:nil
+border-end-start-radius ; border-end-start-radius:value, border-bottom-left-radius:nil, border-bottom-right-radius:nil
+border-end-end-radius ; border-end-end-radius:value, border-bottom-left-radius:nil, border-bottom-right-radius:nil
+border-top-left-radius ; border-top-left-radius:value, border-start-start-radius:nil, border-start-end-radius:nil
+border-top-right-radius ; border-top-right-radius:value, border-start-start-radius:nil, border-start-end-radius:nil
+border-bottom-left-radius ; border-bottom-left-radius:value, border-end-start-radius:nil, border-end-end-radius:nil
+border-bottom-right-radius ; border-bottom-right-radius:value, border-end-start-radius:nil, border-end-end-radius:nil
+
+# =============================================================================
+# Border (main)
+# =============================================================================
+border ; border:value, border-width:nil, border-inline-width:nil, border-inline-start-width:nil, border-left-width:nil, border-inline-end-width:nil, border-right-width:nil, border-block-width:nil, border-top-width:nil, border-bottom-width:nil, border-style:nil, border-inline-style:nil, border-inline-start-style:nil, border-left-style:nil, border-inline-end-style:nil, border-right-style:nil, border-block-style:nil, border-top-style:nil, border-bottom-style:nil, border-color:nil, border-inline-color:nil, border-inline-start-color:nil, border-left-color:nil, border-inline-end-color:nil, border-right-color:nil, border-block-color:nil, border-top-color:nil, border-bottom-color:nil
+border-color ; border-color:value, border-inline-color:nil, border-inline-start-color:nil, border-left-color:nil, border-inline-end-color:nil, border-right-color:nil, border-block-color:nil, border-top-color:nil, border-bottom-color:nil
+border-style ; border-style:value, border-inline-style:nil, border-inline-start-style:nil, border-left-style:nil, border-inline-end-style:nil, border-right-style:nil, border-block-style:nil, border-top-style:nil, border-bottom-style:nil
+border-width ; border-width:value, border-inline-width:nil, border-inline-start-width:nil, border-left-width:nil, border-inline-end-width:nil, border-right-width:nil, border-block-width:nil, border-top-width:nil, border-bottom-width:nil
+border-horizontal ; border-inline:value, border-inline-width:nil, border-inline-start-width:nil, border-left-width:nil, border-inline-end-width:nil, border-right-width:nil, border-inline-style:nil, border-inline-start-style:nil, border-left-style:nil, border-inline-end-style:nil, border-right-style:nil, border-inline-color:nil, border-inline-start-color:nil, border-left-color:nil, border-inline-end-color:nil, border-right-color:nil
+border-vertical ; border-block:value, border-block-width:nil, border-top-width:nil, border-bottom-width:nil, border-block-style:nil, border-top-style:nil, border-bottom-style:nil, border-block-color:nil, border-top-color:nil, border-bottom-color:nil
+
+# =============================================================================
+# Border Sides
+# =============================================================================
+border-top ; border-top:value, border-top-width:nil, border-top-style:nil, border-top-color:nil
+border-bottom ; border-bottom:value, border-bottom-width:nil, border-bottom-style:nil, border-bottom-color:nil
+border-left ; border-left:value, border-left-width:nil, border-left-style:nil, border-left-color:nil
+border-right ; border-right:value, border-right-width:nil, border-right-style:nil, border-right-color:nil
+border-block-start ; border-top:value
+border-block-end ; border-bottom:value
+border-inline-start ; border-inline-start:value, border-inline-start-width:nil, border-left-width:nil, border-right-width:nil, border-inline-start-style:nil, border-left-style:nil, border-right-style:nil, border-inline-start-color:nil, border-left-color:nil, border-right-color:nil
+border-inline-end ; border-inline-end:value, border-inline-end-width:nil, border-left-width:nil, border-right-width:nil, border-inline-end-style:nil, border-left-style:nil, border-right-style:nil, border-inline-end-color:nil, border-left-color:nil, border-right-color:nil
+
+# =============================================================================
+# Border Width
+# =============================================================================
+border-block-width ; border-block-width:value, border-top-width:nil, border-bottom-width:nil
+border-block-start-width ; border-top-width:value
+border-block-end-width ; border-bottom-width:value
+border-inline-width ; border-inline-width:value, border-inline-start-width:nil, border-left-width:nil, border-inline-end-width:nil, border-right-width:nil
+border-inline-start-width ; border-inline-start-width:value, border-left-width:nil, border-right-width:nil
+border-inline-end-width ; border-inline-end-width:value, border-left-width:nil, border-right-width:nil
+border-left-width ; border-left-width:value, border-inline-start-width:nil, border-inline-end-width:nil
+border-right-width ; border-right-width:value, border-inline-start-width:nil, border-inline-end-width:nil
+
+# =============================================================================
+# Border Style
+# =============================================================================
+border-block-style ; border-block-style:value, border-top-style:nil, border-bottom-style:nil
+border-block-start-style ; border-top-style:value
+border-block-end-style ; border-bottom-style:value
+border-inline-style ; border-inline-style:value, border-inline-start-style:nil, border-left-style:nil, border-inline-end-style:nil, border-right-style:nil
+border-inline-start-style ; border-inline-start-style:value, border-left-style:nil, border-right-style:nil
+border-inline-end-style ; border-inline-end-style:value, border-left-style:nil, border-right-style:nil
+border-left-style ; border-left-style:value, border-inline-start-style:nil, border-inline-end-style:nil
+border-right-style ; border-right-style:value, border-inline-start-style:nil, border-inline-end-style:nil
+
+# =============================================================================
+# Border Color
+# =============================================================================
+border-block-color ; border-block-color:value, border-top-color:nil, border-bottom-color:nil
+border-block-start-color ; border-top-color:value
+border-block-end-color ; border-bottom-color:value
+border-inline-color ; border-inline-color:value, border-inline-start-color:nil, border-left-color:nil, border-inline-end-color:nil, border-right-color:nil
+border-inline-start-color ; border-inline-start-color:value, border-left-color:nil, border-right-color:nil
+border-inline-end-color ; border-inline-end-color:value, border-left-color:nil, border-right-color:nil
+border-left-color ; border-left-color:value, border-inline-start-color:nil, border-inline-end-color:nil
+border-right-color ; border-right-color:value, border-inline-start-color:nil, border-inline-end-color:nil
+
+# =============================================================================
+# Inset
+# =============================================================================
+inset ; inset:value, inset-inline:nil, inset-inline-start:nil, inset-inline-end:nil, left:nil, right:nil, inset-block:nil, top:nil, bottom:nil
+inset-inline ; inset-inline:value, inset-inline-start:nil, inset-inline-end:nil, left:nil, right:nil
+inset-block ; inset-block:value, top:nil, bottom:nil
+start ; inset-inline-start:value, left:nil, right:nil
+end ; inset-inline-end:value, left:nil, right:nil
+left ; left:value, inset-inline-start:nil, inset-inline-end:nil
+right ; right:value, inset-inline-start:nil, inset-inline-end:nil
+inset-block-start ; top:value
+inset-block-end ; bottom:value
+
+# =============================================================================
+# Logical Size
+# =============================================================================
+block-size ; height:value
+inline-size ; width:value
+min-block-size ; min-height:value
+min-inline-size ; min-width:value
+max-block-size ; max-height:value
+max-inline-size ; max-width:value
+
+# =============================================================================
+# List Style
+# =============================================================================
+list-style ; list-style:value, list-style-image:nil, list-style-position:nil, list-style-type:nil
+
+# =============================================================================
+# Flex
+# =============================================================================
+flex ; flex:value, flex-grow:nil, flex-shrink:nil, flex-basis:nil
+flex-flow ; flex-flow:value, flex-direction:nil, flex-wrap:nil
+
+# =============================================================================
+# Grid
+# =============================================================================
+grid ; grid:value, grid-template:nil, grid-template-areas:nil, grid-template-columns:nil, grid-template-rows:nil, grid-auto-rows:nil, grid-auto-columns:nil, grid-auto-flow:nil
+grid-template ; grid-template:value, grid-template-areas:nil, grid-template-columns:nil, grid-template-rows:nil
+grid-area ; grid-area:value, grid-row:nil, grid-row-start:nil, grid-row-end:nil, grid-column:nil, grid-column-start:nil, grid-column-end:nil
+grid-row ; grid-row:value, grid-row-start:nil, grid-row-end:nil
+grid-column ; grid-column:value, grid-column-start:nil, grid-column-end:nil
+
+# =============================================================================
+# Animation & Transition
+# =============================================================================
+animation ; animation:value, animation-composition:nil, animation-name:nil, animation-duration:nil, animation-timing-function:nil, animation-delay:nil, animation-iteration-count:nil, animation-direction:nil, animation-fill-mode:nil, animation-play-state:nil, animation-range:nil, animation-range-end:nil, animation-range-start:nil, animation-timeline:nil
+animation-range ; animation-range:value, animation-range-end:nil, animation-range-start:nil
+transition ; transition:value, transition-behavior:nil, transition-delay:nil, transition-duration:nil, transition-property:nil, transition-timing-function:nil
+
+# =============================================================================
+# Background
+# =============================================================================
+background ; background:value, background-attachment:nil, background-clip:nil, background-color:nil, background-image:nil, background-origin:nil, background-position:nil, background-position-x:nil, background-position-y:nil, background-repeat:nil, background-size:nil
+background-position ; background-position:value, background-position-x:nil, background-position-y:nil
+
+# =============================================================================
+# Text
+# =============================================================================
+text-decoration ; text-decoration:value, text-decoration-color:nil, text-decoration-line:nil, text-decoration-style:nil, text-decoration-thickness:nil
+text-emphasis ; text-emphasis:value, text-emphasis-color:nil, text-emphasis-style:nil
+
+# =============================================================================
+# Outline
+# =============================================================================
+outline ; outline:value, outline-color:nil, outline-offset:nil, outline-style:nil, outline-width:nil
+
+# =============================================================================
+# Columns
+# =============================================================================
+columns ; columns:value, column-count:nil, column-width:nil
+column-rule ; column-rule:value, column-rule-color:nil, column-rule-style:nil, column-rule-width:nil
+
+# =============================================================================
+# Container
+# =============================================================================
+container ; container:value, container-name:nil, container-type:nil
+
+# =============================================================================
+# Font
+# =============================================================================
+font ; font:value, font-family:nil, font-size:nil, font-stretch:nil, font-style:nil, font-variant:nil, font-variant-alternates:nil, font-variant-caps:nil, font-variant-east-asian:nil, font-variant-emoji:nil, font-variant-ligatures:nil, font-variant-numeric:nil, font-variant-position:nil, font-weight:nil, line-height:nil
+font-variant ; font-variant:value, font-variant-alternates:nil, font-variant-caps:nil, font-variant-east-asian:nil, font-variant-emoji:nil, font-variant-ligatures:nil, font-variant-numeric:nil, font-variant-position:nil
+
+# =============================================================================
+# Mask
+# =============================================================================
+mask ; mask:value, mask-clip:nil, mask-composite:nil, mask-image:nil, mask-mode:nil, mask-origin:nil, mask-position:nil, mask-repeat:nil, mask-size:nil
+mask-border ; mask-border:value, mask-border-mode:nil, mask-border-outset:nil, mask-border-repeat:nil, mask-border-slice:nil, mask-border-source:nil, mask-border-width:nil
+
+# =============================================================================
+# Border Image
+# =============================================================================
+border-image ; border-image:value, border-image-outset:nil, border-image-repeat:nil, border-image-slice:nil, border-image-source:nil, border-image-width:nil
+
+# =============================================================================
+# Offset
+# =============================================================================
+offset ; offset:value, offset-anchor:nil, offset-distance:nil, offset-path:nil, offset-position:nil, offset-rotate:nil
+
+# =============================================================================
+# Place
+# =============================================================================
+place-content ; place-content:value, align-content:nil, justify-content:nil
+place-items ; place-items:value, align-items:nil, justify-items:nil
+place-self ; place-self:value, align-self:nil, justify-self:nil
+
+# =============================================================================
+# Scroll Margin
+# =============================================================================
+scroll-margin ; scroll-margin:value, scroll-margin-block:nil, scroll-margin-top:nil, scroll-margin-bottom:nil, scroll-margin-inline:nil, scroll-margin-inline-start:nil, scroll-margin-inline-end:nil, scroll-margin-left:nil, scroll-margin-right:nil
+scroll-margin-block ; scroll-margin-block:value, scroll-margin-top:nil, scroll-margin-bottom:nil
+scroll-margin-inline ; scroll-margin-inline:value, scroll-margin-inline-start:nil, scroll-margin-inline-end:nil, scroll-margin-left:nil, scroll-margin-right:nil
+scroll-margin-inline-start ; scroll-margin-inline-start:value, scroll-margin-left:nil, scroll-margin-right:nil
+scroll-margin-inline-end ; scroll-margin-inline-end:value, scroll-margin-left:nil, scroll-margin-right:nil
+scroll-margin-left ; scroll-margin-left:value, scroll-margin-inline-start:nil, scroll-margin-inline-end:nil
+scroll-margin-right ; scroll-margin-right:value, scroll-margin-inline-start:nil, scroll-margin-inline-end:nil
+scroll-margin-block-start ; scroll-margin-top:value
+scroll-margin-block-end ; scroll-margin-bottom:value
+
+# =============================================================================
+# Scroll Padding
+# =============================================================================
+scroll-padding ; scroll-padding:value, scroll-padding-block:nil, scroll-padding-top:nil, scroll-padding-bottom:nil, scroll-padding-inline:nil, scroll-padding-inline-start:nil, scroll-padding-inline-end:nil, scroll-padding-left:nil, scroll-padding-right:nil
+scroll-padding-block ; scroll-padding-block:value, scroll-padding-top:nil, scroll-padding-bottom:nil
+scroll-padding-inline ; scroll-padding-inline:value, scroll-padding-inline-start:nil, scroll-padding-inline-end:nil, scroll-padding-left:nil, scroll-padding-right:nil
+scroll-padding-inline-start ; scroll-padding-inline-start:value, scroll-padding-left:nil, scroll-padding-right:nil
+scroll-padding-inline-end ; scroll-padding-inline-end:value, scroll-padding-left:nil, scroll-padding-right:nil
+scroll-padding-left ; scroll-padding-left:value, scroll-padding-inline-start:nil, scroll-padding-inline-end:nil
+scroll-padding-right ; scroll-padding-right:value, scroll-padding-inline-start:nil, scroll-padding-inline-end:nil
+scroll-padding-block-start ; scroll-padding-top:value
+scroll-padding-block-end ; scroll-padding-bottom:value
+
+# =============================================================================
+# Scroll Snap & Timeline
+# =============================================================================
+scroll-snap-type ; scroll-snap-type:value, scroll-snap-type-x:nil, scroll-snap-type-y:nil
+scroll-timeline ; scroll-timeline:value, scroll-timeline-name:nil, scroll-timeline-axis:nil
+
+# =============================================================================
+# Contain Intrinsic Size (simple cases only)
+# =============================================================================
+contain-intrinsic-block-size ; contain-intrinsic-height:value
+contain-intrinsic-inline-size ; contain-intrinsic-width:value

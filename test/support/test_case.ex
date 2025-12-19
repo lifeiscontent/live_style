@@ -4,7 +4,6 @@ defmodule LiveStyle.TestCase do
 
   This module provides a consistent test environment with:
   - File-based storage with unique tmp paths for test isolation
-  - Access to the manifest via `get_manifest/0`
   - CSS generation via `generate_css/0`
   - Hash computation helpers
   - Per-process config overrides
@@ -15,16 +14,16 @@ defmodule LiveStyle.TestCase do
         use LiveStyle.TestCase, async: true
 
         test "example" do
-          manifest = get_manifest()
           css = generate_css()
           class = class_name("display", "flex")
+          metadata = LiveStyle.get_metadata(MyModule, :root)
         end
       end
 
   ## Options
 
   - `:async` - Whether tests can run in parallel (default: true)
-  - `:shorthand_strategy` - Shorthand expansion strategy (atom, module, or `{module, opts}` tuple)
+  - `:shorthand_behavior` - Shorthand expansion behavior (atom, module, or `{module, opts}` tuple)
   - `:class_name_prefix` - Prefix for generated class names
   - `:debug_class_names` - Include property names in class names
   - `:font_size_px_to_rem` - Convert font-size px values to rem
@@ -35,7 +34,7 @@ defmodule LiveStyle.TestCase do
   use ExUnit.CaseTemplate
 
   @config_keys [
-    :shorthand_strategy,
+    :shorthand_behavior,
     :class_name_prefix,
     :debug_class_names,
     :font_size_px_to_rem,
@@ -95,16 +94,21 @@ defmodule LiveStyle.TestCase do
 
     @doc """
     Gets the current manifest from storage.
+
+    DEPRECATED: Use `LiveStyle.get_metadata/2` instead for accessing specific entries.
+    This function will be removed in a future version.
     """
     def get_manifest do
       LiveStyle.Storage.read()
     end
 
     @doc """
-    Generates CSS from the current manifest.
+    Generates CSS from all registered styles.
+
+    This is a convenience wrapper around `LiveStyle.generate_css/0`.
     """
     def generate_css do
-      LiveStyle.CSS.generate(get_manifest())
+      LiveStyle.generate_css()
     end
 
     @doc """

@@ -336,8 +336,11 @@ defmodule LiveStyle.PseudoClassesTest do
 
   describe "form state pseudo-classes" do
     test ":disabled has priority offset 92" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoClassesTest.FormStatePseudoClasses.disabled"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoClassesTest.FormStatePseudoClasses,
+          {:class, :disabled}
+        )
 
       disabled = rule.atomic_classes["color"].classes[":disabled"]
       assert disabled.ltr =~ ":disabled{color:gray}"
@@ -346,8 +349,11 @@ defmodule LiveStyle.PseudoClassesTest do
     end
 
     test ":enabled has priority offset 91" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoClassesTest.FormStatePseudoClasses.enabled"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoClassesTest.FormStatePseudoClasses,
+          {:class, :enabled}
+        )
 
       enabled = rule.atomic_classes["opacity"].classes[":enabled"]
       # 3000 (opacity) + 91 (:enabled) = 3091
@@ -355,8 +361,11 @@ defmodule LiveStyle.PseudoClassesTest do
     end
 
     test ":checked has priority offset 101" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoClassesTest.FormStatePseudoClasses.checked"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoClassesTest.FormStatePseudoClasses,
+          {:class, :checked}
+        )
 
       checked = rule.atomic_classes["background-color"].classes[":checked"]
       # 3000 (background-color) + 101 (:checked) = 3101
@@ -364,8 +373,11 @@ defmodule LiveStyle.PseudoClassesTest do
     end
 
     test ":valid has priority offset 103" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoClassesTest.FormStatePseudoClasses.valid"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoClassesTest.FormStatePseudoClasses,
+          {:class, :valid}
+        )
 
       valid = rule.atomic_classes["border-color"].classes[":valid"]
       # 2000 (border-color shorthand) + 103 (:valid) = 2103
@@ -373,8 +385,11 @@ defmodule LiveStyle.PseudoClassesTest do
     end
 
     test ":invalid has priority offset 104" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoClassesTest.FormStatePseudoClasses.invalid"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoClassesTest.FormStatePseudoClasses,
+          {:class, :invalid}
+        )
 
       invalid = rule.atomic_classes["border-color"].classes[":invalid"]
       # 2000 (border-color shorthand) + 104 (:invalid) = 2104
@@ -382,8 +397,11 @@ defmodule LiveStyle.PseudoClassesTest do
     end
 
     test ":required has priority offset 93" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoClassesTest.FormStatePseudoClasses.required"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoClassesTest.FormStatePseudoClasses,
+          {:class, :required}
+        )
 
       required = rule.atomic_classes["border-style"].classes[":required"]
       # 2000 (border-style shorthand) + 93 (:required) = 2093
@@ -391,10 +409,11 @@ defmodule LiveStyle.PseudoClassesTest do
     end
 
     test ":placeholder-shown has priority offset 97" do
-      manifest = get_manifest()
-
       rule =
-        manifest.rules["LiveStyle.PseudoClassesTest.FormStatePseudoClasses.placeholder_shown"]
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoClassesTest.FormStatePseudoClasses,
+          {:class, :placeholder_shown}
+        )
 
       ps = rule.atomic_classes["color"].classes[":placeholder-shown"]
       # 3000 (color) + 97 (:placeholder-shown) = 3097
@@ -408,8 +427,11 @@ defmodule LiveStyle.PseudoClassesTest do
 
   describe "focus variant pseudo-classes" do
     test ":focus-visible has priority offset 160" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoClassesTest.FocusPseudoClasses.focus_visible"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoClassesTest.FocusPseudoClasses,
+          {:class, :focus_visible}
+        )
 
       fv = rule.atomic_classes["outline"].classes[":focus-visible"]
       assert fv.ltr =~ ":focus-visible{outline:2px solid blue}"
@@ -418,8 +440,11 @@ defmodule LiveStyle.PseudoClassesTest do
     end
 
     test ":focus-within has priority offset 140" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoClassesTest.FocusPseudoClasses.focus_within"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoClassesTest.FocusPseudoClasses,
+          {:class, :focus_within}
+        )
 
       fw = rule.atomic_classes["border-color"].classes[":focus-within"]
       # 2000 (border-color shorthand) + 140 (:focus-within) = 2140
@@ -433,8 +458,11 @@ defmodule LiveStyle.PseudoClassesTest do
 
   describe "tree-structural pseudo-classes" do
     test ":first-child has priority offset 52" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoClassesTest.TreeStructuralPseudoClasses.first_child"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoClassesTest.TreeStructuralPseudoClasses,
+          {:class, :first_child}
+        )
 
       fc = rule.atomic_classes["margin-top"].classes[":first-child"]
       # 4000 (margin-top physical) + 52 (:first-child) = 4052
@@ -442,8 +470,11 @@ defmodule LiveStyle.PseudoClassesTest do
     end
 
     test ":last-child has priority offset 54" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoClassesTest.TreeStructuralPseudoClasses.last_child"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoClassesTest.TreeStructuralPseudoClasses,
+          {:class, :last_child}
+        )
 
       lc = rule.atomic_classes["margin-bottom"].classes[":last-child"]
       # 4000 (margin-bottom physical) + 54 (:last-child) = 4054
@@ -451,8 +482,11 @@ defmodule LiveStyle.PseudoClassesTest do
     end
 
     test ":only-child has priority offset 56" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoClassesTest.TreeStructuralPseudoClasses.only_child"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoClassesTest.TreeStructuralPseudoClasses,
+          {:class, :only_child}
+        )
 
       oc = rule.atomic_classes["margin"].classes[":only-child"]
       # 1000 (margin shorthand) + 56 (:only-child) = 1056
@@ -460,10 +494,11 @@ defmodule LiveStyle.PseudoClassesTest do
     end
 
     test ":nth-child functional pseudo-class has priority offset 60" do
-      manifest = get_manifest()
-
       rule =
-        manifest.rules["LiveStyle.PseudoClassesTest.TreeStructuralPseudoClasses.nth_child_odd"]
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoClassesTest.TreeStructuralPseudoClasses,
+          {:class, :nth_child_odd}
+        )
 
       nth = rule.atomic_classes["background-color"].classes[":nth-child(odd)"]
       # 3000 (background-color) + 60 (:nth-child) = 3060
@@ -471,12 +506,11 @@ defmodule LiveStyle.PseudoClassesTest do
     end
 
     test ":nth-child with formula has priority offset 60" do
-      manifest = get_manifest()
-
       rule =
-        manifest.rules[
-          "LiveStyle.PseudoClassesTest.TreeStructuralPseudoClasses.nth_child_formula"
-        ]
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoClassesTest.TreeStructuralPseudoClasses,
+          {:class, :nth_child_formula}
+        )
 
       nth = rule.atomic_classes["background-color"].classes[":nth-child(2n+1)"]
       # 3000 (background-color) + 60 (:nth-child) = 3060
@@ -484,10 +518,11 @@ defmodule LiveStyle.PseudoClassesTest do
     end
 
     test ":nth-last-child has priority offset 61" do
-      manifest = get_manifest()
-
       rule =
-        manifest.rules["LiveStyle.PseudoClassesTest.TreeStructuralPseudoClasses.nth_last_child"]
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoClassesTest.TreeStructuralPseudoClasses,
+          {:class, :nth_last_child}
+        )
 
       nlc = rule.atomic_classes["opacity"].classes[":nth-last-child(2)"]
       # 3000 (opacity) + 61 (:nth-last-child) = 3061
@@ -501,8 +536,8 @@ defmodule LiveStyle.PseudoClassesTest do
 
   describe "link pseudo-classes" do
     test ":link has priority offset 80" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoClassesTest.LinkPseudoClasses.link"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.PseudoClassesTest.LinkPseudoClasses, {:class, :link})
 
       link = rule.atomic_classes["color"].classes[":link"]
       # 3000 (color) + 80 (:link) = 3080
@@ -510,8 +545,8 @@ defmodule LiveStyle.PseudoClassesTest do
     end
 
     test ":visited has priority offset 85" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoClassesTest.LinkPseudoClasses.link"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.PseudoClassesTest.LinkPseudoClasses, {:class, :link})
 
       visited = rule.atomic_classes["color"].classes[":visited"]
       # 3000 (color) + 85 (:visited) = 3085
@@ -519,8 +554,8 @@ defmodule LiveStyle.PseudoClassesTest do
     end
 
     test ":target has priority offset 84" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoClassesTest.LinkPseudoClasses.target"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.PseudoClassesTest.LinkPseudoClasses, {:class, :target})
 
       target = rule.atomic_classes["background-color"].classes[":target"]
       # 3000 (background-color) + 84 (:target) = 3084
@@ -534,8 +569,8 @@ defmodule LiveStyle.PseudoClassesTest do
 
   describe "other pseudo-classes" do
     test ":empty has priority offset 70" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoClassesTest.OtherPseudoClasses.empty"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.PseudoClassesTest.OtherPseudoClasses, {:class, :empty})
 
       empty = rule.atomic_classes["display"].classes[":empty"]
       # 3000 (display) + 70 (:empty) = 3070
@@ -543,8 +578,11 @@ defmodule LiveStyle.PseudoClassesTest do
     end
 
     test ":autofill has priority offset 110" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoClassesTest.OtherPseudoClasses.autofill"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoClassesTest.OtherPseudoClasses,
+          {:class, :autofill}
+        )
 
       autofill = rule.atomic_classes["background-color"].classes[":autofill"]
       # 3000 (background-color) + 110 (:autofill) = 3110
@@ -552,8 +590,11 @@ defmodule LiveStyle.PseudoClassesTest do
     end
 
     test ":fullscreen has priority offset 122" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoClassesTest.OtherPseudoClasses.fullscreen"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoClassesTest.OtherPseudoClasses,
+          {:class, :fullscreen}
+        )
 
       fs = rule.atomic_classes["width"].classes[":fullscreen"]
       # 4000 (width physical) + 122 (:fullscreen) = 4122
@@ -567,8 +608,11 @@ defmodule LiveStyle.PseudoClassesTest do
 
   describe "functional pseudo-classes" do
     test ":not() has priority offset 40" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoClassesTest.FunctionalPseudoClasses.not_disabled"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoClassesTest.FunctionalPseudoClasses,
+          {:class, :not_disabled}
+        )
 
       not_dis = rule.atomic_classes["opacity"].classes[":not(:disabled)"]
       # 3000 (opacity) + 40 (:not) = 3040
@@ -576,8 +620,11 @@ defmodule LiveStyle.PseudoClassesTest do
     end
 
     test ":is() has priority offset 40" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoClassesTest.FunctionalPseudoClasses.is_hover_focus"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoClassesTest.FunctionalPseudoClasses,
+          {:class, :is_hover_focus}
+        )
 
       is_hf = rule.atomic_classes["color"].classes[":is(:hover, :focus)"]
       # 3000 (color) + 40 (:is) = 3040
@@ -585,8 +632,11 @@ defmodule LiveStyle.PseudoClassesTest do
     end
 
     test ":where() has priority offset 40" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoClassesTest.FunctionalPseudoClasses.where_hover"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoClassesTest.FunctionalPseudoClasses,
+          {:class, :where_hover}
+        )
 
       where_h = rule.atomic_classes["color"].classes[":where(:hover)"]
       # 3000 (color) + 40 (:where) = 3040
@@ -594,8 +644,11 @@ defmodule LiveStyle.PseudoClassesTest do
     end
 
     test ":has() has priority offset 45" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoClassesTest.FunctionalPseudoClasses.has_focus"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoClassesTest.FunctionalPseudoClasses,
+          {:class, :has_focus}
+        )
 
       has_f = rule.atomic_classes["border-color"].classes[":has(:focus)"]
       # 2000 (border-color shorthand) + 45 (:has) = 2045
@@ -609,8 +662,11 @@ defmodule LiveStyle.PseudoClassesTest do
 
   describe "css output format" do
     test "pseudo-class CSS is properly formatted" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoClassesTest.FormStatePseudoClasses.disabled"]
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoClassesTest.FormStatePseudoClasses,
+          {:class, :disabled}
+        )
 
       disabled = rule.atomic_classes["color"].classes[":disabled"]
       # Format should be: .{class}:disabled{property:value}
@@ -618,10 +674,11 @@ defmodule LiveStyle.PseudoClassesTest do
     end
 
     test "functional pseudo-class CSS preserves arguments" do
-      manifest = get_manifest()
-
       rule =
-        manifest.rules["LiveStyle.PseudoClassesTest.TreeStructuralPseudoClasses.nth_child_odd"]
+        LiveStyle.get_metadata(
+          LiveStyle.PseudoClassesTest.TreeStructuralPseudoClasses,
+          {:class, :nth_child_odd}
+        )
 
       nth = rule.atomic_classes["background-color"].classes[":nth-child(odd)"]
       # Format should include the argument

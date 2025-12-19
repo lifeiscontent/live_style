@@ -30,7 +30,7 @@ defmodule LiveStyle.Class do
   alias LiveStyle.Class.CSS, as: ClassCSS
   alias LiveStyle.{Hash, Include, Manifest, Priority, Value}
   alias LiveStyle.MediaQuery.Transform, as: MediaQueryTransform
-  alias LiveStyle.Shorthand.Strategy, as: ShorthandStrategy
+  alias LiveStyle.ShorthandBehavior
 
   @doc """
   Defines a static style class.
@@ -66,9 +66,9 @@ defmodule LiveStyle.Class do
     # This avoids unnecessary writes during test parallel loading while
     # still updating when source code changes in development
     LiveStyle.Storage.update(fn manifest ->
-      case Manifest.get_rule(manifest, key) do
+      case Manifest.get_class(manifest, key) do
         ^entry -> manifest
-        _ -> Manifest.put_rule(manifest, key, entry)
+        _ -> Manifest.put_class(manifest, key, entry)
       end
     end)
 
@@ -109,9 +109,9 @@ defmodule LiveStyle.Class do
 
     # Only update if the entry has changed (or doesn't exist)
     LiveStyle.Storage.update(fn manifest ->
-      case Manifest.get_rule(manifest, key) do
+      case Manifest.get_class(manifest, key) do
         ^entry -> manifest
-        _ -> Manifest.put_rule(manifest, key, entry)
+        _ -> Manifest.put_class(manifest, key, entry)
       end
     end)
 
@@ -133,7 +133,7 @@ defmodule LiveStyle.Class do
     key = Manifest.simple_key(module, name)
     manifest = LiveStyle.Storage.read()
 
-    case Manifest.get_rule(manifest, key) do
+    case Manifest.get_class(manifest, key) do
       nil ->
         raise ArgumentError, """
         Unknown class: #{inspect(module)}.#{name}
@@ -253,7 +253,7 @@ defmodule LiveStyle.Class do
     expanded =
       declarations
       |> Enum.flat_map(fn {prop, value} ->
-        ShorthandStrategy.expand_declaration(prop, value)
+        ShorthandBehavior.expand_declaration(prop, value)
       end)
 
     # Separate nil values from non-nil values
@@ -339,7 +339,7 @@ defmodule LiveStyle.Class do
       css_prop = Value.to_css_property(prop)
 
       # Use style resolution for conditional properties
-      ShorthandStrategy.expand_shorthand_conditions(prop, css_prop, value_map)
+      ShorthandBehavior.expand_shorthand_conditions(prop, css_prop, value_map)
     end)
     |> Enum.flat_map(&process_expanded_conditional/1)
     |> Map.new()

@@ -100,8 +100,7 @@ defmodule LiveStyle.KeyframesTest do
       #   ltr = "@keyframes x2up61p-B{from{color:red;}to{color:blue;}}"
       #   rtl = null
       #   priority = 0
-      manifest = get_manifest()
-      keyframes = manifest.keyframes["LiveStyle.KeyframesTest.BasicKeyframes.color_change"]
+      keyframes = LiveStyle.get_metadata(BasicKeyframes, {:keyframes, :color_change})
 
       # Exact StyleX hash match
       assert keyframes.css_name == "x2up61p-B"
@@ -117,10 +116,8 @@ defmodule LiveStyle.KeyframesTest do
     end
 
     test "keyframes name is content-hashed" do
-      manifest = get_manifest()
-
-      fade = manifest.keyframes["LiveStyle.KeyframesTest.BasicKeyframes.fade"]
-      color_change = manifest.keyframes["LiveStyle.KeyframesTest.BasicKeyframes.color_change"]
+      fade = LiveStyle.get_metadata(BasicKeyframes, {:keyframes, :fade})
+      color_change = LiveStyle.get_metadata(BasicKeyframes, {:keyframes, :color_change})
 
       # Different content should produce different hashes
       assert fade.css_name != color_change.css_name
@@ -134,9 +131,8 @@ defmodule LiveStyle.KeyframesTest do
   describe "keyframes referenced in animation-name" do
     test "animation-name references the keyframes name" do
       # StyleX: ".xx2qnu0{animation-name:x2up61p-B}" with priority 3000
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.KeyframesTest.BasicKeyframes.animated"]
-      keyframes = manifest.keyframes["LiveStyle.KeyframesTest.BasicKeyframes.fade"]
+      rule = LiveStyle.get_metadata(BasicKeyframes, {:class, :animated})
+      keyframes = LiveStyle.get_metadata(BasicKeyframes, {:keyframes, :fade})
 
       # The animation-name atomic class should reference the keyframes name
       animation_name = rule.atomic_classes["animation-name"]
@@ -148,8 +144,7 @@ defmodule LiveStyle.KeyframesTest do
 
   describe "percentage keyframes" do
     test "supports percentage-based keyframes" do
-      manifest = get_manifest()
-      keyframes = manifest.keyframes["LiveStyle.KeyframesTest.PercentageKeyframes.bounce"]
+      keyframes = LiveStyle.get_metadata(PercentageKeyframes, {:keyframes, :bounce})
 
       # Should have percentage frames in the LTR output
       assert keyframes.ltr =~ "0%{"
@@ -163,9 +158,8 @@ defmodule LiveStyle.KeyframesTest do
 
   describe "inline keyframes" do
     test "inline keyframes are generated and referenced" do
-      manifest = get_manifest()
-      keyframes = manifest.keyframes["LiveStyle.KeyframesTest.InlineKeyframes.pulse"]
-      rule = manifest.rules["LiveStyle.KeyframesTest.InlineKeyframes.pulse"]
+      keyframes = LiveStyle.get_metadata(InlineKeyframes, {:keyframes, :pulse})
+      rule = LiveStyle.get_metadata(InlineKeyframes, {:class, :pulse})
 
       # Keyframes should exist
       assert keyframes.css_name =~ ~r/^x[a-z0-9]+-B$/
@@ -180,8 +174,7 @@ defmodule LiveStyle.KeyframesTest do
   describe "multiple properties in keyframes" do
     test "keyframes can have multiple properties, sorted alphabetically" do
       # StyleX sorts properties alphabetically within each frame
-      manifest = get_manifest()
-      keyframes = manifest.keyframes["LiveStyle.KeyframesTest.MultipleProperties.slide_in"]
+      keyframes = LiveStyle.get_metadata(MultipleProperties, {:keyframes, :slide_in})
 
       # Should have both properties
       assert keyframes.ltr =~ "opacity"
@@ -196,11 +189,12 @@ defmodule LiveStyle.KeyframesTest do
   describe "keyframes priority" do
     test "keyframes have priority 0" do
       # StyleX: keyframes always have priority 0 (lowest)
-      manifest = get_manifest()
-
-      Enum.each(manifest.keyframes, fn {_key, keyframes} ->
-        assert keyframes.priority == 0
-      end)
+      # Test each keyframes module
+      assert LiveStyle.get_metadata(BasicKeyframes, {:keyframes, :color_change}).priority == 0
+      assert LiveStyle.get_metadata(BasicKeyframes, {:keyframes, :fade}).priority == 0
+      assert LiveStyle.get_metadata(PercentageKeyframes, {:keyframes, :bounce}).priority == 0
+      assert LiveStyle.get_metadata(InlineKeyframes, {:keyframes, :pulse}).priority == 0
+      assert LiveStyle.get_metadata(MultipleProperties, {:keyframes, :slide_in}).priority == 0
     end
   end
 end

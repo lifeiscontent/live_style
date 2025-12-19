@@ -238,8 +238,7 @@ defmodule LiveStyle.StyleXParityTest do
       # ["xrkmrrc", {ltr: ".xrkmrrc{background-color:red}", rtl: null}, 3000]
       # ["xju2f9n", {ltr: ".xju2f9n{color:blue}", rtl: null}, 3000]
 
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.StyleXParityTest.StyleObject.root"]
+      rule = LiveStyle.get_metadata(LiveStyle.StyleXParityTest.StyleObject, {:class, :root})
 
       bg = rule.atomic_classes["background-color"]
       assert bg.class == "xrkmrrc"
@@ -263,24 +262,33 @@ defmodule LiveStyle.StyleXParityTest do
       # ["x1prwzq3", {ltr: ".x1prwzq3{color:green}", rtl: null}, 3000]
       # ["x125ip1n", {ltr: ".x125ip1n{color:purple}", rtl: null}, 3000]
 
-      manifest = get_manifest()
+      root =
+        LiveStyle.get_metadata(LiveStyle.StyleXParityTest.StyleObjectMultiple, {:class, :root})
 
-      root = manifest.rules["LiveStyle.StyleXParityTest.StyleObjectMultiple.root"]
       assert root.atomic_classes["background-color"].class == "xrkmrrc"
       assert root.atomic_classes["background-color"].ltr == ".xrkmrrc{background-color:red}"
       assert root.atomic_classes["background-color"].priority == 3000
 
-      other = manifest.rules["LiveStyle.StyleXParityTest.StyleObjectMultiple.other"]
+      other =
+        LiveStyle.get_metadata(LiveStyle.StyleXParityTest.StyleObjectMultiple, {:class, :other})
+
       assert other.atomic_classes["color"].class == "xju2f9n"
       assert other.atomic_classes["color"].ltr == ".xju2f9n{color:blue}"
       assert other.atomic_classes["color"].priority == 3000
 
-      bar_baz = manifest.rules["LiveStyle.StyleXParityTest.StyleObjectMultiple.bar_baz"]
+      bar_baz =
+        LiveStyle.get_metadata(LiveStyle.StyleXParityTest.StyleObjectMultiple, {:class, :bar_baz})
+
       assert bar_baz.atomic_classes["color"].class == "x1prwzq3"
       assert bar_baz.atomic_classes["color"].ltr == ".x1prwzq3{color:green}"
       assert bar_baz.atomic_classes["color"].priority == 3000
 
-      purple = manifest.rules["LiveStyle.StyleXParityTest.StyleObjectMultiple.purple_color"]
+      purple =
+        LiveStyle.get_metadata(
+          LiveStyle.StyleXParityTest.StyleObjectMultiple,
+          {:class, :purple_color}
+        )
+
       assert purple.atomic_classes["color"].class == "x125ip1n"
       assert purple.atomic_classes["color"].ltr == ".x125ip1n{color:purple}"
       assert purple.atomic_classes["color"].priority == 3000
@@ -294,8 +302,7 @@ defmodule LiveStyle.StyleXParityTest do
       # ["x1p9b6ba", {ltr: ".x1p9b6ba{--otherColor:green}", rtl: null}, 1]
       # ["x40g909", {ltr: ".x40g909{--foo:10}", rtl: null}, 1]
 
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.StyleXParityTest.CustomProperties.root"]
+      rule = LiveStyle.get_metadata(LiveStyle.StyleXParityTest.CustomProperties, {:class, :root})
 
       bg = rule.atomic_classes["--background-color"]
       assert bg.class == "xgau0yw"
@@ -322,8 +329,7 @@ defmodule LiveStyle.StyleXParityTest do
       # Expected StyleX output:
       # ["x87ps6o", {ltr: ".x87ps6o{user-select:none}", rtl: null}, 3000]
 
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.StyleXParityTest.VendorPrefixes.root"]
+      rule = LiveStyle.get_metadata(LiveStyle.StyleXParityTest.VendorPrefixes, {:class, :root})
 
       user_select = rule.atomic_classes["user-select"]
       assert user_select.class == "x87ps6o"
@@ -338,8 +344,7 @@ defmodule LiveStyle.StyleXParityTest do
       # Expected StyleX output:
       # ["x1ruww2u", {ltr: ".x1ruww2u{position:sticky;position:fixed}", rtl: null}, 3000]
 
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.StyleXParityTest.ArrayFallbacks.root"]
+      rule = LiveStyle.get_metadata(LiveStyle.StyleXParityTest.ArrayFallbacks, {:class, :root})
 
       position = rule.atomic_classes["position"]
       assert position.class == "x1ruww2u"
@@ -355,8 +360,7 @@ defmodule LiveStyle.StyleXParityTest do
       # ["x1gykpug", {ltr: ".x1gykpug:hover{background-color:red}", rtl: null}, 3130]
       # ["x17z2mba", {ltr: ".x17z2mba:hover{color:blue}", rtl: null}, 3130]
 
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.StyleXParityTest.ValidPseudoClass.root"]
+      rule = LiveStyle.get_metadata(LiveStyle.StyleXParityTest.ValidPseudoClass, {:class, :root})
 
       bg = rule.atomic_classes["background-color"].classes[":hover"]
       assert bg.class == "x1gykpug"
@@ -380,8 +384,7 @@ defmodule LiveStyle.StyleXParityTest do
       # ["x1wvtd7d", {ltr: ".x1wvtd7d:focus{color:yellow}", rtl: null}, 3150]
       # ["x126ychx", {ltr: ".x126ychx:nth-child(2n){color:purple}", rtl: null}, 3060]
 
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.StyleXParityTest.PseudoClassOrder.root"]
+      rule = LiveStyle.get_metadata(LiveStyle.StyleXParityTest.PseudoClassOrder, {:class, :root})
       classes = rule.atomic_classes["color"].classes
 
       hover = classes[":hover"]
@@ -413,8 +416,9 @@ defmodule LiveStyle.StyleXParityTest do
       # Note: Both :hover:active and :active:hover produce same class because
       # the value is the same and pseudos are sorted alphabetically
 
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.StyleXParityTest.NestedPseudoSameValue.root"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.StyleXParityTest.NestedPseudoSameValue, {:class, :root})
+
       classes = rule.atomic_classes["color"].classes
 
       # The key will be the combined selector as written, but both should
@@ -432,8 +436,7 @@ defmodule LiveStyle.StyleXParityTest do
       # ["x16oeupf", {ltr: ".x16oeupf::before{color:red}", rtl: null}, 8000]
       # ["xdaarc3", {ltr: ".xdaarc3::after{color:blue}", rtl: null}, 8000]
 
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.StyleXParityTest.BeforeAfter.foo"]
+      rule = LiveStyle.get_metadata(LiveStyle.StyleXParityTest.BeforeAfter, {:class, :foo})
 
       before = rule.atomic_classes["color::before"]
       assert before.class == "x16oeupf"
@@ -455,8 +458,7 @@ defmodule LiveStyle.StyleXParityTest do
       # ["x16oeupf", {ltr: ".x16oeupf::before{color:red}", rtl: null}, 8000]
       # ["xeb2lg0", {ltr: ".xeb2lg0::before:hover{color:blue}", rtl: null}, 8130]
 
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.StyleXParityTest.BeforeWithPseudo.foo"]
+      rule = LiveStyle.get_metadata(LiveStyle.StyleXParityTest.BeforeWithPseudo, {:class, :foo})
 
       default = rule.atomic_classes["color::before"]
       assert default.class == "x16oeupf"
@@ -476,8 +478,8 @@ defmodule LiveStyle.StyleXParityTest do
       # Expected StyleX output:
       # ["x2up61p-B", {ltr: "@keyframes x2up61p-B{from{color:red;}to{color:blue;}}", rtl: null}, 0]
 
-      manifest = get_manifest()
-      keyframes = manifest.keyframes["LiveStyle.StyleXParityTest.KeyframesObject.name"]
+      keyframes =
+        LiveStyle.get_metadata(LiveStyle.StyleXParityTest.KeyframesObject, {:keyframes, :name})
 
       assert keyframes.css_name == "x2up61p-B"
       assert keyframes.ltr == "@keyframes x2up61p-B{from{color:red;}to{color:blue;}}"
@@ -493,8 +495,7 @@ defmodule LiveStyle.StyleXParityTest do
       # ["xw6up8c", {ltr: "@media ...{.xw6up8c.xw6up8c{background-color:blue}}", rtl: null}, 3200]
       # ["x1ssfqz5", {ltr: "@media (min-width: 2000px){.x1ssfqz5.x1ssfqz5{background-color:purple}}", rtl: null}, 3200]
 
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.StyleXParityTest.MediaQueries.root"]
+      rule = LiveStyle.get_metadata(LiveStyle.StyleXParityTest.MediaQueries, {:class, :root})
       classes = rule.atomic_classes["background-color"].classes
 
       default = classes[:default]
@@ -528,8 +529,7 @@ defmodule LiveStyle.StyleXParityTest do
       # ["x6m3b6q", {ltr: "@supports (hover: hover){.x6m3b6q.x6m3b6q{background-color:blue}}", rtl: null}, 3030]
       # ["x6um648", {ltr: "@supports not (hover: hover){.x6um648.x6um648{background-color:purple}}", rtl: null}, 3030]
 
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.StyleXParityTest.SupportsQueries.root"]
+      rule = LiveStyle.get_metadata(LiveStyle.StyleXParityTest.SupportsQueries, {:class, :root})
       classes = rule.atomic_classes["background-color"].classes
 
       default = classes[:default]
@@ -562,8 +562,9 @@ defmodule LiveStyle.StyleXParityTest do
       # ["x1w3nbkt", {ltr: "@media (min-width: 800px){.x1w3nbkt.x1w3nbkt{font-size:2rem}}", rtl: null}, 3200]
       # ["xicay7j", {ltr: "@media (min-width: 800px){.xicay7j.xicay7j:hover{font-size:2.2rem}}", rtl: null}, 3330]
 
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.StyleXParityTest.MediaQueryWithPseudo.root"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.StyleXParityTest.MediaQueryWithPseudo, {:class, :root})
+
       classes = rule.atomic_classes["font-size"].classes
 
       default = classes[:default]
@@ -607,10 +608,11 @@ defmodule LiveStyle.StyleXParityTest do
       # Expected StyleX output:
       # ["xchu1hv", {ltr: "::view-transition-group(*.xchu1hv){...}...", rtl: null}, 1]
 
-      manifest = get_manifest()
-
       view_transition =
-        manifest.view_transitions["LiveStyle.StyleXParityTest.ViewTransitionBasic.test"]
+        LiveStyle.get_metadata(
+          LiveStyle.StyleXParityTest.ViewTransitionBasic,
+          {:view_transition, :test}
+        )
 
       assert view_transition.css_name == "xchu1hv"
     end
@@ -647,22 +649,29 @@ defmodule LiveStyle.StyleXParityTest do
       # fadeOut: "x1jn504y-B"
       # cls: "xfh0f9i"
 
-      manifest = get_manifest()
-
       # Verify keyframes hashes
       fade_in =
-        manifest.keyframes["LiveStyle.StyleXParityTest.ViewTransitionWithKeyframes.fade_in"]
+        LiveStyle.get_metadata(
+          LiveStyle.StyleXParityTest.ViewTransitionWithKeyframes,
+          {:keyframes, :fade_in}
+        )
 
       assert fade_in.css_name == "x18re5ia-B"
 
       fade_out =
-        manifest.keyframes["LiveStyle.StyleXParityTest.ViewTransitionWithKeyframes.fade_out"]
+        LiveStyle.get_metadata(
+          LiveStyle.StyleXParityTest.ViewTransitionWithKeyframes,
+          {:keyframes, :fade_out}
+        )
 
       assert fade_out.css_name == "x1jn504y-B"
 
       # Verify view transition hash
       view_transition =
-        manifest.view_transitions["LiveStyle.StyleXParityTest.ViewTransitionWithKeyframes.test"]
+        LiveStyle.get_metadata(
+          LiveStyle.StyleXParityTest.ViewTransitionWithKeyframes,
+          {:view_transition, :test}
+        )
 
       assert view_transition.css_name == "xfh0f9i"
     end
@@ -690,8 +699,11 @@ defmodule LiveStyle.StyleXParityTest do
       # Expected StyleX output:
       # ["--xhs37kq", {ltr: "@position-try --xhs37kq {...}", rtl: ...}, 0]
 
-      manifest = get_manifest()
-      position_try = manifest.position_try["LiveStyle.StyleXParityTest.PositionTryBasic.test"]
+      position_try =
+        LiveStyle.get_metadata(
+          LiveStyle.StyleXParityTest.PositionTryBasic,
+          {:position_try, :test}
+        )
 
       assert position_try.css_name == "--xhs37kq"
     end
@@ -718,10 +730,11 @@ defmodule LiveStyle.StyleXParityTest do
       # Expected StyleX output from test:
       # ["--x1oyda6q", ...]
 
-      manifest = get_manifest()
-
       position_try =
-        manifest.position_try["LiveStyle.StyleXParityTest.PositionTryWithoutAnchor.test"]
+        LiveStyle.get_metadata(
+          LiveStyle.StyleXParityTest.PositionTryWithoutAnchor,
+          {:position_try, :test}
+        )
 
       assert position_try.css_name == "--x1oyda6q"
     end

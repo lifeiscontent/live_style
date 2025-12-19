@@ -46,13 +46,17 @@ defmodule LiveStyle.Data.Parser do
   @doc """
   Parses property priorities from data file.
   Returns a map of CSS property names to category atoms.
+
+  Category names use kebab-case in the data file and are converted
+  to snake_case atoms during parsing.
   """
   def property_priorities do
     "property_priorities.txt"
     |> read_data_lines()
     |> Enum.map(fn line ->
       [property, category] = String.split(line, ";", parts: 2)
-      {String.trim(property), String.to_atom(String.trim(category))}
+      # Convert kebab-case category to snake_case atom
+      {String.trim(property), css_to_atom(String.trim(category))}
     end)
     |> Map.new()
   end
@@ -155,15 +159,38 @@ defmodule LiveStyle.Data.Parser do
   @doc """
   Parses shorthand expansions from data file.
   Returns a map of CSS property names to expansion function atoms.
+
+  The data file contains pure CSS property relationships:
+  - `property` - has its own expansion function
+  - `property ; canonical` - is an alias for canonical property
+
+  The code derives function names: `expand_<property>` or `expand_<canonical>`
   """
-  def shorthand_expansions do
-    "shorthand_expansions.txt"
+  def shorthand_properties do
+    "shorthand_properties.txt"
     |> read_data_lines()
     |> Enum.map(fn line ->
-      [property, func] = String.split(line, ";", parts: 2)
-      {String.trim(property), String.to_atom(String.trim(func))}
+      case String.split(line, ";", parts: 2) do
+        [property, canonical] ->
+          # Alias: use the canonical property's expansion function
+          prop = String.trim(property)
+          canonical_prop = String.trim(canonical)
+          {prop, to_expand_fn(canonical_prop)}
+
+        [property] ->
+          # Has its own expansion function
+          prop = String.trim(property)
+          {prop, to_expand_fn(prop)}
+      end
     end)
     |> Map.new()
+  end
+
+  # Derives the expansion function name from a property name
+  # e.g., "margin-block" -> :expand_margin_block
+  defp to_expand_fn(property) do
+    ("expand_" <> String.replace(property, "-", "_"))
+    |> String.to_atom()
   end
 
   @doc """
@@ -223,24 +250,64 @@ defmodule LiveStyle.Data.Parser do
   Parses simple expansion definitions from data file.
   Returns a list of {function_name, [{property, value_type}, ...]} tuples.
 
-  Format: function_name ; prop1:value, prop2:nil, ...
+  Format: source-property ; target-property:value-type, ...
+
+  The data file contains pure CSS property relationships.
+  The code derives function names: `expand_<source-property>`
   """
-  def simple_expansions do
-    "simple_expansions.txt"
+  def keep_shorthands_expansions do
+    "keep_shorthands_expansions.txt"
     |> read_data_lines()
     |> Enum.map(fn line ->
-      [func_name, expansions] = String.split(line, ";", parts: 2)
-      func_atom = String.to_atom(String.trim(func_name))
+      [source_prop, expansions] = String.split(line, ";", parts: 2)
+      # Derive function name from source property
+      func_atom = to_expand_fn(String.trim(source_prop))
 
       props =
         expansions
         |> String.split(",")
         |> Enum.map(fn prop_def ->
           [prop, type] = String.split(String.trim(prop_def), ":")
-          {String.to_atom(String.trim(prop)), String.to_atom(String.trim(type))}
+          # Convert kebab-case property to snake_case atom
+          prop_atom = css_to_atom(String.trim(prop))
+          {prop_atom, String.to_atom(String.trim(type))}
         end)
 
       {func_atom, props}
     end)
+  end
+
+  @doc """
+  Parses longhand expansion definitions from data file.
+  Returns a map of CSS property names to {pattern, [longhand_atoms]} tuples.
+
+  Format: property ; pattern ; longhand-1, longhand-2, ...
+
+  Used to generate both get_longhand_properties/1 and do_expand_to_longhands/4.
+  """
+  def expand_to_longhands_expansions do
+    "expand_to_longhands_expansions.txt"
+    |> read_data_lines()
+    |> Enum.map(fn line ->
+      [property, pattern, longhands] = String.split(line, ";", parts: 3)
+
+      property = String.trim(property)
+      pattern = String.to_atom(String.trim(pattern))
+
+      longhand_atoms =
+        longhands
+        |> String.split(",")
+        |> Enum.map(&css_to_atom(String.trim(&1)))
+
+      {property, {pattern, longhand_atoms}}
+    end)
+    |> Map.new()
+  end
+
+  # Converts CSS kebab-case property name to Elixir snake_case atom
+  defp css_to_atom(css_property) do
+    css_property
+    |> String.replace("-", "_")
+    |> String.to_atom()
   end
 end

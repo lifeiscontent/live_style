@@ -26,8 +26,8 @@ defmodule LiveStyle.Data do
   @time_properties_path Path.join(@data_dir, "time_properties.txt")
   @external_resource @time_properties_path
 
-  @shorthand_expansions_path Path.join(@data_dir, "shorthand_expansions.txt")
-  @external_resource @shorthand_expansions_path
+  @shorthand_properties_path Path.join(@data_dir, "shorthand_properties.txt")
+  @external_resource @shorthand_properties_path
 
   @disallowed_shorthands_path Path.join(@data_dir, "disallowed_shorthands.txt")
   @external_resource @disallowed_shorthands_path
@@ -44,15 +44,18 @@ defmodule LiveStyle.Data do
   @logical_values_path Path.join(@data_dir, "logical_values.txt")
   @external_resource @logical_values_path
 
-  @simple_expansions_path Path.join(@data_dir, "simple_expansions.txt")
-  @external_resource @simple_expansions_path
+  @keep_shorthands_expansions_path Path.join(@data_dir, "keep_shorthands_expansions.txt")
+  @external_resource @keep_shorthands_expansions_path
+
+  @expand_to_longhands_expansions_path Path.join(@data_dir, "expand_to_longhands_expansions.txt")
+  @external_resource @expand_to_longhands_expansions_path
 
   # Load all data at compile time
   @property_priorities Parser.property_priorities()
   @pseudo_priorities Parser.pseudo_priorities()
   @unitless_properties Parser.unitless_properties()
   @time_properties Parser.time_properties()
-  @shorthand_expansions Parser.shorthand_expansions()
+  @shorthand_properties Parser.shorthand_properties()
   @disallowed_shorthands Parser.disallowed_shorthands()
   @disallowed_shorthands_with_messages Parser.disallowed_shorthands_with_messages()
   @rtl_value_properties Parser.rtl_value_properties()
@@ -94,7 +97,7 @@ defmodule LiveStyle.Data do
   def pseudo_priorities, do: @pseudo_priorities
   def unitless_properties, do: @unitless_properties
   def time_properties, do: @time_properties
-  def shorthand_expansions, do: @shorthand_expansions
+  def shorthand_properties, do: @shorthand_properties
   def disallowed_shorthands, do: @disallowed_shorthands
   def disallowed_shorthands_with_messages, do: @disallowed_shorthands_with_messages
   def rtl_value_properties, do: @rtl_value_properties
@@ -107,7 +110,11 @@ defmodule LiveStyle.Data do
   def shorthands_of_longhands, do: @shorthands_of_longhands
   def longhand_physical, do: @longhand_physical
 
-  # Simple expansions loaded at compile time
-  @simple_expansions Parser.simple_expansions()
-  def simple_expansions, do: @simple_expansions
+  # KeepShorthands strategy expansions
+  @keep_shorthands_expansions Parser.keep_shorthands_expansions()
+  def keep_shorthands_expansions, do: @keep_shorthands_expansions
+
+  # ExpandToLonghands strategy expansions
+  @expand_to_longhands_expansions Parser.expand_to_longhands_expansions()
+  def expand_to_longhands_expansions, do: @expand_to_longhands_expansions
 end

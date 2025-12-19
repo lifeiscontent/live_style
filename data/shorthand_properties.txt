@@ -1,0 +1,233 @@
+# shorthand_properties.txt
+# CSS shorthand properties that require expansion
+#
+# Format: property
+# or for aliases: alias ; canonical-property
+#
+# This file lists all shorthand properties and their aliases.
+# Used by all shorthand strategies to identify which properties need expansion.
+
+# Margin
+margin
+margin-horizontal
+margin-vertical
+margin-start
+margin-end
+margin-left
+margin-right
+margin-block ; margin-vertical
+margin-block-start
+margin-block-end
+margin-inline ; margin-horizontal
+margin-inline-start ; margin-start
+margin-inline-end ; margin-end
+
+# Padding
+padding
+padding-horizontal
+padding-vertical
+padding-start
+padding-end
+padding-left
+padding-right
+padding-block ; padding-vertical
+padding-block-start
+padding-block-end
+padding-inline ; padding-horizontal
+padding-inline-start ; padding-start
+padding-inline-end ; padding-end
+
+# Gap
+gap
+grid-gap ; gap
+grid-row-gap
+grid-column-gap
+
+# Overflow
+overflow
+overflow-block
+overflow-inline
+
+# Border radius
+border-radius
+border-top-start-radius
+border-top-end-radius
+border-bottom-start-radius
+border-bottom-end-radius
+border-start-start-radius
+border-start-end-radius
+border-end-start-radius
+border-end-end-radius
+border-top-left-radius
+border-top-right-radius
+border-bottom-left-radius
+border-bottom-right-radius
+
+# Border
+border
+border-color
+border-style
+border-width
+border-horizontal
+border-vertical
+border-block ; border-vertical
+border-inline ; border-horizontal
+border-block-start
+border-block-end
+border-inline-start
+border-inline-end
+
+# Border width
+border-block-width
+border-block-start-width
+border-block-end-width
+border-inline-width
+border-inline-start-width
+border-inline-end-width
+border-left-width
+border-right-width
+border-horizontal-width ; border-inline-width
+border-vertical-width ; border-block-width
+
+# Border style
+border-block-style
+border-block-start-style
+border-block-end-style
+border-inline-style
+border-inline-start-style
+border-inline-end-style
+border-left-style
+border-right-style
+border-horizontal-style ; border-inline-style
+border-vertical-style ; border-block-style
+
+# Border color
+border-block-color
+border-block-start-color
+border-block-end-color
+border-inline-color
+border-inline-start-color
+border-inline-end-color
+border-left-color
+border-right-color
+border-horizontal-color ; border-inline-color
+border-vertical-color ; border-block-color
+
+# Border sides
+border-top
+border-bottom
+border-left
+border-right
+border-start ; border-inline-start
+border-end ; border-inline-end
+
+# Inset
+inset
+inset-inline
+inset-block
+start
+end
+left
+right
+inset-block-start
+inset-block-end
+inset-inline-start ; start
+inset-inline-end ; end
+
+# Logical size
+block-size
+inline-size
+min-block-size
+min-inline-size
+max-block-size
+max-inline-size
+
+# List style
+list-style
+
+# Contain intrinsic size
+contain-intrinsic-size
+contain-intrinsic-block-size
+contain-intrinsic-inline-size
+
+# Flex
+flex
+flex-flow
+
+# Transition & animation
+transition
+animation
+animation-range
+
+# Outline
+outline
+
+# Text
+text-decoration
+text-emphasis
+
+# Placement
+place-content
+place-items
+place-self
+
+# Background
+background
+background-position
+
+# Columns
+columns
+column-rule
+
+# Container
+container
+
+# Grid
+grid
+grid-template
+grid-area
+grid-row
+grid-column
+
+# Scroll margin
+scroll-margin
+scroll-margin-block
+scroll-margin-inline
+scroll-margin-inline-start
+scroll-margin-inline-end
+scroll-margin-left
+scroll-margin-right
+scroll-margin-block-start
+scroll-margin-block-end
+
+# Scroll padding
+scroll-padding
+scroll-padding-block
+scroll-padding-inline
+scroll-padding-inline-start
+scroll-padding-inline-end
+scroll-padding-left
+scroll-padding-right
+scroll-padding-block-start
+scroll-padding-block-end
+
+# Scroll snap & timeline
+scroll-snap-type
+scroll-timeline
+
+# Overscroll
+overscroll-behavior
+
+# Font
+font
+font-variant
+
+# Mask
+mask
+mask-border
+
+# Border image
+border-image
+
+# Offset
+offset

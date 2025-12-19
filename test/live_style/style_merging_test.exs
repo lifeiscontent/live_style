@@ -172,13 +172,8 @@ defmodule LiveStyle.StyleMergingTest do
       # StyleX: stylex.props([styles.red, styles.blue]) -> className: "xju2f9n" (blue only)
       class = LiveStyle.get_css_class(ColorCollision, [:red, :blue])
 
-      manifest = get_manifest()
-
-      red_rule =
-        LiveStyle.Manifest.get_rule(manifest, "LiveStyle.StyleMergingTest.ColorCollision.red")
-
-      blue_rule =
-        LiveStyle.Manifest.get_rule(manifest, "LiveStyle.StyleMergingTest.ColorCollision.blue")
+      red_rule = LiveStyle.get_metadata(ColorCollision, {:class, :red})
+      blue_rule = LiveStyle.get_metadata(ColorCollision, {:class, :blue})
 
       classes = String.split(class, " ")
 
@@ -192,13 +187,8 @@ defmodule LiveStyle.StyleMergingTest do
       # StyleX: stylex.props([styles.blue, styles.red]) -> className: "x1e2nbdu" (red only)
       class = LiveStyle.get_css_class(ColorCollision, [:blue, :red])
 
-      manifest = get_manifest()
-
-      red_rule =
-        LiveStyle.Manifest.get_rule(manifest, "LiveStyle.StyleMergingTest.ColorCollision.red")
-
-      blue_rule =
-        LiveStyle.Manifest.get_rule(manifest, "LiveStyle.StyleMergingTest.ColorCollision.blue")
+      red_rule = LiveStyle.get_metadata(ColorCollision, {:class, :red})
+      blue_rule = LiveStyle.get_metadata(ColorCollision, {:class, :blue})
 
       classes = String.split(class, " ")
 
@@ -211,10 +201,7 @@ defmodule LiveStyle.StyleMergingTest do
     test "three-way collision - only last survives" do
       class = LiveStyle.get_css_class(ColorCollision, [:red, :blue, :green])
 
-      manifest = get_manifest()
-
-      green_rule =
-        LiveStyle.Manifest.get_rule(manifest, "LiveStyle.StyleMergingTest.ColorCollision.green")
+      green_rule = LiveStyle.get_metadata(ColorCollision, {:class, :green})
 
       classes = String.split(class, " ")
 
@@ -246,10 +233,7 @@ defmodule LiveStyle.StyleMergingTest do
       # StyleX: stylex.props([styles.revert, styles.red]) -> className: "x1e2nbdu"
       class = LiveStyle.get_css_class(NullStyles, [:revert_color, :colored])
 
-      manifest = get_manifest()
-
-      colored_rule =
-        LiveStyle.Manifest.get_rule(manifest, "LiveStyle.StyleMergingTest.NullStyles.colored")
+      colored_rule = LiveStyle.get_metadata(NullStyles, {:class, :colored})
 
       classes =
         class
@@ -265,10 +249,7 @@ defmodule LiveStyle.StyleMergingTest do
       # revert_bg only nulls background-color
       class = LiveStyle.get_css_class(NullStyles, [:styled, :revert_bg])
 
-      manifest = get_manifest()
-
-      styled_rule =
-        LiveStyle.Manifest.get_rule(manifest, "LiveStyle.StyleMergingTest.NullStyles.styled")
+      styled_rule = LiveStyle.get_metadata(NullStyles, {:class, :styled})
 
       classes =
         class
@@ -309,19 +290,8 @@ defmodule LiveStyle.StyleMergingTest do
 
       class = LiveStyle.get_css_class(ShorthandStyles, [:margin_longhands, :margin_override])
 
-      manifest = get_manifest()
-
-      _longhands_rule =
-        LiveStyle.Manifest.get_rule(
-          manifest,
-          "LiveStyle.StyleMergingTest.ShorthandStyles.margin_longhands"
-        )
-
-      override_rule =
-        LiveStyle.Manifest.get_rule(
-          manifest,
-          "LiveStyle.StyleMergingTest.ShorthandStyles.margin_override"
-        )
+      _longhands_rule = LiveStyle.get_metadata(ShorthandStyles, {:class, :margin_longhands})
+      override_rule = LiveStyle.get_metadata(ShorthandStyles, {:class, :margin_override})
 
       classes =
         class
@@ -408,13 +378,7 @@ defmodule LiveStyle.StyleMergingTest do
     test "pseudo-selector can be overridden" do
       class = LiveStyle.get_css_class(PseudoStyles, [:link, :override_hover])
 
-      manifest = get_manifest()
-
-      override_rule =
-        LiveStyle.Manifest.get_rule(
-          manifest,
-          "LiveStyle.StyleMergingTest.PseudoStyles.override_hover"
-        )
+      override_rule = LiveStyle.get_metadata(PseudoStyles, {:class, :override_hover})
 
       classes =
         class
@@ -447,13 +411,7 @@ defmodule LiveStyle.StyleMergingTest do
     test "media query can be overridden" do
       class = LiveStyle.get_css_class(MediaStyles, [:responsive, :override_large])
 
-      manifest = get_manifest()
-
-      override_rule =
-        LiveStyle.Manifest.get_rule(
-          manifest,
-          "LiveStyle.StyleMergingTest.MediaStyles.override_large"
-        )
+      override_rule = LiveStyle.get_metadata(MediaStyles, {:class, :override_large})
 
       classes =
         class

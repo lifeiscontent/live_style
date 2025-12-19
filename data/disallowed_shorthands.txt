@@ -2,18 +2,62 @@
 # Based on StyleX's property-specificity.js
 # Format: property ; error_message
 #
-# These properties throw compile-time errors when used in :strict mode.
+# These properties throw compile-time errors when used in :forbid_shorthands mode.
 # Users must use the longhand alternatives instead.
 
+# Reset property
 all ; 'all' is not supported.
-animation ; 'animation' is not supported. Use animation-name, animation-duration, etc. instead.
-background ; 'background' is not supported. Use background-color, background-image, etc. instead.
-border ; 'border' is not supported. Use border-width, border-style and border-color instead.
-border-inline ; 'border-inline' is not supported. Use border-inline-width, border-inline-style and border-inline-color instead.
-border-block ; 'border-block' is not supported. Use border-block-width, border-block-style and border-block-color instead.
-border-top ; 'border-top' is not supported. Use border-top-width, border-top-style and border-top-color instead.
-border-right ; 'border-right' is not supported. Use border-right-width, border-right-style and border-right-color instead.
-border-bottom ; 'border-bottom' is not supported. Use border-bottom-width, border-bottom-style and border-bottom-color instead.
-border-left ; 'border-left' is not supported. Use border-left-width, border-left-style and border-left-color instead. Prefer border-inline-start-* for RTL support.
-border-inline-start ; 'border-inline-start' is not supported. Use border-inline-start-width, border-inline-start-style and border-inline-start-color instead.
-border-inline-end ; 'border-inline-end' is not supported. Use border-inline-end-width, border-inline-end-style and border-inline-end-color instead.
+
+# Animation and transition shorthands
+animation ; 'animation' is not supported. Use animation-name, animation-duration, animation-timing-function, animation-delay, animation-iteration-count, animation-direction, animation-fill-mode, and animation-play-state instead.
+transition ; 'transition' is not supported. Use transition-property, transition-duration, transition-timing-function, and transition-delay instead.
+
+# Background shorthand
+background ; 'background' is not supported. Use background-color, background-image, background-position, background-size, background-repeat, background-origin, background-clip, and background-attachment instead.
+
+# Border shorthands (composite)
+border ; 'border' is not supported. Use border-width, border-style, and border-color instead.
+border-top ; 'border-top' is not supported. Use border-top-width, border-top-style, and border-top-color instead.
+border-right ; 'border-right' is not supported. Use border-right-width, border-right-style, and border-right-color instead.
+border-bottom ; 'border-bottom' is not supported. Use border-bottom-width, border-bottom-style, and border-bottom-color instead.
+border-left ; 'border-left' is not supported. Use border-left-width, border-left-style, and border-left-color instead. Prefer border-inline-start-* for RTL support.
+
+# Border logical shorthands (composite)
+border-inline ; 'border-inline' is not supported. Use border-inline-width, border-inline-style, and border-inline-color instead.
+border-block ; 'border-block' is not supported. Use border-block-width, border-block-style, and border-block-color instead.
+border-inline-start ; 'border-inline-start' is not supported. Use border-inline-start-width, border-inline-start-style, and border-inline-start-color instead.
+border-inline-end ; 'border-inline-end' is not supported. Use border-inline-end-width, border-inline-end-style, and border-inline-end-color instead.
+border-block-start ; 'border-block-start' is not supported. Use border-block-start-width, border-block-start-style, and border-block-start-color instead.
+border-block-end ; 'border-block-end' is not supported. Use border-block-end-width, border-block-end-style, and border-block-end-color instead.
+
+# Font shorthand
+font ; 'font' is not supported. Use font-style, font-variant, font-weight, font-stretch, font-size, line-height, and font-family instead.
+
+# Flex shorthand
+flex-flow ; 'flex-flow' is not supported. Use flex-direction and flex-wrap instead.
+
+# Grid shorthands
+grid ; 'grid' is not supported. Use grid-template-rows, grid-template-columns, grid-template-areas, grid-auto-rows, grid-auto-columns, and grid-auto-flow instead.
+grid-area ; 'grid-area' is not supported. Use grid-row-start, grid-column-start, grid-row-end, and grid-column-end instead.
+grid-template ; 'grid-template' is not supported. Use grid-template-rows, grid-template-columns, and grid-template-areas instead.
+grid-row ; 'grid-row' is not supported. Use grid-row-start and grid-row-end instead.
+grid-column ; 'grid-column' is not supported. Use grid-column-start and grid-column-end instead.
+
+# Text decoration shorthand
+text-decoration ; 'text-decoration' is not supported. Use text-decoration-line, text-decoration-color, text-decoration-style, and text-decoration-thickness instead.
+
+# Outline shorthand
+outline ; 'outline' is not supported. Use outline-width, outline-style, and outline-color instead.
+
+# List style shorthand
+list-style ; 'list-style' is not supported. Use list-style-type, list-style-position, and list-style-image instead.
+
+# Columns shorthand
+columns ; 'columns' is not supported. Use column-width and column-count instead.
+column-rule ; 'column-rule' is not supported. Use column-rule-width, column-rule-style, and column-rule-color instead.
+
+# Offset shorthand (for motion path)
+offset ; 'offset' is not supported. Use offset-path, offset-distance, offset-rotate, and offset-anchor instead.
+
+# Mask shorthand
+mask ; 'mask' is not supported. Use mask-image, mask-mode, mask-repeat, mask-position, mask-clip, mask-origin, mask-size, and mask-composite instead.

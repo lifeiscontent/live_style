@@ -405,85 +405,81 @@ defmodule LiveStyle.TypesTest do
 
   describe "typed variables in css_vars" do
     test "all types store correct type information" do
-      manifest = get_manifest()
-
       # Angle
-      angle_var = manifest.vars["LiveStyle.TypesTest.AllTypedVars.all_types.angle_var"]
+      angle_var = LiveStyle.get_metadata(AllTypedVars, {:var, :all_types, :angle_var})
       assert angle_var.type.syntax == "<angle>"
       assert angle_var.value == "45deg"
 
       # Color
-      color_var = manifest.vars["LiveStyle.TypesTest.AllTypedVars.all_types.color_var"]
+      color_var = LiveStyle.get_metadata(AllTypedVars, {:var, :all_types, :color_var})
       assert color_var.type.syntax == "<color>"
       assert color_var.value == "red"
 
       # URL
-      url_var = manifest.vars["LiveStyle.TypesTest.AllTypedVars.all_types.url_var"]
+      url_var = LiveStyle.get_metadata(AllTypedVars, {:var, :all_types, :url_var})
       assert url_var.type.syntax == "<url>"
       assert url_var.value == "url(#image)"
 
       # Image
-      image_var = manifest.vars["LiveStyle.TypesTest.AllTypedVars.all_types.image_var"]
+      image_var = LiveStyle.get_metadata(AllTypedVars, {:var, :all_types, :image_var})
       assert image_var.type.syntax == "<image>"
       assert image_var.value == "linear-gradient(red, blue)"
 
       # Integer
-      integer_var = manifest.vars["LiveStyle.TypesTest.AllTypedVars.all_types.integer_var"]
+      integer_var = LiveStyle.get_metadata(AllTypedVars, {:var, :all_types, :integer_var})
       assert integer_var.type.syntax == "<integer>"
       assert integer_var.value == "3"
 
       # Length
-      length_var = manifest.vars["LiveStyle.TypesTest.AllTypedVars.all_types.length_var"]
+      length_var = LiveStyle.get_metadata(AllTypedVars, {:var, :all_types, :length_var})
       assert length_var.type.syntax == "<length>"
       assert length_var.value == "10px"
 
       # Length-Percentage
-      lp_var = manifest.vars["LiveStyle.TypesTest.AllTypedVars.all_types.length_percentage_var"]
+      lp_var = LiveStyle.get_metadata(AllTypedVars, {:var, :all_types, :length_percentage_var})
       assert lp_var.type.syntax == "<length-percentage>"
       assert lp_var.value == "50%"
 
       # Percentage
-      percentage_var = manifest.vars["LiveStyle.TypesTest.AllTypedVars.all_types.percentage_var"]
+      percentage_var = LiveStyle.get_metadata(AllTypedVars, {:var, :all_types, :percentage_var})
       assert percentage_var.type.syntax == "<percentage>"
       assert percentage_var.value == "100%"
 
       # Number
-      number_var = manifest.vars["LiveStyle.TypesTest.AllTypedVars.all_types.number_var"]
+      number_var = LiveStyle.get_metadata(AllTypedVars, {:var, :all_types, :number_var})
       assert number_var.type.syntax == "<number>"
       assert number_var.value == "1.5"
 
       # Resolution
-      resolution_var = manifest.vars["LiveStyle.TypesTest.AllTypedVars.all_types.resolution_var"]
+      resolution_var = LiveStyle.get_metadata(AllTypedVars, {:var, :all_types, :resolution_var})
       assert resolution_var.type.syntax == "<resolution>"
       assert resolution_var.value == "96dpi"
 
       # Time
-      time_var = manifest.vars["LiveStyle.TypesTest.AllTypedVars.all_types.time_var"]
+      time_var = LiveStyle.get_metadata(AllTypedVars, {:var, :all_types, :time_var})
       assert time_var.type.syntax == "<time>"
       assert time_var.value == "200ms"
 
       # Transform Function
-      tf_var = manifest.vars["LiveStyle.TypesTest.AllTypedVars.all_types.transform_function_var"]
+      tf_var = LiveStyle.get_metadata(AllTypedVars, {:var, :all_types, :transform_function_var})
       assert tf_var.type.syntax == "<transform-function>"
       assert tf_var.value == "rotate(45deg)"
 
       # Transform List
-      tl_var = manifest.vars["LiveStyle.TypesTest.AllTypedVars.all_types.transform_list_var"]
+      tl_var = LiveStyle.get_metadata(AllTypedVars, {:var, :all_types, :transform_list_var})
       assert tl_var.type.syntax == "<transform-list>"
       assert tl_var.value == "translateX(10px) rotate(45deg)"
     end
 
     test "typed variables with conditionals store both type and values" do
-      manifest = get_manifest()
-
-      primary = manifest.vars["LiveStyle.TypesTest.TypedVarsWithConditions.themed.primary_color"]
+      primary = LiveStyle.get_metadata(TypedVarsWithConditions, {:var, :themed, :primary_color})
       assert primary.type.syntax == "<color>"
       assert is_map(primary.value)
       assert primary.value.default == "red"
       assert primary.value[:"@media (prefers-color-scheme: dark)"] == "white"
       assert primary.value[:"@media print"] == "black"
 
-      spacing = manifest.vars["LiveStyle.TypesTest.TypedVarsWithConditions.themed.spacing"]
+      spacing = LiveStyle.get_metadata(TypedVarsWithConditions, {:var, :themed, :spacing})
       assert spacing.type.syntax == "<length>"
       assert is_map(spacing.value)
       assert spacing.value.default == "8px"
@@ -497,7 +493,7 @@ defmodule LiveStyle.TypesTest do
       # "@property --xwx8imx { syntax: "<color>"; inherits: true; initial-value: red }"
       css = generate_css()
 
-      color_var = get_manifest().vars["LiveStyle.TypesTest.AllTypedVars.all_types.color_var"]
+      color_var = LiveStyle.get_metadata(AllTypedVars, {:var, :all_types, :color_var})
 
       # Should have @property rule with correct syntax
       assert css =~ ~r/@property #{Regex.escape(color_var.css_name)}/
@@ -507,27 +503,26 @@ defmodule LiveStyle.TypesTest do
 
     test "generates @property rules for all types" do
       css = generate_css()
-      manifest = get_manifest()
 
       # Check each type generates correct @property rule
       type_checks = [
-        {"angle_var", "<angle>", "45deg"},
-        {"color_var", "<color>", "red"},
-        {"url_var", "<url>", "url\\(#image\\)"},
-        {"image_var", "<image>", "linear-gradient"},
-        {"integer_var", "<integer>", "3"},
-        {"length_var", "<length>", "10px"},
-        {"length_percentage_var", "<length-percentage>", "50%"},
-        {"percentage_var", "<percentage>", "100%"},
-        {"number_var", "<number>", "1.5"},
-        {"resolution_var", "<resolution>", "96dpi"},
-        {"time_var", "<time>", "200ms"},
-        {"transform_function_var", "<transform-function>", "rotate"},
-        {"transform_list_var", "<transform-list>", "translateX"}
+        {:angle_var, "<angle>", "45deg"},
+        {:color_var, "<color>", "red"},
+        {:url_var, "<url>", "url\\(#image\\)"},
+        {:image_var, "<image>", "linear-gradient"},
+        {:integer_var, "<integer>", "3"},
+        {:length_var, "<length>", "10px"},
+        {:length_percentage_var, "<length-percentage>", "50%"},
+        {:percentage_var, "<percentage>", "100%"},
+        {:number_var, "<number>", "1.5"},
+        {:resolution_var, "<resolution>", "96dpi"},
+        {:time_var, "<time>", "200ms"},
+        {:transform_function_var, "<transform-function>", "rotate"},
+        {:transform_list_var, "<transform-list>", "translateX"}
       ]
 
       for {var_name, syntax, value_pattern} <- type_checks do
-        var = manifest.vars["LiveStyle.TypesTest.AllTypedVars.all_types.#{var_name}"]
+        var = LiveStyle.get_metadata(AllTypedVars, {:var, :all_types, var_name})
 
         assert css =~ ~r/@property #{Regex.escape(var.css_name)}/,
                "Missing @property for #{var_name}"
@@ -543,9 +538,7 @@ defmodule LiveStyle.TypesTest do
     test "generates CSS variables with conditional values for typed vars" do
       css = generate_css()
 
-      primary =
-        get_manifest().vars["LiveStyle.TypesTest.TypedVarsWithConditions.themed.primary_color"]
-
+      primary = LiveStyle.get_metadata(TypedVarsWithConditions, {:var, :themed, :primary_color})
       var_name = primary.css_name
 
       # Default value in :root (no-space format: :root{--var:value;})

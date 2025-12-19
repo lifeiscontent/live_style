@@ -84,43 +84,43 @@ defmodule LiveStyle.Include do
     fetch_external_style(module, rule_name)
   end
 
-  defp fetch_included_style(rule_name, caller_module) when is_atom(rule_name) do
+  defp fetch_included_style(class_name, caller_module) when is_atom(class_name) do
     # Local reference - look up in storage
-    key = Manifest.simple_key(caller_module, rule_name)
+    key = Manifest.simple_key(caller_module, class_name)
     manifest = LiveStyle.Storage.read()
 
-    case Manifest.get_rule(manifest, key) do
+    case Manifest.get_class(manifest, key) do
       %{declarations: declarations} ->
         declarations
 
       nil ->
         raise CompileError,
           description: """
-          LiveStyle: Cannot include :#{rule_name} - class not found.
+          LiveStyle: Cannot include :#{class_name} - class not found.
 
           Local includes must refer to classes defined earlier in the same module.
-          Make sure css_class(:#{rule_name}, ...) is defined before it's included.
+          Make sure css_class(:#{class_name}, ...) is defined before it's included.
           """
     end
   end
 
-  defp fetch_external_style(module, rule_name) do
+  defp fetch_external_style(module, class_name) do
     Code.ensure_loaded!(module)
 
-    key = Manifest.simple_key(module, rule_name)
+    key = Manifest.simple_key(module, class_name)
     manifest = LiveStyle.Storage.read()
 
-    case Manifest.get_rule(manifest, key) do
+    case Manifest.get_class(manifest, key) do
       %{declarations: declarations} ->
         declarations
 
       nil ->
         raise CompileError,
           description: """
-          LiveStyle: Class :#{rule_name} not found in #{inspect(module)}.
+          LiveStyle: Class :#{class_name} not found in #{inspect(module)}.
 
           Make sure #{inspect(module)} is compiled before this module
-          and defines css_class(:#{rule_name}, ...).
+          and defines css_class(:#{class_name}, ...).
           """
     end
   end

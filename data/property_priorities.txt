@@ -3,10 +3,10 @@
 # Based on StyleX's property-priorities.js
 #
 # Format: property ; category
-# Categories:
-#   - shorthands_of_shorthands (priority 1000)
-#   - shorthands_of_longhands (priority 2000)
-#   - longhand_physical (priority 4000)
+# Categories (use kebab-case, converted to snake_case atoms at compile time):
+#   - shorthands-of-shorthands (priority 1000)
+#   - shorthands-of-longhands (priority 2000)
+#   - longhand-physical (priority 4000)
 # Properties not listed default to longhand_logical (priority 3000)
 
 # ================================================
@@ -14,132 +14,132 @@
 # These affect the most properties and should be applied first
 # ================================================
 
-all ; shorthands_of_shorthands
-animation ; shorthands_of_shorthands
-background ; shorthands_of_shorthands
-border ; shorthands_of_shorthands
-border-block ; shorthands_of_shorthands
-border-inline ; shorthands_of_shorthands
-font ; shorthands_of_shorthands
-grid ; shorthands_of_shorthands
-grid-area ; shorthands_of_shorthands
-grid-template ; shorthands_of_shorthands
-inset ; shorthands_of_shorthands
-margin ; shorthands_of_shorthands
-padding ; shorthands_of_shorthands
-scroll-margin ; shorthands_of_shorthands
-scroll-padding ; shorthands_of_shorthands
+all ; shorthands-of-shorthands
+animation ; shorthands-of-shorthands
+background ; shorthands-of-shorthands
+border ; shorthands-of-shorthands
+border-block ; shorthands-of-shorthands
+border-inline ; shorthands-of-shorthands
+font ; shorthands-of-shorthands
+grid ; shorthands-of-shorthands
+grid-area ; shorthands-of-shorthands
+grid-template ; shorthands-of-shorthands
+inset ; shorthands-of-shorthands
+margin ; shorthands-of-shorthands
+padding ; shorthands-of-shorthands
+scroll-margin ; shorthands-of-shorthands
+scroll-padding ; shorthands-of-shorthands
 
 # ================================================
 # Shorthands of longhands (priority 2000)
 # These expand to a smaller set of longhands
 # ================================================
 
-animation-range ; shorthands_of_longhands
-background-position ; shorthands_of_longhands
-border-block-end ; shorthands_of_longhands
-border-block-start ; shorthands_of_longhands
-border-bottom ; shorthands_of_longhands
-border-color ; shorthands_of_longhands
-border-image ; shorthands_of_longhands
-border-inline-color ; shorthands_of_longhands
-border-inline-end ; shorthands_of_longhands
-border-inline-start ; shorthands_of_longhands
-border-inline-style ; shorthands_of_longhands
-border-inline-width ; shorthands_of_longhands
-border-left ; shorthands_of_longhands
-border-radius ; shorthands_of_longhands
-border-right ; shorthands_of_longhands
-border-style ; shorthands_of_longhands
-border-top ; shorthands_of_longhands
-border-width ; shorthands_of_longhands
-caret ; shorthands_of_longhands
-column-rule ; shorthands_of_longhands
-columns ; shorthands_of_longhands
-contain-intrinsic-size ; shorthands_of_longhands
-container ; shorthands_of_longhands
-flex ; shorthands_of_longhands
-flex-flow ; shorthands_of_longhands
-font-variant ; shorthands_of_longhands
-gap ; shorthands_of_longhands
-grid-column ; shorthands_of_longhands
-grid-row ; shorthands_of_longhands
-grid-template-areas ; shorthands_of_longhands
-inset-block ; shorthands_of_longhands
-inset-inline ; shorthands_of_longhands
-list-style ; shorthands_of_longhands
-margin-block ; shorthands_of_longhands
-margin-inline ; shorthands_of_longhands
-mask ; shorthands_of_longhands
-mask-border ; shorthands_of_longhands
-offset ; shorthands_of_longhands
-outline ; shorthands_of_longhands
-overflow ; shorthands_of_longhands
-overscroll-behavior ; shorthands_of_longhands
-padding-block ; shorthands_of_longhands
-padding-inline ; shorthands_of_longhands
-place-content ; shorthands_of_longhands
-place-items ; shorthands_of_longhands
-place-self ; shorthands_of_longhands
-scroll-margin-block ; shorthands_of_longhands
-scroll-margin-inline ; shorthands_of_longhands
-scroll-padding-block ; shorthands_of_longhands
-scroll-padding-inline ; shorthands_of_longhands
-scroll-snap-type ; shorthands_of_longhands
-scroll-timeline ; shorthands_of_longhands
-text-decoration ; shorthands_of_longhands
-text-emphasis ; shorthands_of_longhands
-transition ; shorthands_of_longhands
-view-timeline ; shorthands_of_longhands
+animation-range ; shorthands-of-longhands
+background-position ; shorthands-of-longhands
+border-block-end ; shorthands-of-longhands
+border-block-start ; shorthands-of-longhands
+border-bottom ; shorthands-of-longhands
+border-color ; shorthands-of-longhands
+border-image ; shorthands-of-longhands
+border-inline-color ; shorthands-of-longhands
+border-inline-end ; shorthands-of-longhands
+border-inline-start ; shorthands-of-longhands
+border-inline-style ; shorthands-of-longhands
+border-inline-width ; shorthands-of-longhands
+border-left ; shorthands-of-longhands
+border-radius ; shorthands-of-longhands
+border-right ; shorthands-of-longhands
+border-style ; shorthands-of-longhands
+border-top ; shorthands-of-longhands
+border-width ; shorthands-of-longhands
+caret ; shorthands-of-longhands
+column-rule ; shorthands-of-longhands
+columns ; shorthands-of-longhands
+contain-intrinsic-size ; shorthands-of-longhands
+container ; shorthands-of-longhands
+flex ; shorthands-of-longhands
+flex-flow ; shorthands-of-longhands
+font-variant ; shorthands-of-longhands
+gap ; shorthands-of-longhands
+grid-column ; shorthands-of-longhands
+grid-row ; shorthands-of-longhands
+grid-template-areas ; shorthands-of-longhands
+inset-block ; shorthands-of-longhands
+inset-inline ; shorthands-of-longhands
+list-style ; shorthands-of-longhands
+margin-block ; shorthands-of-longhands
+margin-inline ; shorthands-of-longhands
+mask ; shorthands-of-longhands
+mask-border ; shorthands-of-longhands
+offset ; shorthands-of-longhands
+outline ; shorthands-of-longhands
+overflow ; shorthands-of-longhands
+overscroll-behavior ; shorthands-of-longhands
+padding-block ; shorthands-of-longhands
+padding-inline ; shorthands-of-longhands
+place-content ; shorthands-of-longhands
+place-items ; shorthands-of-longhands
+place-self ; shorthands-of-longhands
+scroll-margin-block ; shorthands-of-longhands
+scroll-margin-inline ; shorthands-of-longhands
+scroll-padding-block ; shorthands-of-longhands
+scroll-padding-inline ; shorthands-of-longhands
+scroll-snap-type ; shorthands-of-longhands
+scroll-timeline ; shorthands-of-longhands
+text-decoration ; shorthands-of-longhands
+text-emphasis ; shorthands-of-longhands
+transition ; shorthands-of-longhands
+view-timeline ; shorthands-of-longhands
 
 # ================================================
 # Physical longhand properties (priority 4000)
 # These take precedence over logical properties
 # ================================================
 
-border-bottom-color ; longhand_physical
-border-bottom-left-radius ; longhand_physical
-border-bottom-right-radius ; longhand_physical
-border-bottom-style ; longhand_physical
-border-bottom-width ; longhand_physical
-border-left-color ; longhand_physical
-border-left-style ; longhand_physical
-border-left-width ; longhand_physical
-border-right-color ; longhand_physical
-border-right-style ; longhand_physical
-border-right-width ; longhand_physical
-border-top-color ; longhand_physical
-border-top-left-radius ; longhand_physical
-border-top-right-radius ; longhand_physical
-border-top-style ; longhand_physical
-border-top-width ; longhand_physical
-bottom ; longhand_physical
-height ; longhand_physical
-left ; longhand_physical
-margin-bottom ; longhand_physical
-margin-left ; longhand_physical
-margin-right ; longhand_physical
-margin-top ; longhand_physical
-max-height ; longhand_physical
-max-width ; longhand_physical
-min-height ; longhand_physical
-min-width ; longhand_physical
-overflow-x ; longhand_physical
-overflow-y ; longhand_physical
-overscroll-behavior-x ; longhand_physical
-overscroll-behavior-y ; longhand_physical
-padding-bottom ; longhand_physical
-padding-left ; longhand_physical
-padding-right ; longhand_physical
-padding-top ; longhand_physical
-right ; longhand_physical
-scroll-margin-bottom ; longhand_physical
-scroll-margin-left ; longhand_physical
-scroll-margin-right ; longhand_physical
-scroll-margin-top ; longhand_physical
-scroll-padding-bottom ; longhand_physical
-scroll-padding-left ; longhand_physical
-scroll-padding-right ; longhand_physical
-scroll-padding-top ; longhand_physical
-top ; longhand_physical
-width ; longhand_physical
+border-bottom-color ; longhand-physical
+border-bottom-left-radius ; longhand-physical
+border-bottom-right-radius ; longhand-physical
+border-bottom-style ; longhand-physical
+border-bottom-width ; longhand-physical
+border-left-color ; longhand-physical
+border-left-style ; longhand-physical
+border-left-width ; longhand-physical
+border-right-color ; longhand-physical
+border-right-style ; longhand-physical
+border-right-width ; longhand-physical
+border-top-color ; longhand-physical
+border-top-left-radius ; longhand-physical
+border-top-right-radius ; longhand-physical
+border-top-style ; longhand-physical
+border-top-width ; longhand-physical
+bottom ; longhand-physical
+height ; longhand-physical
+left ; longhand-physical
+margin-bottom ; longhand-physical
+margin-left ; longhand-physical
+margin-right ; longhand-physical
+margin-top ; longhand-physical
+max-height ; longhand-physical
+max-width ; longhand-physical
+min-height ; longhand-physical
+min-width ; longhand-physical
+overflow-x ; longhand-physical
+overflow-y ; longhand-physical
+overscroll-behavior-x ; longhand-physical
+overscroll-behavior-y ; longhand-physical
+padding-bottom ; longhand-physical
+padding-left ; longhand-physical
+padding-right ; longhand-physical
+padding-top ; longhand-physical
+right ; longhand-physical
+scroll-margin-bottom ; longhand-physical
+scroll-margin-left ; longhand-physical
+scroll-margin-right ; longhand-physical
+scroll-margin-top ; longhand-physical
+scroll-padding-bottom ; longhand-physical
+scroll-padding-left ; longhand-physical
+scroll-padding-right ; longhand-physical
+scroll-padding-top ; longhand-physical
+top ; longhand-physical
+width ; longhand-physical

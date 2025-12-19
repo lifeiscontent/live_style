@@ -174,8 +174,7 @@ defmodule LiveStyle.PseudoElementsTest do
 
   describe "::marker pseudo-element" do
     test "generates CSS with ::marker" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoElementsTest.MarkerStyles.marker"]
+      rule = LiveStyle.get_metadata(MarkerStyles, {:class, :marker})
 
       # color::marker
       color_meta = rule.atomic_classes["color::marker"]
@@ -191,8 +190,7 @@ defmodule LiveStyle.PseudoElementsTest do
 
   describe "::selection pseudo-element" do
     test "generates CSS with ::selection" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoElementsTest.SelectionStyles.selection"]
+      rule = LiveStyle.get_metadata(SelectionStyles, {:class, :selection})
 
       # background-color::selection
       bg_meta = rule.atomic_classes["background-color::selection"]
@@ -208,8 +206,7 @@ defmodule LiveStyle.PseudoElementsTest do
 
   describe "::backdrop pseudo-element" do
     test "generates CSS with ::backdrop" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoElementsTest.BackdropStyles.backdrop"]
+      rule = LiveStyle.get_metadata(BackdropStyles, {:class, :backdrop})
 
       bg_meta = rule.atomic_classes["background-color::backdrop"]
       # Note: StyleX removes leading zeros from decimal values (0.7 -> .7)
@@ -220,8 +217,7 @@ defmodule LiveStyle.PseudoElementsTest do
 
   describe "::first-letter and ::first-line pseudo-elements" do
     test "generates CSS with ::first-letter" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoElementsTest.FirstLetterLineStyles.first_letter"]
+      rule = LiveStyle.get_metadata(FirstLetterLineStyles, {:class, :first_letter})
 
       font_size = rule.atomic_classes["font-size::first-letter"]
       assert font_size.ltr =~ "::first-letter{font-size:2em}"
@@ -233,8 +229,7 @@ defmodule LiveStyle.PseudoElementsTest do
     end
 
     test "generates CSS with ::first-line" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoElementsTest.FirstLetterLineStyles.first_line"]
+      rule = LiveStyle.get_metadata(FirstLetterLineStyles, {:class, :first_line})
 
       font_weight = rule.atomic_classes["font-weight::first-line"]
       assert font_weight.ltr =~ "::first-line{font-weight:bold}"
@@ -249,8 +244,7 @@ defmodule LiveStyle.PseudoElementsTest do
 
   describe "::file-selector-button pseudo-element" do
     test "generates CSS with ::file-selector-button" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoElementsTest.FileSelectorStyles.file_button"]
+      rule = LiveStyle.get_metadata(FileSelectorStyles, {:class, :file_button})
 
       bg_meta = rule.atomic_classes["background-color::file-selector-button"]
       assert bg_meta.ltr =~ "::file-selector-button{background-color:blue}"
@@ -264,8 +258,7 @@ defmodule LiveStyle.PseudoElementsTest do
 
   describe "::-webkit-scrollbar pseudo-elements" do
     test "generates CSS with ::-webkit-scrollbar" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoElementsTest.WebkitScrollbarStyles.scrollbar"]
+      rule = LiveStyle.get_metadata(WebkitScrollbarStyles, {:class, :scrollbar})
 
       width_meta = rule.atomic_classes["width::-webkit-scrollbar"]
       assert width_meta.ltr =~ "::-webkit-scrollbar{width:8px}"
@@ -273,8 +266,7 @@ defmodule LiveStyle.PseudoElementsTest do
     end
 
     test "generates CSS with ::-webkit-scrollbar-thumb" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoElementsTest.WebkitScrollbarStyles.scrollbar_thumb"]
+      rule = LiveStyle.get_metadata(WebkitScrollbarStyles, {:class, :scrollbar_thumb})
 
       bg_meta = rule.atomic_classes["background-color::-webkit-scrollbar-thumb"]
       assert bg_meta.ltr =~ "::-webkit-scrollbar-thumb{background-color:gray}"
@@ -282,8 +274,7 @@ defmodule LiveStyle.PseudoElementsTest do
     end
 
     test "generates CSS with ::-webkit-scrollbar-track" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoElementsTest.WebkitScrollbarStyles.scrollbar_track"]
+      rule = LiveStyle.get_metadata(WebkitScrollbarStyles, {:class, :scrollbar_track})
 
       bg_meta = rule.atomic_classes["background-color::-webkit-scrollbar-track"]
       assert bg_meta.ltr =~ "::-webkit-scrollbar-track{background-color:#f1f1f1}"
@@ -293,8 +284,7 @@ defmodule LiveStyle.PseudoElementsTest do
 
   describe "::cue pseudo-element" do
     test "generates CSS with ::cue" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoElementsTest.CueStyles.cue"]
+      rule = LiveStyle.get_metadata(CueStyles, {:class, :cue})
 
       color_meta = rule.atomic_classes["color::cue"]
       assert color_meta.ltr =~ "::cue{color:white}"
@@ -312,8 +302,7 @@ defmodule LiveStyle.PseudoElementsTest do
 
   describe "::grammar-error pseudo-element" do
     test "generates CSS with ::grammar-error" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoElementsTest.GrammarErrorStyles.grammar_error"]
+      rule = LiveStyle.get_metadata(GrammarErrorStyles, {:class, :grammar_error})
 
       text_dec = rule.atomic_classes["text-decoration::grammar-error"]
       assert text_dec.ltr =~ "::grammar-error{text-decoration:underline wavy red}"
@@ -324,8 +313,7 @@ defmodule LiveStyle.PseudoElementsTest do
 
   describe "::spelling-error pseudo-element" do
     test "generates CSS with ::spelling-error" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoElementsTest.SpellingErrorStyles.spelling_error"]
+      rule = LiveStyle.get_metadata(SpellingErrorStyles, {:class, :spelling_error})
 
       text_dec = rule.atomic_classes["text-decoration::spelling-error"]
       assert text_dec.ltr =~ "::spelling-error{text-decoration:underline wavy blue}"
@@ -336,8 +324,7 @@ defmodule LiveStyle.PseudoElementsTest do
 
   describe "::target-text pseudo-element" do
     test "generates CSS with ::target-text" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoElementsTest.TargetTextStyles.target_text"]
+      rule = LiveStyle.get_metadata(TargetTextStyles, {:class, :target_text})
 
       bg_meta = rule.atomic_classes["background-color::target-text"]
       assert bg_meta.ltr =~ "::target-text{background-color:yellow}"
@@ -351,10 +338,7 @@ defmodule LiveStyle.PseudoElementsTest do
 
   describe "pseudo-element with pseudo-class" do
     test "generates CSS with ::selection and :hover" do
-      manifest = get_manifest()
-
-      rule =
-        manifest.rules["LiveStyle.PseudoElementsTest.PseudoElementWithPseudo.selection_hover"]
+      rule = LiveStyle.get_metadata(PseudoElementWithPseudo, {:class, :selection_hover})
 
       # Default ::selection
       default_meta = rule.atomic_classes["background-color::selection"]
@@ -375,18 +359,16 @@ defmodule LiveStyle.PseudoElementsTest do
 
   describe "pseudo-element priority system" do
     test "all pseudo-elements have base priority 8000" do
-      manifest = get_manifest()
-
       # Check marker
-      marker_rule = manifest.rules["LiveStyle.PseudoElementsTest.MarkerStyles.marker"]
+      marker_rule = LiveStyle.get_metadata(MarkerStyles, {:class, :marker})
       assert marker_rule.atomic_classes["color::marker"].priority == 8000
 
       # Check selection
-      selection_rule = manifest.rules["LiveStyle.PseudoElementsTest.SelectionStyles.selection"]
+      selection_rule = LiveStyle.get_metadata(SelectionStyles, {:class, :selection})
       assert selection_rule.atomic_classes["color::selection"].priority == 8000
 
       # Check backdrop
-      backdrop_rule = manifest.rules["LiveStyle.PseudoElementsTest.BackdropStyles.backdrop"]
+      backdrop_rule = LiveStyle.get_metadata(BackdropStyles, {:class, :backdrop})
       assert backdrop_rule.atomic_classes["background-color::backdrop"].priority == 8000
     end
   end
@@ -397,8 +379,7 @@ defmodule LiveStyle.PseudoElementsTest do
 
   describe "css output format" do
     test "pseudo-element CSS is properly formatted" do
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.PseudoElementsTest.MarkerStyles.marker"]
+      rule = LiveStyle.get_metadata(MarkerStyles, {:class, :marker})
 
       # Format should be: .{class}::{pseudo-element}{property:value}
       color_meta = rule.atomic_classes["color::marker"]

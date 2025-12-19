@@ -66,8 +66,7 @@ defmodule LiveStyle.FirstThatWorksTest do
   describe "plain array fallbacks (variableFallbacks behavior)" do
     test "no CSS variables - order preserved" do
       # StyleX: position: ['sticky', 'fixed'] -> position:sticky;position:fixed
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.FirstThatWorksTest.PlainArrayFallbacks.no_vars"]
+      rule = LiveStyle.get_metadata(PlainArrayFallbacks, {:class, :no_vars})
 
       position = rule.atomic_classes["position"]
       assert position.class == "x1ruww2u"
@@ -77,8 +76,7 @@ defmodule LiveStyle.FirstThatWorksTest do
 
     test "CSS var first, non-var after - two declarations (not nested)" do
       # StyleX variableFallbacks: ['var(--color)', 'red'] -> color:var(--color);color:red
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.FirstThatWorksTest.PlainArrayFallbacks.var_first"]
+      rule = LiveStyle.get_metadata(PlainArrayFallbacks, {:class, :var_first})
 
       color = rule.atomic_classes["color"]
       assert color.ltr == ".x1nv2f59{color:var(--color);color:red}"
@@ -86,8 +84,7 @@ defmodule LiveStyle.FirstThatWorksTest do
 
     test "non-var first, CSS var after - nested into var()" do
       # StyleX variableFallbacks: ['red', 'var(--color)'] -> color:var(--color,red)
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.FirstThatWorksTest.PlainArrayFallbacks.var_last"]
+      rule = LiveStyle.get_metadata(PlainArrayFallbacks, {:class, :var_last})
 
       color = rule.atomic_classes["color"]
       assert color.ltr =~ "color:var(--color,red)"
@@ -96,8 +93,7 @@ defmodule LiveStyle.FirstThatWorksTest do
     test "multiple CSS vars - nested together" do
       # When all values are vars with no non-var before, they get nested
       # ['var(--primary)', 'var(--fallback)'] -> var(--primary,var(--fallback))
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.FirstThatWorksTest.PlainArrayFallbacks.multi_vars"]
+      rule = LiveStyle.get_metadata(PlainArrayFallbacks, {:class, :multi_vars})
 
       color = rule.atomic_classes["color"]
       assert color.ltr =~ "var(--primary,var(--fallback))"
@@ -106,12 +102,7 @@ defmodule LiveStyle.FirstThatWorksTest do
     test "non-var before multiple CSS vars - nested with fallback" do
       # StyleX: ['blue', 'var(--primary)', 'var(--fallback)']
       # -> color:var(--primary,var(--fallback,blue))
-      manifest = get_manifest()
-
-      rule =
-        manifest.rules[
-          "LiveStyle.FirstThatWorksTest.PlainArrayFallbacks.multi_vars_with_fallback"
-        ]
+      rule = LiveStyle.get_metadata(PlainArrayFallbacks, {:class, :multi_vars_with_fallback})
 
       color = rule.atomic_classes["color"]
       assert color.ltr =~ "var(--primary,var(--fallback,blue))"
@@ -125,8 +116,7 @@ defmodule LiveStyle.FirstThatWorksTest do
   describe "explicit first_that_works() (firstThatWorks behavior)" do
     test "no CSS variables - reversed order" do
       # StyleX firstThatWorks('sticky', 'fixed') -> position:fixed;position:sticky
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.FirstThatWorksTest.ExplicitFirstThatWorks.no_vars"]
+      rule = LiveStyle.get_metadata(ExplicitFirstThatWorks, {:class, :no_vars})
 
       position = rule.atomic_classes["position"]
       # Note: different class name due to different hash (reversed order)
@@ -135,8 +125,7 @@ defmodule LiveStyle.FirstThatWorksTest do
 
     test "CSS var first, non-var after - nested into var()" do
       # StyleX firstThatWorks('var(--color)', 'red') -> color:var(--color,red)
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.FirstThatWorksTest.ExplicitFirstThatWorks.var_first"]
+      rule = LiveStyle.get_metadata(ExplicitFirstThatWorks, {:class, :var_first})
 
       color = rule.atomic_classes["color"]
       assert color.ltr =~ "color:var(--color,red)"
@@ -144,8 +133,7 @@ defmodule LiveStyle.FirstThatWorksTest do
 
     test "non-var first, CSS var after - two declarations (reversed)" do
       # StyleX firstThatWorks('red', 'var(--color)') -> color:var(--color);color:red
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.FirstThatWorksTest.ExplicitFirstThatWorks.var_last"]
+      rule = LiveStyle.get_metadata(ExplicitFirstThatWorks, {:class, :var_last})
 
       color = rule.atomic_classes["color"]
       assert color.ltr =~ "color:var(--color);color:red"
@@ -154,12 +142,7 @@ defmodule LiveStyle.FirstThatWorksTest do
     test "multiple CSS vars with fallback - all nested" do
       # StyleX firstThatWorks('var(--primary)', 'var(--secondary)', 'blue')
       # -> color:var(--primary,var(--secondary,blue))
-      manifest = get_manifest()
-
-      rule =
-        manifest.rules[
-          "LiveStyle.FirstThatWorksTest.ExplicitFirstThatWorks.multi_vars_with_fallback"
-        ]
+      rule = LiveStyle.get_metadata(ExplicitFirstThatWorks, {:class, :multi_vars_with_fallback})
 
       color = rule.atomic_classes["color"]
       assert color.ltr =~ "var(--primary,var(--secondary,blue))"
@@ -200,10 +183,7 @@ defmodule LiveStyle.FirstThatWorksTest do
   describe "StyleX parity - firstThatWorks CSS format" do
     test "firstThatWorks('red', 'var(--color)') produces correct format" do
       # StyleX format: color:var(--color);color:red (two declarations, var first)
-      manifest = get_manifest()
-
-      rule =
-        manifest.rules["LiveStyle.FirstThatWorksTest.StyleXParityFirstThatWorks.value_then_var"]
+      rule = LiveStyle.get_metadata(StyleXParityFirstThatWorks, {:class, :value_then_var})
 
       color = rule.atomic_classes["color"]
       assert color.ltr =~ "color:var(--color);color:red"
@@ -211,10 +191,7 @@ defmodule LiveStyle.FirstThatWorksTest do
 
     test "firstThatWorks('var(--color)', 'red') produces nested var()" do
       # StyleX format: color:var(--color,red) (nested)
-      manifest = get_manifest()
-
-      rule =
-        manifest.rules["LiveStyle.FirstThatWorksTest.StyleXParityFirstThatWorks.var_then_value"]
+      rule = LiveStyle.get_metadata(StyleXParityFirstThatWorks, {:class, :var_then_value})
 
       color = rule.atomic_classes["color"]
       assert color.ltr =~ "color:var(--color,red)"
@@ -222,10 +199,7 @@ defmodule LiveStyle.FirstThatWorksTest do
 
     test "firstThatWorks('var(--color)', 'var(--otherColor)') produces nested vars" do
       # StyleX format: color:var(--color,var(--otherColor)) (nested)
-      manifest = get_manifest()
-
-      rule =
-        manifest.rules["LiveStyle.FirstThatWorksTest.StyleXParityFirstThatWorks.var_then_var"]
+      rule = LiveStyle.get_metadata(StyleXParityFirstThatWorks, {:class, :var_then_var})
 
       color = rule.atomic_classes["color"]
       assert color.ltr =~ "color:var(--color,var(--otherColor))"
@@ -233,8 +207,7 @@ defmodule LiveStyle.FirstThatWorksTest do
 
     test "firstThatWorks with three vars produces deeply nested vars" do
       # StyleX format: color:var(--color,var(--secondColor,var(--thirdColor)))
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.FirstThatWorksTest.StyleXParityFirstThatWorks.three_vars"]
+      rule = LiveStyle.get_metadata(StyleXParityFirstThatWorks, {:class, :three_vars})
 
       color = rule.atomic_classes["color"]
       assert color.ltr =~ "color:var(--color,var(--secondColor,var(--thirdColor)))"

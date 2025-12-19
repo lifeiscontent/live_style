@@ -26,9 +26,11 @@ defmodule LiveStyle.ViewTransitionTest do
     end
 
     test "generates view transition with all pseudo-element types" do
-      manifest = get_manifest()
-      full_key = "LiveStyle.ViewTransitionTest.BasicViewTransition.card"
-      view_transition = LiveStyle.Manifest.get_view_transition(manifest, full_key)
+      view_transition =
+        LiveStyle.get_metadata(
+          LiveStyle.ViewTransitionTest.BasicViewTransition,
+          {:view_transition, :card}
+        )
 
       assert view_transition != nil
       assert view_transition.css_name != nil
@@ -50,9 +52,11 @@ defmodule LiveStyle.ViewTransitionTest do
     end
 
     test "handles view transition with only group pseudo-element" do
-      manifest = get_manifest()
-      full_key = "LiveStyle.ViewTransitionTest.GroupOnlyViewTransition.slide"
-      view_transition = LiveStyle.Manifest.get_view_transition(manifest, full_key)
+      view_transition =
+        LiveStyle.get_metadata(
+          LiveStyle.ViewTransitionTest.GroupOnlyViewTransition,
+          {:view_transition, :slide}
+        )
 
       assert view_transition != nil
       assert view_transition.css_name != nil
@@ -71,9 +75,11 @@ defmodule LiveStyle.ViewTransitionTest do
     end
 
     test "handles view transition with only image_pair pseudo-element" do
-      manifest = get_manifest()
-      full_key = "LiveStyle.ViewTransitionTest.ImagePairOnlyViewTransition.image"
-      view_transition = LiveStyle.Manifest.get_view_transition(manifest, full_key)
+      view_transition =
+        LiveStyle.get_metadata(
+          LiveStyle.ViewTransitionTest.ImagePairOnlyViewTransition,
+          {:view_transition, :image}
+        )
 
       assert view_transition != nil
       assert Map.has_key?(view_transition.styles, :image_pair)
@@ -88,9 +94,11 @@ defmodule LiveStyle.ViewTransitionTest do
     end
 
     test "handles view transition with only old pseudo-element" do
-      manifest = get_manifest()
-      full_key = "LiveStyle.ViewTransitionTest.OldOnlyViewTransition.fade_out"
-      view_transition = LiveStyle.Manifest.get_view_transition(manifest, full_key)
+      view_transition =
+        LiveStyle.get_metadata(
+          LiveStyle.ViewTransitionTest.OldOnlyViewTransition,
+          {:view_transition, :fade_out}
+        )
 
       assert view_transition != nil
       assert Map.has_key?(view_transition.styles, :old)
@@ -105,9 +113,11 @@ defmodule LiveStyle.ViewTransitionTest do
     end
 
     test "handles view transition with only new pseudo-element" do
-      manifest = get_manifest()
-      full_key = "LiveStyle.ViewTransitionTest.NewOnlyViewTransition.fade_in"
-      view_transition = LiveStyle.Manifest.get_view_transition(manifest, full_key)
+      view_transition =
+        LiveStyle.get_metadata(
+          LiveStyle.ViewTransitionTest.NewOnlyViewTransition,
+          {:view_transition, :fade_in}
+        )
 
       assert view_transition != nil
       assert Map.has_key?(view_transition.styles, :new)
@@ -139,18 +149,26 @@ defmodule LiveStyle.ViewTransitionTest do
     end
 
     test "uses keyframe references in view transition" do
-      manifest = get_manifest()
-      full_key = "LiveStyle.ViewTransitionTest.ViewTransitionWithKeyframes.crossfade"
-      view_transition = LiveStyle.Manifest.get_view_transition(manifest, full_key)
+      view_transition =
+        LiveStyle.get_metadata(
+          LiveStyle.ViewTransitionTest.ViewTransitionWithKeyframes,
+          {:view_transition, :crossfade}
+        )
 
       assert view_transition != nil
 
       # Verify keyframes are also registered
-      fade_in_key = "LiveStyle.ViewTransitionTest.ViewTransitionWithKeyframes.fade_in"
-      fade_out_key = "LiveStyle.ViewTransitionTest.ViewTransitionWithKeyframes.fade_out"
+      fade_in =
+        LiveStyle.get_metadata(
+          LiveStyle.ViewTransitionTest.ViewTransitionWithKeyframes,
+          {:keyframes, :fade_in}
+        )
 
-      fade_in = LiveStyle.Manifest.get_keyframes(manifest, fade_in_key)
-      fade_out = LiveStyle.Manifest.get_keyframes(manifest, fade_out_key)
+      fade_out =
+        LiveStyle.get_metadata(
+          LiveStyle.ViewTransitionTest.ViewTransitionWithKeyframes,
+          {:keyframes, :fade_out}
+        )
 
       assert fade_in != nil
       assert fade_out != nil
@@ -176,9 +194,11 @@ defmodule LiveStyle.ViewTransitionTest do
     end
 
     test "view transition with transform keyframes" do
-      manifest = get_manifest()
-      full_key = "LiveStyle.ViewTransitionTest.ViewTransitionWithSlideKeyframes.slide"
-      view_transition = LiveStyle.Manifest.get_view_transition(manifest, full_key)
+      view_transition =
+        LiveStyle.get_metadata(
+          LiveStyle.ViewTransitionTest.ViewTransitionWithSlideKeyframes,
+          {:view_transition, :slide}
+        )
 
       assert view_transition != nil
       assert Map.has_key?(view_transition.styles, :old)
@@ -215,9 +235,11 @@ defmodule LiveStyle.ViewTransitionTest do
     end
 
     test "handles multiple properties per pseudo-element" do
-      manifest = get_manifest()
-      full_key = "LiveStyle.ViewTransitionTest.ViewTransitionMultipleProps.complex"
-      view_transition = LiveStyle.Manifest.get_view_transition(manifest, full_key)
+      view_transition =
+        LiveStyle.get_metadata(
+          LiveStyle.ViewTransitionTest.ViewTransitionMultipleProps,
+          {:view_transition, :complex}
+        )
 
       assert view_transition != nil
 
@@ -254,9 +276,11 @@ defmodule LiveStyle.ViewTransitionTest do
     end
 
     test "stores values in styles map" do
-      manifest = get_manifest()
-      full_key = "LiveStyle.ViewTransitionTest.ViewTransitionValueNormalization.normalized"
-      view_transition = LiveStyle.Manifest.get_view_transition(manifest, full_key)
+      view_transition =
+        LiveStyle.get_metadata(
+          LiveStyle.ViewTransitionTest.ViewTransitionValueNormalization,
+          {:view_transition, :normalized}
+        )
 
       assert view_transition != nil
 
@@ -277,9 +301,11 @@ defmodule LiveStyle.ViewTransitionTest do
     end
 
     test "preserves string values" do
-      manifest = get_manifest()
-      full_key = "LiveStyle.ViewTransitionTest.ViewTransitionStringValues.string_vals"
-      view_transition = LiveStyle.Manifest.get_view_transition(manifest, full_key)
+      view_transition =
+        LiveStyle.get_metadata(
+          LiveStyle.ViewTransitionTest.ViewTransitionStringValues,
+          {:view_transition, :string_vals}
+        )
 
       assert view_transition != nil
 
@@ -348,15 +374,27 @@ defmodule LiveStyle.ViewTransitionTest do
     end
 
     test "all view transitions are registered in manifest" do
-      manifest = get_manifest()
+      fade =
+        LiveStyle.get_metadata(
+          LiveStyle.ViewTransitionTest.MultipleViewTransitions,
+          {:view_transition, :fade}
+        )
 
-      fade_key = "LiveStyle.ViewTransitionTest.MultipleViewTransitions.fade"
-      slide_key = "LiveStyle.ViewTransitionTest.MultipleViewTransitions.slide"
-      scale_key = "LiveStyle.ViewTransitionTest.MultipleViewTransitions.scale"
+      slide =
+        LiveStyle.get_metadata(
+          LiveStyle.ViewTransitionTest.MultipleViewTransitions,
+          {:view_transition, :slide}
+        )
 
-      assert LiveStyle.Manifest.get_view_transition(manifest, fade_key) != nil
-      assert LiveStyle.Manifest.get_view_transition(manifest, slide_key) != nil
-      assert LiveStyle.Manifest.get_view_transition(manifest, scale_key) != nil
+      scale =
+        LiveStyle.get_metadata(
+          LiveStyle.ViewTransitionTest.MultipleViewTransitions,
+          {:view_transition, :scale}
+        )
+
+      assert fade != nil
+      assert slide != nil
+      assert scale != nil
     end
   end
 
@@ -378,8 +416,7 @@ defmodule LiveStyle.ViewTransitionTest do
 
     test "generates CSS with view transition pseudo-elements" do
       # Generate CSS output
-      manifest = get_manifest()
-      css = LiveStyle.CSS.generate(manifest)
+      css = LiveStyle.CSS.generate(get_manifest())
 
       # The CSS should contain view-transition pseudo-elements
       assert css =~ "::view-transition-group"
@@ -389,8 +426,7 @@ defmodule LiveStyle.ViewTransitionTest do
     end
 
     test "CSS uses wildcard class selector pattern" do
-      manifest = get_manifest()
-      css = LiveStyle.CSS.generate(manifest)
+      css = LiveStyle.CSS.generate(get_manifest())
 
       # StyleX pattern: ::view-transition-group(*.xchu1hv)
       assert css =~ ~r/::view-transition-\w+\(\*\.x[a-z0-9]+\)/
@@ -412,9 +448,11 @@ defmodule LiveStyle.ViewTransitionTest do
     end
 
     test "handles zero values" do
-      manifest = get_manifest()
-      full_key = "LiveStyle.ViewTransitionTest.ViewTransitionWithZero.zero_values"
-      view_transition = LiveStyle.Manifest.get_view_transition(manifest, full_key)
+      view_transition =
+        LiveStyle.get_metadata(
+          LiveStyle.ViewTransitionTest.ViewTransitionWithZero,
+          {:view_transition, :zero_values}
+        )
 
       assert view_transition != nil
 
@@ -433,9 +471,11 @@ defmodule LiveStyle.ViewTransitionTest do
     end
 
     test "handles transition without group or image_pair" do
-      manifest = get_manifest()
-      full_key = "LiveStyle.ViewTransitionTest.ViewTransitionEmptyGroup.minimal"
-      view_transition = LiveStyle.Manifest.get_view_transition(manifest, full_key)
+      view_transition =
+        LiveStyle.get_metadata(
+          LiveStyle.ViewTransitionTest.ViewTransitionEmptyGroup,
+          {:view_transition, :minimal}
+        )
 
       assert view_transition != nil
 
@@ -456,12 +496,14 @@ defmodule LiveStyle.ViewTransitionTest do
     end
 
     test "CSS output does not include unspecified pseudo-elements" do
-      manifest = get_manifest()
-      full_key = "LiveStyle.ViewTransitionTest.ViewTransitionCSSMinimalOutput.css_minimal"
-      view_transition = LiveStyle.Manifest.get_view_transition(manifest, full_key)
-      css_name = view_transition.css_name
+      view_transition =
+        LiveStyle.get_metadata(
+          LiveStyle.ViewTransitionTest.ViewTransitionCSSMinimalOutput,
+          {:view_transition, :css_minimal}
+        )
 
-      css = LiveStyle.CSS.generate(manifest)
+      css_name = view_transition.css_name
+      css = LiveStyle.CSS.generate(get_manifest())
 
       # Should have old and new
       assert css =~ "::view-transition-old(*.#{css_name})"
@@ -493,9 +535,11 @@ defmodule LiveStyle.ViewTransitionTest do
 
     test "matches StyleX hash for basic view transition" do
       # Expected StyleX output: "xchu1hv"
-      manifest = get_manifest()
-      full_key = "LiveStyle.ViewTransitionTest.StyleXParityBasic.test"
-      view_transition = LiveStyle.Manifest.get_view_transition(manifest, full_key)
+      view_transition =
+        LiveStyle.get_metadata(
+          LiveStyle.ViewTransitionTest.StyleXParityBasic,
+          {:view_transition, :test}
+        )
 
       assert view_transition.css_name == "xchu1hv"
     end

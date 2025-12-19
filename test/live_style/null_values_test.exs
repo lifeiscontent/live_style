@@ -77,8 +77,7 @@ defmodule LiveStyle.NullValuesTest do
     test "nil value property is excluded from generated CSS" do
       # StyleX: color: null produces kMwMTN: null in the compiled object
       # No CSS is generated for null values
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.NullValuesTest.NullStaticStyles.revert"]
+      rule = LiveStyle.get_metadata(LiveStyle.NullValuesTest.NullStaticStyles, {:class, :revert})
 
       # The rule should exist but with no atomic classes (or nil class for color)
       # StyleX stores null as the className for the property key
@@ -107,8 +106,8 @@ defmodule LiveStyle.NullValuesTest do
     test "partial nil - only non-nil properties generate classes" do
       # StyleX: multiple properties where one is null
       # Only the non-null property generates a class
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.NullValuesTest.NullStaticStyles.partial_nil"]
+      rule =
+        LiveStyle.get_metadata(LiveStyle.NullValuesTest.NullStaticStyles, {:class, :partial_nil})
 
       # color: blue should generate a class
       assert rule.atomic_classes["color"] != nil
@@ -122,8 +121,7 @@ defmodule LiveStyle.NullValuesTest do
 
     test "nil value does not produce CSS output" do
       # Generate the CSS and verify nil values don't appear
-      manifest = get_manifest()
-      css = LiveStyle.CSS.generate(manifest)
+      css = generate_css()
 
       # The CSS should NOT contain any rules for the :revert style
       # (since color: nil doesn't generate CSS)
@@ -158,8 +156,7 @@ defmodule LiveStyle.NullValuesTest do
       assert attrs.class != ""
 
       # Verify it's the red color class
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.NullValuesTest.NullStaticStyles.red"]
+      rule = LiveStyle.get_metadata(LiveStyle.NullValuesTest.NullStaticStyles, {:class, :red})
       red_class = rule.atomic_classes["color"].class
       assert attrs.class =~ red_class
     end
@@ -173,8 +170,9 @@ defmodule LiveStyle.NullValuesTest do
       attrs = NullStaticStyles.test_css([:red, :revert, :partial_nil])
 
       # Result should have partial_nil's blue color, not red's color
-      manifest = get_manifest()
-      blue_rule = manifest.rules["LiveStyle.NullValuesTest.NullStaticStyles.partial_nil"]
+      blue_rule =
+        LiveStyle.get_metadata(LiveStyle.NullValuesTest.NullStaticStyles, {:class, :partial_nil})
+
       blue_class = blue_rule.atomic_classes["color"].class
 
       assert attrs.class =~ blue_class
@@ -189,10 +187,11 @@ defmodule LiveStyle.NullValuesTest do
     test "nil in non-default condition has no effect" do
       # StyleX: Using null for a non-default condition has no effect
       # and should be considered invalid (but doesn't error)
-      manifest = get_manifest()
-
       rule =
-        manifest.rules["LiveStyle.NullValuesTest.NullConditionalStyles.default_with_nil_hover"]
+        LiveStyle.get_metadata(
+          LiveStyle.NullValuesTest.NullConditionalStyles,
+          {:class, :default_with_nil_hover}
+        )
 
       # Should have a default class
       classes = rule.atomic_classes["color"].classes
@@ -207,10 +206,11 @@ defmodule LiveStyle.NullValuesTest do
     test "nil default with conditional value" do
       # StyleX: default: null means no style in the default case
       # but the hover style should still apply
-      manifest = get_manifest()
-
       rule =
-        manifest.rules["LiveStyle.NullValuesTest.NullConditionalStyles.nil_default_with_hover"]
+        LiveStyle.get_metadata(
+          LiveStyle.NullValuesTest.NullConditionalStyles,
+          {:class, :nil_default_with_hover}
+        )
 
       classes = rule.atomic_classes["color"].classes
 

@@ -115,12 +115,12 @@ defmodule LiveStyle.Vars do
     # Collect all defined var keys
     defined_vars = Map.keys(manifest.vars) |> MapSet.new()
 
-    # Check each rule's declarations for var() references
-    Enum.each(manifest.rules, fn {rule_key, rule} ->
-      declarations = Map.get(rule, :declarations, %{})
+    # Check each class's declarations for var() references
+    Enum.each(manifest.classes, fn {class_key, class_entry} ->
+      declarations = Map.get(class_entry, :declarations, %{})
 
       Enum.each(declarations, fn {_prop, value} ->
-        validate_value_refs!(value, defined_vars, rule_key)
+        validate_value_refs!(value, defined_vars, class_key)
       end)
     end)
 

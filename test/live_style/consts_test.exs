@@ -25,15 +25,14 @@ defmodule LiveStyle.ConstsTest do
     end
 
     test "defines string constants" do
-      manifest = get_manifest()
+      assert LiveStyle.get_metadata(BasicBreakpoints, {:const, :breakpoint, :sm}) ==
+               "(min-width: 768px)"
 
-      sm_key = "LiveStyle.ConstsTest.BasicBreakpoints.breakpoint.sm"
-      md_key = "LiveStyle.ConstsTest.BasicBreakpoints.breakpoint.md"
-      lg_key = "LiveStyle.ConstsTest.BasicBreakpoints.breakpoint.lg"
+      assert LiveStyle.get_metadata(BasicBreakpoints, {:const, :breakpoint, :md}) ==
+               "(min-width: 1024px)"
 
-      assert LiveStyle.Manifest.get_const(manifest, sm_key) == "(min-width: 768px)"
-      assert LiveStyle.Manifest.get_const(manifest, md_key) == "(min-width: 1024px)"
-      assert LiveStyle.Manifest.get_const(manifest, lg_key) == "(min-width: 1280px)"
+      assert LiveStyle.get_metadata(BasicBreakpoints, {:const, :breakpoint, :lg}) ==
+               "(min-width: 1280px)"
     end
 
     defmodule NumericConstants do
@@ -47,15 +46,9 @@ defmodule LiveStyle.ConstsTest do
     end
 
     test "defines numeric constants" do
-      manifest = get_manifest()
-
-      small_key = "LiveStyle.ConstsTest.NumericConstants.size.small"
-      medium_key = "LiveStyle.ConstsTest.NumericConstants.size.medium"
-      large_key = "LiveStyle.ConstsTest.NumericConstants.size.large"
-
-      assert LiveStyle.Manifest.get_const(manifest, small_key) == 8
-      assert LiveStyle.Manifest.get_const(manifest, medium_key) == 16
-      assert LiveStyle.Manifest.get_const(manifest, large_key) == 24
+      assert LiveStyle.get_metadata(NumericConstants, {:const, :size, :small}) == 8
+      assert LiveStyle.get_metadata(NumericConstants, {:const, :size, :medium}) == 16
+      assert LiveStyle.get_metadata(NumericConstants, {:const, :size, :large}) == 24
     end
 
     defmodule MixedConstants do
@@ -69,15 +62,11 @@ defmodule LiveStyle.ConstsTest do
     end
 
     test "defines mixed string and numeric constants" do
-      manifest = get_manifest()
+      assert LiveStyle.get_metadata(MixedConstants, {:const, :theme, :spacing}) == 16
+      assert LiveStyle.get_metadata(MixedConstants, {:const, :theme, :color}) == "blue"
 
-      spacing_key = "LiveStyle.ConstsTest.MixedConstants.theme.spacing"
-      color_key = "LiveStyle.ConstsTest.MixedConstants.theme.color"
-      breakpoint_key = "LiveStyle.ConstsTest.MixedConstants.theme.breakpoint"
-
-      assert LiveStyle.Manifest.get_const(manifest, spacing_key) == 16
-      assert LiveStyle.Manifest.get_const(manifest, color_key) == "blue"
-      assert LiveStyle.Manifest.get_const(manifest, breakpoint_key) == "(min-width: 768px)"
+      assert LiveStyle.get_metadata(MixedConstants, {:const, :theme, :breakpoint}) ==
+               "(min-width: 768px)"
     end
   end
 
@@ -105,31 +94,20 @@ defmodule LiveStyle.ConstsTest do
     end
 
     test "same inputs produce same values" do
-      manifest = get_manifest()
-
-      key1 = "LiveStyle.ConstsTest.ConstsUnique1.test.padding"
-      key2 = "LiveStyle.ConstsTest.ConstsUnique2.test.padding"
-
-      val1 = LiveStyle.Manifest.get_const(manifest, key1)
-      val2 = LiveStyle.Manifest.get_const(manifest, key2)
+      val1 = LiveStyle.get_metadata(ConstsUnique1, {:const, :test, :padding})
+      val2 = LiveStyle.get_metadata(ConstsUnique2, {:const, :test, :padding})
 
       assert val1 == val2
     end
 
     test "different inputs produce different entries" do
-      manifest = get_manifest()
-
-      key1 = "LiveStyle.ConstsTest.ConstsUnique1.test.padding"
-      key3 = "LiveStyle.ConstsTest.ConstsUnique3.test.margin"
-
-      val1 = LiveStyle.Manifest.get_const(manifest, key1)
-      val3 = LiveStyle.Manifest.get_const(manifest, key3)
+      val1 = LiveStyle.get_metadata(ConstsUnique1, {:const, :test, :padding})
+      val3 = LiveStyle.get_metadata(ConstsUnique3, {:const, :test, :margin})
 
       # Values are different (padding vs margin)
       assert val1 == "10px"
       assert val3 == "10px"
-      # But they're stored under different keys
-      assert key1 != key3
+      # But they're stored under different keys (different modules/names)
     end
   end
 
@@ -155,9 +133,7 @@ defmodule LiveStyle.ConstsTest do
     end
 
     test "constants can be used in conditional styles" do
-      manifest = get_manifest()
-      rule_key = "LiveStyle.ConstsTest.ConstsWithRule.responsive"
-      rule = LiveStyle.Manifest.get_rule(manifest, rule_key)
+      rule = LiveStyle.get_metadata(ConstsWithRule, {:class, :responsive})
 
       assert rule != nil
       assert rule.class_string != ""
@@ -178,25 +154,9 @@ defmodule LiveStyle.ConstsTest do
     end
 
     test "numeric constants can be used as property values" do
-      manifest = get_manifest()
-
-      dropdown_rule =
-        LiveStyle.Manifest.get_rule(
-          manifest,
-          "LiveStyle.ConstsTest.ConstsWithMultipleRules.dropdown"
-        )
-
-      modal_rule =
-        LiveStyle.Manifest.get_rule(
-          manifest,
-          "LiveStyle.ConstsTest.ConstsWithMultipleRules.modal"
-        )
-
-      tooltip_rule =
-        LiveStyle.Manifest.get_rule(
-          manifest,
-          "LiveStyle.ConstsTest.ConstsWithMultipleRules.tooltip"
-        )
+      dropdown_rule = LiveStyle.get_metadata(ConstsWithMultipleRules, {:class, :dropdown})
+      modal_rule = LiveStyle.get_metadata(ConstsWithMultipleRules, {:class, :modal})
+      tooltip_rule = LiveStyle.get_metadata(ConstsWithMultipleRules, {:class, :tooltip})
 
       assert dropdown_rule != nil
       assert modal_rule != nil
@@ -229,19 +189,15 @@ defmodule LiveStyle.ConstsTest do
     end
 
     test "different namespaces have independent values" do
-      manifest = get_manifest()
-
       # Breakpoints
-      sm_key = "LiveStyle.ConstsTest.MultipleNamespaces.breakpoint.sm"
-      assert LiveStyle.Manifest.get_const(manifest, sm_key) == "(min-width: 768px)"
+      assert LiveStyle.get_metadata(MultipleNamespaces, {:const, :breakpoint, :sm}) ==
+               "(min-width: 768px)"
 
       # Colors
-      primary_key = "LiveStyle.ConstsTest.MultipleNamespaces.color.primary"
-      assert LiveStyle.Manifest.get_const(manifest, primary_key) == "blue"
+      assert LiveStyle.get_metadata(MultipleNamespaces, {:const, :color, :primary}) == "blue"
 
       # Sizes
-      small_key = "LiveStyle.ConstsTest.MultipleNamespaces.size.small"
-      assert LiveStyle.Manifest.get_const(manifest, small_key) == 8
+      assert LiveStyle.get_metadata(MultipleNamespaces, {:const, :size, :small}) == 8
     end
   end
 
@@ -260,13 +216,11 @@ defmodule LiveStyle.ConstsTest do
     end
 
     test "handles special characters in values" do
-      manifest = get_manifest()
+      assert LiveStyle.get_metadata(ConstsWithSpecialChars, {:const, :special, :with_url}) ==
+               "url(\"bg.png\")"
 
-      url_key = "LiveStyle.ConstsTest.ConstsWithSpecialChars.special.with_url"
-      quotes_key = "LiveStyle.ConstsTest.ConstsWithSpecialChars.special.with_quotes"
-
-      assert LiveStyle.Manifest.get_const(manifest, url_key) == "url(\"bg.png\")"
-      assert LiveStyle.Manifest.get_const(manifest, quotes_key) == "\"hello world\""
+      assert LiveStyle.get_metadata(ConstsWithSpecialChars, {:const, :special, :with_quotes}) ==
+               "\"hello world\""
     end
 
     defmodule ConstsWithZero do
@@ -279,13 +233,8 @@ defmodule LiveStyle.ConstsTest do
     end
 
     test "handles zero and negative values" do
-      manifest = get_manifest()
-
-      base_key = "LiveStyle.ConstsTest.ConstsWithZero.z.base"
-      negative_key = "LiveStyle.ConstsTest.ConstsWithZero.z.negative"
-
-      assert LiveStyle.Manifest.get_const(manifest, base_key) == 0
-      assert LiveStyle.Manifest.get_const(manifest, negative_key) == -1
+      assert LiveStyle.get_metadata(ConstsWithZero, {:const, :z, :base}) == 0
+      assert LiveStyle.get_metadata(ConstsWithZero, {:const, :z, :negative}) == -1
     end
 
     defmodule ConstsWithFloat do
@@ -298,13 +247,8 @@ defmodule LiveStyle.ConstsTest do
     end
 
     test "handles float values" do
-      manifest = get_manifest()
-
-      half_key = "LiveStyle.ConstsTest.ConstsWithFloat.ratio.half"
-      third_key = "LiveStyle.ConstsTest.ConstsWithFloat.ratio.third"
-
-      assert LiveStyle.Manifest.get_const(manifest, half_key) == 0.5
-      assert LiveStyle.Manifest.get_const(manifest, third_key) == 0.333
+      assert LiveStyle.get_metadata(ConstsWithFloat, {:const, :ratio, :half}) == 0.5
+      assert LiveStyle.get_metadata(ConstsWithFloat, {:const, :ratio, :third}) == 0.333
     end
   end
 
@@ -324,11 +268,9 @@ defmodule LiveStyle.ConstsTest do
 
     test "css_const/1 retrieves constant value" do
       # The css_const function is used at compile time in css_class
-      # Here we verify the manifest contains the expected values
-      manifest = get_manifest()
-
-      sm = LiveStyle.Manifest.get_const(manifest, "LiveStyle.ConstsTest.ConstsAccessor.bp.sm")
-      lg = LiveStyle.Manifest.get_const(manifest, "LiveStyle.ConstsTest.ConstsAccessor.bp.lg")
+      # Here we verify the metadata contains the expected values
+      sm = LiveStyle.get_metadata(ConstsAccessor, {:const, :bp, :sm})
+      lg = LiveStyle.get_metadata(ConstsAccessor, {:const, :bp, :lg})
 
       assert sm == "(min-width: 768px)"
       assert lg == "(min-width: 1280px)"
@@ -359,10 +301,8 @@ defmodule LiveStyle.ConstsTest do
     end
 
     test "constants can be referenced from other modules" do
-      manifest = get_manifest()
-
       # The rule should exist and use the shared constant
-      rule = LiveStyle.Manifest.get_rule(manifest, "LiveStyle.ConstsTest.ConstsConsumer.box")
+      rule = LiveStyle.get_metadata(ConstsConsumer, {:class, :box})
       assert rule != nil
       assert rule.class_string != ""
     end
@@ -383,8 +323,7 @@ defmodule LiveStyle.ConstsTest do
     end
 
     test "constants don't appear in CSS output" do
-      manifest = get_manifest()
-      css = LiveStyle.CSS.generate(manifest)
+      css = generate_css()
 
       # Constants should not generate any CSS rules
       # They are compile-time values only

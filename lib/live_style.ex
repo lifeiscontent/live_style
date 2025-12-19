@@ -101,31 +101,31 @@ defmodule LiveStyle do
           first_that_works: 1
         ]
 
-      # Accumulate rule definitions for @before_compile
-      Module.register_attribute(__MODULE__, :__live_style_rules__, accumulate: true)
+      # Accumulate class definitions for @before_compile
+      Module.register_attribute(__MODULE__, :__live_style_classes__, accumulate: true)
 
       @before_compile LiveStyle
     end
   end
 
   defmacro __before_compile__(env) do
-    rules = Module.get_attribute(env.module, :__live_style_rules__) |> Enum.reverse()
+    classes = Module.get_attribute(env.module, :__live_style_classes__) |> Enum.reverse()
 
-    # Separate static from dynamic rules
-    # Dynamic rules have format: {:__dynamic__, all_props, param_names, has_computed}
-    {static_rules, dynamic_rules} =
-      Enum.split_with(rules, fn {_name, decl} ->
+    # Separate static from dynamic classes
+    # Dynamic classes have format: {:__dynamic__, all_props, param_names, has_computed}
+    {static_classes, dynamic_classes} =
+      Enum.split_with(classes, fn {_name, decl} ->
         not match?({:__dynamic__, _, _, _}, decl)
       end)
 
-    # Build class string map and property_classes map for static rules
-    {class_strings, property_classes} = build_static_rule_maps(static_rules, env.module)
+    # Build class string map and property_classes map for static classes
+    {class_strings, property_classes} = build_static_class_maps(static_classes, env.module)
 
-    # Generate dynamic rule functions
-    # Dynamic rules: {name, {:__dynamic__, all_props, param_names, has_computed}}
-    dynamic_fns = build_dynamic_fns(dynamic_rules, env.module)
+    # Generate dynamic class functions
+    # Dynamic classes: {name, {:__dynamic__, all_props, param_names, has_computed}}
+    dynamic_fns = build_dynamic_fns(dynamic_classes, env.module)
 
-    dynamic_names = Enum.map(dynamic_rules, fn {name, _} -> name end)
+    dynamic_names = Enum.map(dynamic_classes, fn {name, _} -> name end)
 
     quote do
       @__class_strings__ unquote(Macro.escape(class_strings))
@@ -519,7 +519,7 @@ defmodule LiveStyle do
         normalized
       )
 
-      @__live_style_rules__ {unquote(name), normalized}
+      @__live_style_classes__ {unquote(name), normalized}
     end
   end
 
@@ -537,7 +537,7 @@ defmodule LiveStyle do
         normalized
       )
 
-      @__live_style_rules__ {unquote(name), normalized}
+      @__live_style_classes__ {unquote(name), normalized}
     end
   end
 
@@ -581,9 +581,9 @@ defmodule LiveStyle do
         apply(func, values)
       end
 
-      @__live_style_rules__ {unquote(name),
-                             {:__dynamic__, unquote(Macro.escape(all_props)),
-                              unquote(param_names), unquote(has_computed)}}
+      @__live_style_classes__ {unquote(name),
+                               {:__dynamic__, unquote(Macro.escape(all_props)),
+                                unquote(param_names), unquote(has_computed)}}
     end
   end
 
@@ -643,9 +643,9 @@ defmodule LiveStyle do
     quote do
       manifest = LiveStyle.Storage.read()
 
-      case LiveStyle.Manifest.get_rule(manifest, unquote(key)) do
+      case LiveStyle.Manifest.get_class(manifest, unquote(key)) do
         nil ->
-          raise ArgumentError, "Unknown rule: #{unquote(key)}"
+          raise ArgumentError, "Unknown class: #{unquote(key)}"
 
         %{class_string: cs} ->
           cs
@@ -861,6 +861,22 @@ defmodule LiveStyle do
   end
 
   @doc """
+  Generates CSS from all registered styles.
+
+  This reads the manifest and generates the complete CSS output.
+  Primarily useful for testing and build tooling.
+
+  ## Example
+
+      css = LiveStyle.generate_css()
+      # => "@layer live_style { .x1234{display:flex} ... }"
+  """
+  def generate_css do
+    manifest = LiveStyle.Storage.read()
+    LiveStyle.CSS.generate(manifest)
+  end
+
+  @doc """
   Gets the class string from a module that uses LiveStyle.
 
   This is the public API for accessing a module's styles from outside
@@ -886,20 +902,99 @@ defmodule LiveStyle do
     Map.get(class_strings, ref, "")
   end
 
+  @doc """
+  Gets metadata for a LiveStyle artifact from the manifest.
+
+  This is primarily useful for testing and introspection. It provides access
+  to internal metadata like class names, CSS output, and priority levels.
+
+  ## Examples
+
+      # Get metadata for a style rule
+      LiveStyle.get_metadata(MyComponent, :button)
+      # => %{class_string: "x1234 x5678", atomic_classes: %{...}, ...}
+
+      # Get metadata for a style class
+      LiveStyle.get_metadata(MyComponent, {:class, :button})
+      # => %{class_string: "x1234 x5678", atomic_classes: %{...}, ...}
+
+      # Get metadata for keyframes
+      LiveStyle.get_metadata(MyComponent, {:keyframes, :spin})
+      # => %{css_name: "x1abc", frames: %{...}}
+
+      # Get metadata for a CSS variable
+      LiveStyle.get_metadata(MyTokens, {:var, :colors, :primary})
+      # => %{css_name: "--x1234", value: "blue", ...}
+
+      # Get metadata for a theme
+      LiveStyle.get_metadata(MyTokens, {:theme, :dark})
+      # => %{css_name: "x1234", overrides: %{...}}
+  """
+  def get_metadata(module, {:class, name}) when is_atom(module) and is_atom(name) do
+    key = Manifest.simple_key(module, name)
+    manifest = LiveStyle.Storage.read()
+    Manifest.get_class(manifest, key)
+  end
+
+  def get_metadata(module, {:keyframes, name}) when is_atom(module) and is_atom(name) do
+    key = Manifest.simple_key(module, name)
+    manifest = LiveStyle.Storage.read()
+    Manifest.get_keyframes(manifest, key)
+  end
+
+  def get_metadata(module, {:var, namespace, name})
+      when is_atom(module) and is_atom(namespace) and is_atom(name) do
+    key = Manifest.namespaced_key(module, namespace, name)
+    manifest = LiveStyle.Storage.read()
+    Manifest.get_var(manifest, key)
+  end
+
+  def get_metadata(module, {:const, namespace, name})
+      when is_atom(module) and is_atom(namespace) and is_atom(name) do
+    key = Manifest.namespaced_key(module, namespace, name)
+    manifest = LiveStyle.Storage.read()
+    Manifest.get_const(manifest, key)
+  end
+
+  def get_metadata(module, {:theme, name}) when is_atom(module) and is_atom(name) do
+    key = Manifest.simple_key(module, name)
+    manifest = LiveStyle.Storage.read()
+    Manifest.get_theme(manifest, key)
+  end
+
+  def get_metadata(module, {:theme, namespace, name})
+      when is_atom(module) and is_atom(namespace) and is_atom(name) do
+    key = Manifest.namespaced_key(module, namespace, name)
+    manifest = LiveStyle.Storage.read()
+    Manifest.get_theme(manifest, key)
+  end
+
+  def get_metadata(module, {:position_try, name}) when is_atom(module) and is_atom(name) do
+    key = Manifest.simple_key(module, name)
+    manifest = LiveStyle.Storage.read()
+    Manifest.get_position_try(manifest, key)
+  end
+
+  def get_metadata(module, {:view_transition, name}) when is_atom(module) and is_atom(name) do
+    key = Manifest.simple_key(module, name)
+    manifest = LiveStyle.Storage.read()
+    Manifest.get_view_transition(manifest, key)
+  end
+
   # Helper functions for __before_compile__
 
   @doc false
-  def build_static_rule_maps(static_rules, module) do
-    Enum.reduce(static_rules, {%{}, %{}}, fn {name, _decl}, {cs_acc, pc_acc} ->
-      build_static_rule_map(name, module, cs_acc, pc_acc)
+  def build_static_class_maps(static_classes, module) do
+    Enum.reduce(static_classes, {%{}, %{}}, fn {name, _decl}, {cs_acc, pc_acc} ->
+      build_static_class_map(name, module, cs_acc, pc_acc)
     end)
   end
 
-  defp build_static_rule_map(name, module, cs_acc, pc_acc) do
+  defp build_static_class_map(name, module, cs_acc, pc_acc) do
     key = Manifest.simple_key(module, name)
     manifest = LiveStyle.Storage.read()
 
-    case Manifest.get_rule(manifest, key) do
+    case Manifest.get_class(manifest, key) do
       %{class_string: cs, atomic_classes: atomic_classes} ->
         prop_classes = build_prop_classes(atomic_classes)
         {Map.put(cs_acc, name, cs), Map.put(pc_acc, name, prop_classes)}

@@ -124,18 +124,20 @@ defmodule LiveStyle.ValidationTest do
     end
 
     test "valid css_vars are stored in manifest" do
-      manifest = get_manifest()
+      assert LiveStyle.get_metadata(
+               LiveStyle.ValidationTest.ValidVarsModule,
+               {:var, :valid, :simple}
+             ) != nil
 
-      simple_key = "LiveStyle.ValidationTest.ValidVarsModule.valid.simple"
-      conditional_key = "LiveStyle.ValidationTest.ValidVarsModule.valid.conditional"
-
-      assert manifest.vars[simple_key] != nil
-      assert manifest.vars[conditional_key] != nil
+      assert LiveStyle.get_metadata(
+               LiveStyle.ValidationTest.ValidVarsModule,
+               {:var, :valid, :conditional}
+             ) != nil
     end
 
     test "vars have correct css_name format" do
-      manifest = get_manifest()
-      var = manifest.vars["LiveStyle.ValidationTest.ValidVarsModule.valid.simple"]
+      var =
+        LiveStyle.get_metadata(LiveStyle.ValidationTest.ValidVarsModule, {:var, :valid, :simple})
 
       # CSS variable names should start with --
       assert var.css_name =~ ~r/^--/
@@ -157,15 +159,15 @@ defmodule LiveStyle.ValidationTest do
     end
 
     test "valid keyframes are stored in manifest" do
-      manifest = get_manifest()
-      key = "LiveStyle.ValidationTest.ValidKeyframesModule.spin"
-
-      assert manifest.keyframes[key] != nil
+      assert LiveStyle.get_metadata(
+               LiveStyle.ValidationTest.ValidKeyframesModule,
+               {:keyframes, :spin}
+             ) != nil
     end
 
     test "keyframes have css_name" do
-      manifest = get_manifest()
-      keyframes = manifest.keyframes["LiveStyle.ValidationTest.ValidKeyframesModule.spin"]
+      keyframes =
+        LiveStyle.get_metadata(LiveStyle.ValidationTest.ValidKeyframesModule, {:keyframes, :spin})
 
       assert keyframes.css_name =~ ~r/^[a-zA-Z]/
     end
@@ -227,8 +229,8 @@ defmodule LiveStyle.ValidationTest do
         css_class(:test, padding: 5)
       end
 
-      manifest = get_manifest()
-      assert manifest.rules["LiveStyle.ValidationTest.NumberValueModule.test"] != nil
+      assert LiveStyle.get_metadata(LiveStyle.ValidationTest.NumberValueModule, {:class, :test}) !=
+               nil
     end
 
     test "allows string values" do
@@ -239,8 +241,8 @@ defmodule LiveStyle.ValidationTest do
         css_class(:test, background_color: "red")
       end
 
-      manifest = get_manifest()
-      assert manifest.rules["LiveStyle.ValidationTest.StringValueModule.test"] != nil
+      assert LiveStyle.get_metadata(LiveStyle.ValidationTest.StringValueModule, {:class, :test}) !=
+               nil
     end
 
     test "allows nil values (StyleX null behavior)" do
@@ -251,8 +253,8 @@ defmodule LiveStyle.ValidationTest do
         css_class(:test, color: nil)
       end
 
-      manifest = get_manifest()
-      assert manifest.rules["LiveStyle.ValidationTest.NilValueModule.test"] != nil
+      assert LiveStyle.get_metadata(LiveStyle.ValidationTest.NilValueModule, {:class, :test}) !=
+               nil
     end
 
     test "allows array of numbers for fallback values" do
@@ -263,8 +265,8 @@ defmodule LiveStyle.ValidationTest do
         css_class(:test, transition_duration: [500])
       end
 
-      manifest = get_manifest()
-      assert manifest.rules["LiveStyle.ValidationTest.ArrayNumbersModule.test"] != nil
+      assert LiveStyle.get_metadata(LiveStyle.ValidationTest.ArrayNumbersModule, {:class, :test}) !=
+               nil
     end
 
     test "allows array of strings for fallback values" do
@@ -275,8 +277,8 @@ defmodule LiveStyle.ValidationTest do
         css_class(:test, transition_duration: ["0.5s"])
       end
 
-      manifest = get_manifest()
-      assert manifest.rules["LiveStyle.ValidationTest.ArrayStringsModule.test"] != nil
+      assert LiveStyle.get_metadata(LiveStyle.ValidationTest.ArrayStringsModule, {:class, :test}) !=
+               nil
     end
   end
 
@@ -309,8 +311,11 @@ defmodule LiveStyle.ValidationTest do
         )
       end
 
-      manifest = get_manifest()
-      assert manifest.keyframes["LiveStyle.ValidationTest.PercentageKeyframesModule.fade"] != nil
+      assert LiveStyle.get_metadata(
+               LiveStyle.ValidationTest.PercentageKeyframesModule,
+               {:keyframes, :fade}
+             ) !=
+               nil
     end
 
     test "allows from/to keyframes" do
@@ -323,8 +328,10 @@ defmodule LiveStyle.ValidationTest do
         )
       end
 
-      manifest = get_manifest()
-      assert manifest.keyframes["LiveStyle.ValidationTest.FromToKeyframesModule.slide"] != nil
+      assert LiveStyle.get_metadata(
+               LiveStyle.ValidationTest.FromToKeyframesModule,
+               {:keyframes, :slide}
+             ) != nil
     end
   end
 
@@ -352,15 +359,18 @@ defmodule LiveStyle.ValidationTest do
     end
 
     test "theme overrides are stored in manifest" do
-      manifest = get_manifest()
-      key = "LiveStyle.ValidationTest.ValidThemeOverride.base.override"
-
-      assert manifest.themes[key] != nil
+      assert LiveStyle.get_metadata(
+               LiveStyle.ValidationTest.ValidThemeOverride,
+               {:theme, :base, :override}
+             ) != nil
     end
 
     test "theme has overrides map" do
-      manifest = get_manifest()
-      theme = manifest.themes["LiveStyle.ValidationTest.ValidThemeOverride.base.override"]
+      theme =
+        LiveStyle.get_metadata(
+          LiveStyle.ValidationTest.ValidThemeOverride,
+          {:theme, :base, :override}
+        )
 
       assert is_map(theme.overrides)
       assert map_size(theme.overrides) > 0

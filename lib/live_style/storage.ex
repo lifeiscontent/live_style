@@ -142,7 +142,7 @@ defmodule LiveStyle.Storage do
   def has_styles?(manifest) do
     has_map_entries?(manifest, :var_groups) or
       has_map_entries?(manifest, :keyframes) or
-      has_map_entries?(manifest, :rules) or
+      has_map_entries?(manifest, :classes) or
       has_map_entries?(manifest, :properties) or
       has_map_entries?(manifest, :position_try) or
       has_list_entries?(manifest, :view_transition_css)

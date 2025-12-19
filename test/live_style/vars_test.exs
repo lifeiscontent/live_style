@@ -142,19 +142,18 @@ defmodule LiveStyle.VarsTest do
   describe "basic CSS variables" do
     test "variables are stored with css_name as var reference" do
       # StyleX: { color: "var(--xwx8imx)", ... }
-      manifest = get_manifest()
-
-      primary = manifest.vars["LiveStyle.VarsTest.BasicVars.colors.primary"]
+      primary = LiveStyle.get_metadata(LiveStyle.VarsTest.BasicVars, {:var, :colors, :primary})
       assert primary.css_name =~ ~r/^--[a-z0-9]+$/
       assert primary.value == "red"
     end
 
     test "variables have correct values stored" do
-      manifest = get_manifest()
+      primary = LiveStyle.get_metadata(LiveStyle.VarsTest.BasicVars, {:var, :colors, :primary})
 
-      primary = manifest.vars["LiveStyle.VarsTest.BasicVars.colors.primary"]
-      secondary = manifest.vars["LiveStyle.VarsTest.BasicVars.colors.secondary"]
-      tertiary = manifest.vars["LiveStyle.VarsTest.BasicVars.colors.tertiary"]
+      secondary =
+        LiveStyle.get_metadata(LiveStyle.VarsTest.BasicVars, {:var, :colors, :secondary})
+
+      tertiary = LiveStyle.get_metadata(LiveStyle.VarsTest.BasicVars, {:var, :colors, :tertiary})
 
       assert primary.value == "red"
       assert secondary.value == "blue"
@@ -162,11 +161,12 @@ defmodule LiveStyle.VarsTest do
     end
 
     test "different variables have different hashed names" do
-      manifest = get_manifest()
+      primary = LiveStyle.get_metadata(LiveStyle.VarsTest.BasicVars, {:var, :colors, :primary})
 
-      primary = manifest.vars["LiveStyle.VarsTest.BasicVars.colors.primary"]
-      secondary = manifest.vars["LiveStyle.VarsTest.BasicVars.colors.secondary"]
-      tertiary = manifest.vars["LiveStyle.VarsTest.BasicVars.colors.tertiary"]
+      secondary =
+        LiveStyle.get_metadata(LiveStyle.VarsTest.BasicVars, {:var, :colors, :secondary})
+
+      tertiary = LiveStyle.get_metadata(LiveStyle.VarsTest.BasicVars, {:var, :colors, :tertiary})
 
       names = [primary.css_name, secondary.css_name, tertiary.css_name]
       assert length(Enum.uniq(names)) == 3
@@ -175,9 +175,11 @@ defmodule LiveStyle.VarsTest do
 
   describe "CSS variables with media queries" do
     test "stores conditional values correctly" do
-      manifest = get_manifest()
-
-      background = manifest.vars["LiveStyle.VarsTest.VarsWithMediaQuery.colors.background"]
+      background =
+        LiveStyle.get_metadata(
+          LiveStyle.VarsTest.VarsWithMediaQuery,
+          {:var, :colors, :background}
+        )
 
       # Should store the conditional value structure
       assert is_map(background.value)
@@ -200,9 +202,8 @@ defmodule LiveStyle.VarsTest do
 
   describe "CSS variables with nested @-rules" do
     test "stores nested conditional values correctly" do
-      manifest = get_manifest()
-
-      color = manifest.vars["LiveStyle.VarsTest.VarsWithNestedAtRules.colors.color"]
+      color =
+        LiveStyle.get_metadata(LiveStyle.VarsTest.VarsWithNestedAtRules, {:var, :colors, :color})
 
       # Should store the nested conditional value structure
       assert is_map(color.value)
@@ -224,7 +225,9 @@ defmodule LiveStyle.VarsTest do
       #    Note: @supports wraps @media (innermost at-rule becomes outermost wrapper)
       css = generate_css()
 
-      color_var = get_manifest().vars["LiveStyle.VarsTest.VarsWithNestedAtRules.colors.color"]
+      color_var =
+        LiveStyle.get_metadata(LiveStyle.VarsTest.VarsWithNestedAtRules, {:var, :colors, :color})
+
       var_name = color_var.css_name
 
       # Should have default value in :root (no spaces - StyleX format)
@@ -244,10 +247,13 @@ defmodule LiveStyle.VarsTest do
   describe "using CSS variables in rules" do
     test "css_var reference in css_class generates var() in atomic class" do
       # StyleX: ".xx2qnu0{color:var(--xwx8imx)}"
-      manifest = get_manifest()
-      rule = manifest.rules["LiveStyle.VarsTest.VarsUsedInRules.styled"]
-      primary_var = manifest.vars["LiveStyle.VarsTest.VarsUsedInRules.theme.primary_color"]
-      text_var = manifest.vars["LiveStyle.VarsTest.VarsUsedInRules.theme.text_size"]
+      rule = LiveStyle.get_metadata(LiveStyle.VarsTest.VarsUsedInRules, {:class, :styled})
+
+      primary_var =
+        LiveStyle.get_metadata(LiveStyle.VarsTest.VarsUsedInRules, {:var, :theme, :primary_color})
+
+      text_var =
+        LiveStyle.get_metadata(LiveStyle.VarsTest.VarsUsedInRules, {:var, :theme, :text_size})
 
       # Color should reference the variable
       color = rule.atomic_classes["color"]
@@ -260,29 +266,36 @@ defmodule LiveStyle.VarsTest do
   end
 
   describe "themes (css_theme)" do
-    test "themes are stored in manifest.themes" do
-      manifest = get_manifest()
+    test "themes are stored in manifest" do
+      dark_theme = LiveStyle.get_metadata(LiveStyle.VarsTest.DarkTheme, {:theme, :base, :dark})
+
+      high_contrast =
+        LiveStyle.get_metadata(
+          LiveStyle.VarsTest.HighContrastTheme,
+          {:theme, :base, :high_contrast}
+        )
 
       # Should have themes stored
-      assert map_size(manifest.themes) >= 2
+      assert dark_theme != nil
+      assert high_contrast != nil
     end
 
     test "different themes have different class names" do
-      manifest = get_manifest()
+      dark_theme = LiveStyle.get_metadata(LiveStyle.VarsTest.DarkTheme, {:theme, :base, :dark})
 
-      # Theme keys include the var_group namespace
-      dark_theme = manifest.themes["LiveStyle.VarsTest.DarkTheme.base.dark"]
-      high_contrast = manifest.themes["LiveStyle.VarsTest.HighContrastTheme.base.high_contrast"]
+      high_contrast =
+        LiveStyle.get_metadata(
+          LiveStyle.VarsTest.HighContrastTheme,
+          {:theme, :base, :high_contrast}
+        )
 
       assert dark_theme.css_name != high_contrast.css_name
     end
 
     test "themes override the correct variables" do
-      manifest = get_manifest()
-
-      dark_theme = manifest.themes["LiveStyle.VarsTest.DarkTheme.base.dark"]
-      base_color = manifest.vars["LiveStyle.VarsTest.ThemeVars.base.color"]
-      base_bg = manifest.vars["LiveStyle.VarsTest.ThemeVars.base.bg"]
+      dark_theme = LiveStyle.get_metadata(LiveStyle.VarsTest.DarkTheme, {:theme, :base, :dark})
+      base_color = LiveStyle.get_metadata(LiveStyle.VarsTest.ThemeVars, {:var, :base, :color})
+      base_bg = LiveStyle.get_metadata(LiveStyle.VarsTest.ThemeVars, {:var, :base, :bg})
 
       # Dark theme should have overrides for color and bg (using hashed var names as keys)
       assert dark_theme.overrides[base_color.css_name] == "white"
@@ -292,12 +305,17 @@ defmodule LiveStyle.VarsTest do
 
   describe "variable naming" do
     test "variable names are hashed" do
-      manifest = get_manifest()
+      primary = LiveStyle.get_metadata(LiveStyle.VarsTest.BasicVars, {:var, :colors, :primary})
+
+      secondary =
+        LiveStyle.get_metadata(LiveStyle.VarsTest.BasicVars, {:var, :colors, :secondary})
+
+      tertiary = LiveStyle.get_metadata(LiveStyle.VarsTest.BasicVars, {:var, :colors, :tertiary})
 
       # All variable names should have the var prefix pattern
-      for {_key, entry} <- manifest.vars do
-        assert entry.css_name =~ ~r/^--[a-z0-9]+$/
-      end
+      assert primary.css_name =~ ~r/^--[a-z0-9]+$/
+      assert secondary.css_name =~ ~r/^--[a-z0-9]+$/
+      assert tertiary.css_name =~ ~r/^--[a-z0-9]+$/
     end
   end
 
@@ -305,26 +323,22 @@ defmodule LiveStyle.VarsTest do
     # StyleX: variables have priority 0.1, @media overrides have 0.2
     # Note: We may not implement fractional priorities exactly the same way
 
-    test "variables are stored in manifest.vars" do
-      manifest = get_manifest()
-      assert map_size(manifest.vars) > 0
+    test "variables are stored in manifest" do
+      primary = LiveStyle.get_metadata(LiveStyle.VarsTest.BasicVars, {:var, :colors, :primary})
+      assert primary != nil
     end
   end
 
   describe "typed variables (stylex.types equivalent)" do
     test "typed variables store type information" do
       # StyleX: stylex.types.color() generates @property rule
-      manifest = get_manifest()
-
-      primary = manifest.vars["LiveStyle.VarsTest.TypedVars.colors.primary"]
+      primary = LiveStyle.get_metadata(LiveStyle.VarsTest.TypedVars, {:var, :colors, :primary})
       assert primary.type != nil
       assert primary.type.syntax == "<color>"
     end
 
     test "typed variables with conditionals store both type and values" do
-      manifest = get_manifest()
-
-      primary = manifest.vars["LiveStyle.VarsTest.TypedVars.colors.primary"]
+      primary = LiveStyle.get_metadata(LiveStyle.VarsTest.TypedVars, {:var, :colors, :primary})
       assert primary.type.syntax == "<color>"
       assert is_map(primary.value)
       assert primary.value.default == "red"
@@ -337,7 +351,7 @@ defmodule LiveStyle.VarsTest do
       # "@property --xwx8imx { syntax: "<color>"; inherits: true; initial-value: red }"
       css = generate_css()
 
-      primary = get_manifest().vars["LiveStyle.VarsTest.TypedVars.colors.primary"]
+      primary = LiveStyle.get_metadata(LiveStyle.VarsTest.TypedVars, {:var, :colors, :primary})
       var_name = primary.css_name
 
       # Should have @property rule with correct syntax
@@ -349,8 +363,10 @@ defmodule LiveStyle.VarsTest do
     test "generates @property rules for different types" do
       css = generate_css()
 
-      angle_var = get_manifest().vars["LiveStyle.VarsTest.TypedVars.animation.angle"]
-      duration_var = get_manifest().vars["LiveStyle.VarsTest.TypedVars.animation.duration"]
+      angle_var = LiveStyle.get_metadata(LiveStyle.VarsTest.TypedVars, {:var, :animation, :angle})
+
+      duration_var =
+        LiveStyle.get_metadata(LiveStyle.VarsTest.TypedVars, {:var, :animation, :duration})
 
       # Angle variable
       assert css =~ ~r/@property #{Regex.escape(angle_var.css_name)}/
@@ -364,7 +380,7 @@ defmodule LiveStyle.VarsTest do
     test "generates CSS variables with conditional values for typed vars" do
       css = generate_css()
 
-      primary = get_manifest().vars["LiveStyle.VarsTest.TypedVars.colors.primary"]
+      primary = LiveStyle.get_metadata(LiveStyle.VarsTest.TypedVars, {:var, :colors, :primary})
       var_name = primary.css_name
 
       # Default value in :root (no-space format: :root{--var:value;})
