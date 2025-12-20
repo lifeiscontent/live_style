@@ -26,7 +26,16 @@ defmodule LiveStyle.MixProject do
   defp aliases do
     [
       # Pre-compile test files to ensure LiveStyle modules are in the manifest
-      test: ["live_style.setup_tests", "test"]
+      test: ["live_style.setup_tests", "test"],
+      # Run all code quality checks before committing
+      precommit: [
+        "format --check-formatted",
+        "compile --warnings-as-errors",
+        "credo --strict",
+        "dialyzer",
+        "docs",
+        "cmd MIX_ENV=test mix test"
+      ]
     ]
   end
 
