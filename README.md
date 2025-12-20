@@ -19,7 +19,7 @@ Add `live_style` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:live_style, "~> 0.8.0"}
+    {:live_style, "~> 0.8.1"}
   ]
 end
 ```
@@ -168,7 +168,7 @@ LiveStyle brings Meta's StyleX philosophy to Phoenix LiveView:
 ```elixir
 def deps do
   [
-    {:live_style, "~> 0.8.0"},
+    {:live_style, "~> 0.8.1"},
     # Automatic vendor prefixing
     {:autoprefixer_ex, "~> 0.1.0"},
     # Deprecation warnings for CSS properties
