@@ -1,6 +1,6 @@
 defmodule LiveStyle.AtRulesTest do
   @moduledoc """
-  Tests for CSS at-rules (@media, @supports, @container).
+  Tests for CSS at-rules (@media, @supports, @container, @starting-style).
 
   These tests mirror StyleX's transform-stylex-create-test.js at-rule
   sections to ensure LiveStyle handles them the same way.
@@ -80,6 +80,53 @@ defmodule LiveStyle.AtRulesTest do
         default: "1rem",
         "@container (min-width: 400px)": "2rem"
       ]
+    )
+  end
+
+  # ============================================================================
+  # Starting Style (Entry Animations)
+  # ============================================================================
+
+  defmodule StartingStyle do
+    use LiveStyle
+
+    # Basic @starting-style for entry animations
+    css_class(:fade_in,
+      opacity: %{
+        :default => "1",
+        "@starting-style" => "0"
+      }
+    )
+
+    # @starting-style with transform
+    css_class(:scale_in,
+      transform: %{
+        :default => "scale(1)",
+        "@starting-style" => "scale(0.9)"
+      }
+    )
+
+    # Multiple properties with @starting-style
+    css_class(:slide_in,
+      opacity: %{
+        :default => "1",
+        "@starting-style" => "0"
+      },
+      transform: %{
+        :default => "translateY(0)",
+        "@starting-style" => "translateY(-20px)"
+      }
+    )
+
+    # @starting-style with nested pseudo-class (StyleX pattern)
+    css_class(:hover_fade,
+      opacity: %{
+        :default => "1",
+        "@starting-style" => %{
+          :default => "0",
+          ":hover" => "0.5"
+        }
+      }
     )
   end
 
@@ -624,6 +671,99 @@ defmodule LiveStyle.AtRulesTest do
       assert named_class != nil
       assert named_class.ltr =~ "@container sidebar (min-width: 200px)"
       assert named_class.ltr =~ "padding:16px"
+    end
+  end
+
+  # ============================================================================
+  # @starting-style Tests
+  # ============================================================================
+
+  describe "@starting-style" do
+    test "basic @starting-style generates correct CSS" do
+      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.StartingStyle, {:class, :fade_in})
+      classes = rule.atomic_classes["opacity"].classes
+
+      # Default value
+      default = classes[:default]
+      assert default.ltr == ".#{default.class}{opacity:1}"
+      # opacity is a longhand-logical property (priority 3000)
+      assert default.priority == 3000
+
+      # @starting-style value
+      starting = classes["@starting-style"]
+      assert starting != nil
+      assert starting.ltr =~ "@starting-style"
+      assert starting.ltr =~ "opacity:0"
+      # Priority should be property_priority (3000) + at_rule_priority (20) = 3020
+      assert starting.priority == 3020
+    end
+
+    test "@starting-style with transform generates correct CSS" do
+      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.StartingStyle, {:class, :scale_in})
+      classes = rule.atomic_classes["transform"].classes
+
+      starting = classes["@starting-style"]
+      assert starting != nil
+      assert starting.ltr =~ "@starting-style"
+      assert starting.ltr =~ "transform:scale(.9)"
+    end
+
+    test "multiple properties with @starting-style" do
+      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.StartingStyle, {:class, :slide_in})
+
+      # Opacity
+      opacity_classes = rule.atomic_classes["opacity"].classes
+      opacity_starting = opacity_classes["@starting-style"]
+      assert opacity_starting.ltr =~ "@starting-style"
+      assert opacity_starting.ltr =~ "opacity:0"
+
+      # Transform
+      transform_classes = rule.atomic_classes["transform"].classes
+      transform_starting = transform_classes["@starting-style"]
+      assert transform_starting.ltr =~ "@starting-style"
+      assert transform_starting.ltr =~ "transform:translateY(-20px)"
+    end
+
+    test "@starting-style has correct priority relative to other at-rules" do
+      # @starting-style: 20 (should be lower than @supports)
+      # @supports: 30
+      # @media: 200
+      # @container: 300
+      assert LiveStyle.Priority.get_at_rule_priority("@starting-style") == 20
+      assert LiveStyle.Priority.get_at_rule_priority("@supports (x)") == 30
+      assert LiveStyle.Priority.get_at_rule_priority("@media (x)") == 200
+      assert LiveStyle.Priority.get_at_rule_priority("@container (x)") == 300
+
+      # @starting-style should have lowest at-rule priority
+      starting_priority = LiveStyle.Priority.get_at_rule_priority("@starting-style")
+      supports_priority = LiveStyle.Priority.get_at_rule_priority("@supports (x)")
+      assert starting_priority < supports_priority
+    end
+
+    test "@starting-style rules have doubled class selector" do
+      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.StartingStyle, {:class, :fade_in})
+      starting = rule.atomic_classes["opacity"].classes["@starting-style"]
+
+      # Should have doubled selector like .x123.x123 inside @starting-style
+      assert starting.ltr =~ ~r/@starting-style\{\.[a-z0-9]+\.[a-z0-9]+\{/
+    end
+
+    test "@starting-style with nested pseudo-class generates correct CSS" do
+      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.StartingStyle, {:class, :hover_fade})
+      classes = rule.atomic_classes["opacity"].classes
+
+      # @starting-style default
+      starting_default = classes["@starting-style"]
+      assert starting_default != nil
+      assert starting_default.ltr =~ "@starting-style"
+      assert starting_default.ltr =~ "opacity:0"
+
+      # @starting-style:hover - nested pseudo inside at-rule
+      starting_hover = classes["@starting-style:hover"]
+      assert starting_hover != nil
+      assert starting_hover.ltr =~ "@starting-style"
+      assert starting_hover.ltr =~ ":hover"
+      assert starting_hover.ltr =~ "opacity:.5"
     end
   end
 end

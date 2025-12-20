@@ -35,6 +35,7 @@ defmodule LiveStyle.Priority do
   @doc false
   @spec get_at_rule_priority(String.t() | nil) :: integer()
   def get_at_rule_priority(nil), do: 0
+  def get_at_rule_priority(<<"@starting-style", _rest::binary>>), do: 20
   def get_at_rule_priority(<<"@supports", _rest::binary>>), do: 30
   def get_at_rule_priority(<<"@media", _rest::binary>>), do: 200
   def get_at_rule_priority(<<"@container", _rest::binary>>), do: 300

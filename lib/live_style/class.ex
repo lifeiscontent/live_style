@@ -147,10 +147,79 @@ defmodule LiveStyle.Class do
     end
   end
 
+  # Transform nested at-rule declarations into conditional format
+  # StyleX syntax: at-rules as top-level keys with nested CSS properties
+  #
+  # Input: {"@container (min-width: 400px)", %{color: "red", padding: "10px"}}
+  # Output: [{:color, %{"@container (min-width: 400px)" => "red"}},
+  #          {:padding, %{"@container (min-width: 400px)" => "10px"}}]
+  defp transform_nested_at_rules(declarations) do
+    declarations
+    |> Enum.flat_map(&transform_declaration/1)
+    |> merge_conditional_declarations()
+  end
+
+  defp transform_declaration({key, value}) when is_map(value) do
+    key_str = to_string(key)
+
+    if at_rule_key?(key_str) and has_css_properties?(value) do
+      # This is a nested at-rule with CSS properties inside
+      # Transform each property into a conditional declaration
+      Enum.map(value, fn {prop, prop_value} ->
+        {prop, %{key => prop_value}}
+      end)
+    else
+      [{key, value}]
+    end
+  end
+
+  defp transform_declaration(other), do: [other]
+
+  # Merge conditional declarations for the same property
+  # e.g., [{:color, %{"@media" => "red"}}, {:color, %{"@container" => "blue"}}]
+  # becomes [{:color, %{"@media" => "red", "@container" => "blue"}}]
+  defp merge_conditional_declarations(declarations) do
+    declarations
+    |> Enum.reduce(%{}, fn {prop, value}, acc ->
+      case {Map.get(acc, prop), value} do
+        {nil, _} ->
+          Map.put(acc, prop, value)
+
+        {existing, new} when is_map(existing) and is_map(new) ->
+          Map.put(acc, prop, Map.merge(existing, new))
+
+        {_existing, new} ->
+          # New value overwrites (e.g., simple value overwrites conditional)
+          Map.put(acc, prop, new)
+      end
+    end)
+    |> Enum.to_list()
+  end
+
+  # Check if key is an at-rule
+  defp at_rule_key?(<<"@", _rest::binary>>), do: true
+  defp at_rule_key?(_), do: false
+
+  defp has_css_properties?(map) when is_map(map) do
+    Enum.any?(Map.keys(map), fn key ->
+      key_str = to_string(key)
+      # CSS properties use snake_case (Elixir) or are known property names
+      # At-rules and pseudo-classes/elements start with @ or :
+      not String.starts_with?(key_str, "@") and
+        not String.starts_with?(key_str, ":") and
+        key not in [:default, "default"]
+    end)
+  end
+
   defp process_declarations(declarations, opts) do
+    # First, transform nested at-rule declarations into conditional format
+    # e.g., {"@container (min-width: 400px)", %{color: "red"}} becomes
+    #       {:color, %{"@container (min-width: 400px)" => "red"}}
+    transformed_declarations = transform_nested_at_rules(declarations)
+
     # Separate into: simple values, conditional values, and pseudo-element declarations
     {pseudo_decls, rest} =
-      Enum.split_with(declarations, fn {prop, _value} ->
+      Enum.split_with(transformed_declarations, fn {prop, _value} ->
         LiveStyle.Pseudo.element?(prop)
       end)
 

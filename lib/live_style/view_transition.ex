@@ -37,11 +37,16 @@ defmodule LiveStyle.ViewTransition do
           ]
       end
 
-  Apply in templates using `view-transition-name`:
+  Apply in templates using `css/2` with the `style` option:
 
-      <li style={"view-transition-name: \#{css_view_transition({MyApp.Tokens, :card})}-\#{@id}"}>
-        <%= @item.text %>
-      </li>
+      <div {css([:card_styles], style: [
+        view_transition_class: css_view_transition(:card),
+        view_transition_name: "card-\#{@id}"
+      ])}>
+
+  Or directly in inline styles:
+
+      <div style={"view-transition-class: \#{css_view_transition(:card)}; view-transition-name: card-\#{@id}"}>
 
   ## Available Pseudo-element Keys
 

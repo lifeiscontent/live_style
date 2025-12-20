@@ -5,6 +5,68 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2024-12-21
+
+### Added
+
+- `css/2` macro with `:style` option for merging additional inline styles:
+  ```elixir
+  <div {css([:card], style: [
+    view_transition_class: css_view_transition(:card),
+    view_transition_name: "card-#{@id}"
+  ])}>
+  ```
+
+- Nested at-rule syntax support (StyleX-style) for cleaner conditional styles:
+  ```elixir
+  css_class :card,
+    padding: "1rem",
+    "@container (min-width: 400px)": %{
+      padding: "2rem",
+      font_size: "1.125rem"
+    }
+  ```
+
+- Comprehensive documentation for Phoenix LiveView View Transitions integration:
+  - Complete JavaScript adapter code (`createViewTransitionDom`)
+  - Reusable `ViewTransition` component with colocated hook
+  - Step-by-step integration guide
+  - Key insights for correct timing and element structure
+
+- Documentation for CSS Scroll-Driven Animations:
+  - Scroll progress timelines (`animation-timeline: scroll()`)
+  - View progress timelines (`animation-timeline: view()`)
+  - Named view timelines for parallax effects
+  - Horizontal scroll progress with named scroll timelines
+  - Animation range control
+
+- `LiveStyle.Dev` module with development helpers for inspecting styles:
+  - `class_info/2` - Returns detailed info about a class (CSS, properties, values)
+  - `list/1,2` - Lists all class names in a module (with :static/:dynamic filtering)
+  - `diff/2` - Shows how multiple classes merge with property-level detail
+  - `css/2` - Returns raw CSS output for classes
+  - `tokens/1` - Shows all tokens defined in a module
+  - `pp/2`, `pp_list/1` - Pretty-print helpers for console output
+
+- `mix live_style.audit` task to find potentially unused class definitions:
+  - Scans codebase for `css_class/2` definitions
+  - Searches for references in `.ex`, `.exs`, and `.heex` files
+  - Reports classes with no apparent references
+  - Supports `--format json` for tooling integration
+
+- `mix live_style.inspect` task to inspect class definitions from CLI:
+  - Shows generated CSS and property breakdown
+  - Supports inspecting multiple classes with merged result
+  - `--css` flag for raw CSS output
+
+### Changed
+
+- `css_view_transition/1` macro now returns compile-time values instead of runtime lookups
+
+### Fixed
+
+- View transition class references are now resolved at compile time for better performance
+
 ## [0.7.0] - 2024-12-20
 
 ### Changed

@@ -49,14 +49,23 @@ defmodule LiveStyle.Runtime do
   Resolve a list of refs into an Attrs struct with class and style.
 
   Handles both static rules and dynamic rules with CSS variables.
+  Optionally merges additional inline styles from the `opts` parameter.
+
+  ## Options
+
+    * `:style` - A keyword list or map of CSS properties to merge into the style.
+
   Validation is done at compile time by the css/1 macro.
   """
-  @spec resolve_attrs(module(), list(), map(), list()) :: LiveStyle.Attrs.t()
-  def resolve_attrs(module, refs, _class_strings, _dynamic_names) when is_list(refs) do
+  @spec resolve_attrs(module(), list(), map(), list(), keyword() | nil) :: LiveStyle.Attrs.t()
+  def resolve_attrs(module, refs, _class_strings, _dynamic_names, opts) when is_list(refs) do
     property_classes_map = module.__live_style__(:property_classes)
 
     # Use property-based merging to correctly handle :__unset__ values (StyleX behavior)
     # This ensures that nil values properly "unset" properties
+    # Accumulator is {props_acc, vars_acc}
+    # - props_acc: map of property -> class for static merging
+    # - vars_acc: list of CSS variable maps for dynamic styles
     {merged_props, var_styles} =
       refs
       |> List.flatten()
@@ -75,20 +84,66 @@ defmodule LiveStyle.Runtime do
       |> Enum.uniq()
       |> Enum.join(" ")
 
-    # Merge all CSS variable maps and convert to style string
-    style_string =
-      case var_styles do
-        [] ->
-          nil
+    # Extract additional styles from opts
+    extra_styles = extract_extra_styles(opts)
 
-        _ ->
-          var_styles
-          |> Enum.reverse()
-          |> Enum.reduce(%{}, &Map.merge(&2, &1))
-          |> Enum.map_join("; ", fn {var_name, value} -> "#{var_name}: #{value}" end)
-      end
+    # Build style string from CSS variables and extra styles
+    style_string = build_style_string(var_styles, extra_styles)
 
     %LiveStyle.Attrs{class: class_string, style: style_string}
+  end
+
+  # Extract and format extra styles from opts
+  defp extract_extra_styles(nil), do: nil
+  defp extract_extra_styles([]), do: nil
+
+  defp extract_extra_styles(opts) when is_list(opts) do
+    case Keyword.get(opts, :style) do
+      nil -> nil
+      styles when is_list(styles) -> format_extra_styles(styles)
+      styles when is_map(styles) -> format_extra_styles(styles)
+    end
+  end
+
+  defp format_extra_styles(styles) when is_list(styles) or is_map(styles) do
+    Enum.map_join(styles, "; ", fn {key, value} ->
+      css_prop = format_style_key(key)
+      "#{css_prop}: #{value}"
+    end)
+  end
+
+  # Convert atom keys (snake_case) to CSS property names (kebab-case)
+  # String keys are passed through as-is
+  defp format_style_key(key) when is_atom(key) do
+    Value.to_css_property(key)
+  end
+
+  defp format_style_key(key) when is_binary(key), do: key
+
+  # Build the final style string from CSS variables and extra styles
+  defp build_style_string([], nil), do: nil
+
+  defp build_style_string([], extra) when is_binary(extra), do: extra
+
+  defp build_style_string(var_styles, nil) do
+    var_styles
+    |> Enum.reverse()
+    |> Enum.reduce(%{}, &Map.merge(&2, &1))
+    |> Enum.map_join("; ", fn {var_name, value} -> "#{var_name}: #{value}" end)
+  end
+
+  defp build_style_string(var_styles, extra) when is_binary(extra) do
+    var_string =
+      var_styles
+      |> Enum.reverse()
+      |> Enum.reduce(%{}, &Map.merge(&2, &1))
+      |> Enum.map_join("; ", fn {var_name, value} -> "#{var_name}: #{value}" end)
+
+    if var_string == "" do
+      extra
+    else
+      "#{var_string}; #{extra}"
+    end
   end
 
   # Merge a resolved reference into the accumulator
@@ -225,6 +280,7 @@ defmodule LiveStyle.Runtime do
     end
   end
 
+  # Dynamic rule: {name, args}
   defp resolve_ref_with_props(module, {name, args}, _property_classes_map) when is_atom(name) do
     dynamic_names = module.__live_style__(:dynamic_names)
 

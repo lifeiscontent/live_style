@@ -429,28 +429,41 @@ defmodule LiveStyle do
   end
 
   @doc """
-  References a view transition, returning the class name.
+  References a view transition, returning the `view-transition-class` value.
+
+  Returns the hashed class name that should be used with the CSS `view-transition-class`
+  property. You control when and where to apply `view-transition-name` via inline styles.
 
   ## Local reference
 
-      css_view_transition(:card_transition)
+      css_view_transition(:card)
+      # => "x9fx6z8"
 
   ## Cross-module reference
 
-      css_view_transition({MyApp.Components.Card, :card_transition})
+      css_view_transition({Tokens, :card})
+      # => "x9fx6z8"
+
+  ## Usage in templates
+
+  Use with inline styles to control view transitions:
+
+      <div style={"view-transition-class: \#{css_view_transition(:card)}; view-transition-name: card-\#{@id}"}>
+
+  Or use `css/2` with the `style` option for merging with other styles:
+
+      <div {css([:card_styles], style: [view_transition_class: css_view_transition(:card), view_transition_name: "card-\#{@id}"])}>
   """
+  # Local reference: css_view_transition(:name)
   defmacro css_view_transition(ref) when is_atom(ref) do
-    quote do
-      LiveStyle.ViewTransition.lookup!(__MODULE__, unquote(ref))
-    end
+    module = __CALLER__.module
+    LiveStyle.ViewTransition.lookup!(module, ref)
   end
 
-  defmacro css_view_transition({module_ast, name}) do
+  # Cross-module reference: css_view_transition({Module, :name})
+  defmacro css_view_transition({module_ast, name}) when is_atom(name) do
     {module, _} = Code.eval_quoted(module_ast, [], __CALLER__)
-
-    quote do
-      LiveStyle.ViewTransition.lookup!(unquote(module), unquote(name))
-    end
+    LiveStyle.ViewTransition.lookup!(module, name)
   end
 
   @doc """
@@ -466,6 +479,43 @@ defmodule LiveStyle do
 
       css_class :themed,
         color: css_var({MyApp.Tokens, :color, :white})
+
+  ## Conditional styles (pseudo-classes, media queries)
+
+      css_class :interactive,
+        color: %{
+          :default => "blue",
+          ":hover" => "darkblue",
+          "@media (prefers-color-scheme: dark)" => "lightblue"
+        }
+
+  ## Nested at-rule syntax (StyleX-style)
+
+  For cleaner conditional styles, you can nest CSS properties under at-rules:
+
+      css_class :responsive_card,
+        padding: "1rem",
+        font_size: "1rem",
+        "@container (min-width: 400px)": %{
+          padding: "2rem",
+          font_size: "1.125rem"
+        },
+        "@media (min-width: 768px)": %{
+          padding: "3rem"
+        }
+
+  This is equivalent to:
+
+      css_class :responsive_card,
+        padding: %{
+          :default => "1rem",
+          "@container (min-width: 400px)" => "2rem",
+          "@media (min-width: 768px)" => "3rem"
+        },
+        font_size: %{
+          :default => "1rem",
+          "@container (min-width: 400px)" => "1.125rem"
+        }
 
   ## Dynamic classes (StyleX-style with CSS variables)
 
@@ -679,6 +729,16 @@ defmodule LiveStyle do
 
       # Dynamic styles
       <div {css([{:dynamic_color, @color}])}>
+
+      # With additional inline styles (keyword list or map)
+      <div {css([:card], style: [view_transition_name: "card-1"])}>
+      <div {css([:card], style: %{"view-transition-name" => "card-1"})}>
+
+      # With view transitions
+      <div {css([:card], style: [
+        view_transition_class: css_view_transition(:card),
+        view_transition_name: "card-\#{@id}"
+      ])}>
   """
   # Single atom reference: css(:button)
   # Returns Attrs struct for spreading in templates
@@ -693,13 +753,51 @@ defmodule LiveStyle do
 
   # List of refs: css([:base, :primary, @active && :active])
   # Resolves and merges multiple refs at runtime, returns Attrs struct
-  defmacro css(refs) do
+  defmacro css(refs) when is_list(refs) do
     quote do
       LiveStyle.resolve_attrs(
         __MODULE__,
         unquote(refs),
         __MODULE__.__live_style__(:class_strings),
-        __MODULE__.__live_style__(:dynamic_names)
+        __MODULE__.__live_style__(:dynamic_names),
+        nil
+      )
+    end
+  end
+
+  @doc """
+  Returns CSS attributes with additional inline styles merged in.
+
+  The second argument is a keyword list with a `:style` key containing
+  additional CSS properties to merge into the inline style.
+
+  ## Options
+
+    * `:style` - A keyword list or map of CSS properties to merge.
+      Property names can be atoms (snake_case) or strings (kebab-case).
+
+  ## Examples
+
+      # With view transition styles
+      <div {css([:card], style: [
+        view_transition_class: css_view_transition(:card),
+        view_transition_name: "card-\#{@id}"
+      ])}>
+
+      # With arbitrary inline styles
+      <div {css([:base], style: [opacity: "0.5", transform: "scale(1.1)"])}>
+
+      # Using string keys (kebab-case)
+      <div {css([:base], style: %{"--custom-prop" => "value"})}>
+  """
+  defmacro css(refs, opts) when is_list(opts) do
+    quote do
+      LiveStyle.resolve_attrs(
+        __MODULE__,
+        unquote(refs),
+        __MODULE__.__live_style__(:class_strings),
+        __MODULE__.__live_style__(:dynamic_names),
+        unquote(opts)
       )
     end
   end
@@ -837,7 +935,8 @@ defmodule LiveStyle do
     to: LiveStyle.Runtime
 
   @doc false
-  defdelegate resolve_attrs(module, refs, class_strings, dynamic_names), to: LiveStyle.Runtime
+  defdelegate resolve_attrs(module, refs, class_strings, dynamic_names, opts),
+    to: LiveStyle.Runtime
 
   @doc false
   defdelegate process_dynamic_rule(all_props, param_names, values, module, name, has_computed),
@@ -895,7 +994,7 @@ defmodule LiveStyle do
   def get_css(module, refs) when is_atom(module) and is_list(refs) do
     class_strings = module.__live_style__(:class_strings)
     dynamic_names = module.__live_style__(:dynamic_names)
-    resolve_attrs(module, refs, class_strings, dynamic_names)
+    resolve_attrs(module, refs, class_strings, dynamic_names, nil)
   end
 
   def get_css(module, ref) when is_atom(module) and is_atom(ref) do
