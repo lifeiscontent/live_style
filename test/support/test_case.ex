@@ -3,6 +3,7 @@ defmodule LiveStyle.TestCase do
   Base test case for LiveStyle tests.
 
   This module provides a consistent test environment with:
+  - Isolated manifest per test (for async test safety)
   - CSS generation via `generate_css/0`
   - Hash computation helpers
   - Per-process config overrides
@@ -55,6 +56,19 @@ defmodule LiveStyle.TestCase do
 
   @doc false
   def setup_test(config_opts) do
+    # Generate a unique manifest path for this test process
+    unique_id = :erlang.unique_integer([:positive, :monotonic])
+    manifest_path = Path.join(System.tmp_dir!(), "live_style_test_#{unique_id}.etf")
+
+    # Read the shared manifest (compiled test modules)
+    manifest = LiveStyle.Storage.read()
+
+    # Set this test's unique manifest path
+    LiveStyle.Storage.set_path(manifest_path)
+
+    # Write the manifest to the test's unique file
+    LiveStyle.Storage.write(manifest)
+
     # Apply any config overrides for this test
     for {key, value} <- config_opts do
       LiveStyle.Config.put(key, value)
@@ -62,6 +76,8 @@ defmodule LiveStyle.TestCase do
 
     # Cleanup on test exit
     ExUnit.Callbacks.on_exit(fn ->
+      File.rm(manifest_path)
+      LiveStyle.Storage.clear_path()
       LiveStyle.Config.reset_all()
     end)
 
