@@ -39,8 +39,8 @@ defmodule LiveStyle.Class.ConditionalProcessor do
         }
       }
   """
-  @spec process(list()) :: map()
-  def process(declarations) do
+  @spec process(list(), keyword()) :: map()
+  def process(declarations, _opts \\ []) do
     declarations
     |> Enum.flat_map(fn {prop, value_map} ->
       # Convert key to CSS string at boundary

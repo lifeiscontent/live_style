@@ -9,7 +9,7 @@ defmodule LiveStyle.Property.ValidationTest do
     # Reset config after each test
     on_exit(fn ->
       LiveStyle.Config.reset_all()
-      Application.delete_env(:live_style, :prefixer)
+      Application.delete_env(:live_style, :prefix_css)
       Application.delete_env(:live_style, :vendor_prefix_level)
     end)
 
@@ -59,9 +59,9 @@ defmodule LiveStyle.Property.ValidationTest do
   end
 
   describe "validate!/2 with vendor prefix checking" do
-    test "warns when using vendor-prefixed property that prefixer handles" do
-      # Configure a prefixer that handles mask-image
-      Application.put_env(:live_style, :prefixer, fn property, value ->
+    test "warns when using vendor-prefixed property that prefix_css handles" do
+      # Configure a prefix_css that handles mask-image
+      Application.put_env(:live_style, :prefix_css, fn property, value ->
         if property == "mask-image" do
           "-webkit-mask-image:#{value};mask-image:#{value}"
         else
@@ -78,9 +78,9 @@ defmodule LiveStyle.Property.ValidationTest do
       assert warning =~ "Use 'mask-image' instead"
     end
 
-    test "does not warn for vendor-prefixed property when prefixer doesn't handle it" do
-      # Configure a prefixer that doesn't handle font-smoothing
-      Application.put_env(:live_style, :prefixer, fn property, value ->
+    test "does not warn for vendor-prefixed property when prefix_css doesn't handle it" do
+      # Configure a prefix_css that doesn't handle font-smoothing
+      Application.put_env(:live_style, :prefix_css, fn property, value ->
         "#{property}:#{value}"
       end)
 
@@ -89,12 +89,12 @@ defmodule LiveStyle.Property.ValidationTest do
           Validation.validate!("-webkit-font-smoothing")
         end)
 
-      # Should not warn about vendor prefix since prefixer doesn't handle it
+      # Should not warn about vendor prefix since prefix_css doesn't handle it
       refute warning =~ "Unnecessary vendor prefix"
     end
 
-    test "does not warn when no prefixer is configured" do
-      Application.delete_env(:live_style, :prefixer)
+    test "does not warn when no prefix_css is configured" do
+      Application.delete_env(:live_style, :prefix_css)
 
       warning =
         capture_io(:stderr, fn ->
@@ -105,7 +105,7 @@ defmodule LiveStyle.Property.ValidationTest do
     end
 
     test "does not warn when vendor_prefix_level is :ignore" do
-      Application.put_env(:live_style, :prefixer, fn property, value ->
+      Application.put_env(:live_style, :prefix_css, fn property, value ->
         if property == "mask-image" do
           "-webkit-mask-image:#{value};mask-image:#{value}"
         else
@@ -124,7 +124,7 @@ defmodule LiveStyle.Property.ValidationTest do
     end
 
     test "does not warn for standard properties" do
-      Application.put_env(:live_style, :prefixer, fn property, value ->
+      Application.put_env(:live_style, :prefix_css, fn property, value ->
         "#{property}:#{value}"
       end)
 
@@ -145,7 +145,7 @@ defmodule LiveStyle.Property.ValidationTest do
 
     test "returns multiple suggestions sorted by similarity" do
       suggestions = Validation.find_suggestions("backgrund")
-      assert length(suggestions) > 0
+      assert not Enum.empty?(suggestions)
       assert Enum.any?(suggestions, &String.contains?(&1, "background"))
     end
 

@@ -25,6 +25,7 @@ defmodule LiveStyle.Class do
       # => %{class_string: "x1234 x5678", atomic_classes: %{...}, ...}
   """
 
+  alias LiveStyle.Class.Conditional
   alias LiveStyle.Class.ConditionalProcessor
   alias LiveStyle.Class.DynamicProcessor
   alias LiveStyle.Class.PseudoElementProcessor
@@ -39,20 +40,21 @@ defmodule LiveStyle.Class do
     * `module` - The module defining the class
     * `name` - The class name (atom)
     * `declarations` - Map of CSS property declarations
+    * `opts` - Options including `:file` and `:line` for validation warnings
 
   ## Example
 
       LiveStyle.Class.define(MyModule, :button, %{display: "flex"})
   """
-  @spec define(module(), atom(), map()) :: :ok
-  def define(module, name, declarations) do
+  @spec define(module(), atom(), map(), keyword()) :: :ok
+  def define(module, name, declarations, opts \\ []) do
     key = Manifest.simple_key(module, name)
 
     # Resolve __include__ entries first
     resolved_declarations = Include.resolve(declarations, module)
 
     # Process declarations into atomic classes
-    {atomic_classes, class_string} = process_declarations(resolved_declarations)
+    {atomic_classes, class_string} = process_declarations(resolved_declarations, opts)
 
     entry = %{
       class_string: class_string,
@@ -145,7 +147,7 @@ defmodule LiveStyle.Class do
     end
   end
 
-  defp process_declarations(declarations) do
+  defp process_declarations(declarations, opts) do
     # Separate into: simple values, conditional values, and pseudo-element declarations
     {pseudo_decls, rest} =
       Enum.split_with(declarations, fn {prop, _value} ->
@@ -155,13 +157,13 @@ defmodule LiveStyle.Class do
     {simple_decls, conditional_decls} =
       rest
       |> Enum.split_with(fn {_prop, value} ->
-        not LiveStyle.Class.Conditional.conditional?(value)
+        not Conditional.conditional?(value)
       end)
 
     # Process each type of declaration via specialized processors
-    simple_atomic = SimpleProcessor.process(simple_decls)
-    conditional_atomic = ConditionalProcessor.process(conditional_decls)
-    pseudo_atomic = PseudoElementProcessor.process(pseudo_decls)
+    simple_atomic = SimpleProcessor.process(simple_decls, opts)
+    conditional_atomic = ConditionalProcessor.process(conditional_decls, opts)
+    pseudo_atomic = PseudoElementProcessor.process(pseudo_decls, opts)
 
     # Merge all atomic classes
     atomic =

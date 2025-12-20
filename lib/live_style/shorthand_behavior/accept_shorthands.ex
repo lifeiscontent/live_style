@@ -1,6 +1,6 @@
 defmodule LiveStyle.ShorthandBehavior.AcceptShorthands do
   @moduledoc """
-  Keeps shorthand properties intact with null resets for longhands.
+  Keeps shorthand properties intact with nil resets for longhands.
 
   This is the default behavior. Shorthand properties are preserved,
   but conflicting longhand properties are reset to `nil` to ensure

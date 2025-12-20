@@ -40,14 +40,31 @@ defmodule LiveStyle.Config do
     * `:font_size_root_px` - root font size for px to rem conversion
       (default: 16)
 
-    * `:use_css_layers` - wrap CSS output in `@layer` blocks for specificity
-      (default: true). When false, uses `:not(#\\#)` selector hack instead
-      (matching StyleX's default behavior)
+    * `:use_css_layers` - use CSS `@layer` for specificity control (default: false).
+      When true, groups rules by priority into `@layer priorityN` blocks
+      (matching StyleX's `useLayers: true`).
+      When false, uses `:not(#\\#)` selector hack instead (matching StyleX's default)
 
-    * `:use_priority_layers` - when `use_css_layers` is true, groups CSS rules
-      by priority level into separate `@layer priorityN` blocks (default: false).
-      This matches StyleX's `useLayers: true` behavior where rules are grouped
-      as: `@layer priority1, priority2, ...; @layer priority2 { rules... }`
+    * `:validate_properties` - validate CSS property names at compile time (default: true)
+
+    * `:unknown_property_level` - how to handle unknown CSS properties (default: `:warn`)
+      - `:error` - raise compile-time error
+      - `:warn` - emit warning with "did you mean?" suggestions
+      - `:ignore` - silently ignore
+
+    * `:vendor_prefix_level` - how to handle unnecessary vendor prefixes (default: `:warn`)
+      - `:warn` - emit warning suggesting to use the unprefixed property
+      - `:ignore` - silently allow
+
+    * `:deprecated_property_level` - how to handle deprecated CSS properties (default: `:warn`)
+      - `:warn` - emit warning about deprecated property
+      - `:ignore` - silently allow
+
+    * `:prefix_css` - function to add vendor prefixes to CSS (default: nil)
+      - Example: `&MyApp.CSS.prefix/2` - should take `(property, value)` and return CSS string
+
+    * `:deprecated?` - function to check if a property is deprecated (default: nil)
+      - Example: `&MyApp.CSS.deprecated?/1` - should take property name and return boolean
 
   ## Example Configuration
 
@@ -78,12 +95,13 @@ defmodule LiveStyle.Config do
   @default_debug_class_names false
   @default_font_size_px_to_rem false
   @default_font_size_root_px 16
-  @default_use_css_layers true
-  @default_use_priority_layers false
+  @default_use_css_layers false
   @default_validate_properties true
   @default_unknown_property_level :warn
   @default_vendor_prefix_level :warn
-  @default_prefixer nil
+  @default_deprecated_property_level :warn
+  @default_prefix_css nil
+  @default_deprecated? nil
 
   @config_key :live_style_config_overrides
 
@@ -304,31 +322,8 @@ defmodule LiveStyle.Config do
   @doc """
   Returns whether CSS layers should be used for specificity control.
 
-  When enabled (default), output is wrapped in `@layer live_style { ... }`.
-  When disabled, uses the `:not(#\\#)` selector hack instead, matching
-  StyleX's default behavior.
-
-  CSS layers are the modern approach but may conflict with user's own
-  `@layer` declarations. The `:not(#\\#)` hack works in all browsers but
-  is less elegant.
-
-  Default is `true`. Disable for StyleX compatibility:
-
-      config :live_style, use_css_layers: false
-  """
-  def use_css_layers? do
-    case get_override(:use_css_layers) do
-      nil -> Application.get_env(:live_style, :use_css_layers, @default_use_css_layers)
-      value -> value
-    end
-  end
-
-  @doc """
-  Returns whether priority layers should be used for CSS rule grouping.
-
-  When enabled (and `use_css_layers?` is true), CSS rules are grouped by
-  priority level into separate `@layer priorityN` blocks. This matches
-  StyleX's `useLayers: true` behavior.
+  When enabled, CSS rules are grouped by priority level into separate
+  `@layer priorityN` blocks. This matches StyleX's `useLayers: true` behavior.
 
   Priority levels are calculated as `div(priority, 1000)`:
   - Priority 0-999 → @layer priority1 (non-style rules like @property, @keyframes)
@@ -338,15 +333,16 @@ defmodule LiveStyle.Config do
   - Priority 4000-4999 → @layer priority5 (physical longhands)
   - Priority 5000+ → @layer priority6+ (pseudo-elements)
 
-  Default is `false` (matching StyleX's default). Enable for StyleX `useLayers: true` compatibility:
+  When disabled (default), uses the `:not(#\\#)` selector hack instead,
+  matching StyleX's default behavior.
 
-      config :live_style,
-        use_css_layers: true,
-        use_priority_layers: true
+  Enable for StyleX `useLayers: true` compatibility:
+
+      config :live_style, use_css_layers: true
   """
-  def use_priority_layers? do
-    case get_override(:use_priority_layers) do
-      nil -> Application.get_env(:live_style, :use_priority_layers, @default_use_priority_layers)
+  def use_css_layers? do
+    case get_override(:use_css_layers) do
+      nil -> Application.get_env(:live_style, :use_css_layers, @default_use_css_layers)
       value -> value
     end
   end
@@ -386,7 +382,7 @@ defmodule LiveStyle.Config do
   Returns the level of vendor prefix property handling.
 
   When a vendor-prefixed property is used (e.g., `-webkit-mask-image`) and
-  the configured prefixer would add that prefix automatically for the
+  the configured `prefix_css` would add that prefix automatically for the
   standard property (e.g., `mask-image`), this setting controls the behavior.
 
   - `:warn` (default) - Log a warning suggesting to use the standard property
@@ -401,52 +397,83 @@ defmodule LiveStyle.Config do
   end
 
   @doc """
-  Returns the prefixer function or module.
+  Returns the level of deprecated property handling.
 
-  The prefixer is called during CSS generation to add vendor prefixes.
-  It should be a function that takes `(property, value)` and returns
-  a CSS string with any needed prefixes.
+  When a deprecated CSS property is used (e.g., `clip`), this setting
+  controls the behavior. Requires the `deprecated?` config to be set.
 
-  Default is `nil` (no prefixing). Set to a function or module:
+  - `:warn` (default) - Log a warning about the deprecated property
+  - `:ignore` - Silently allow deprecated properties
 
-      # Using a function
-      config :live_style, prefixer: &MyApp.Prefixer.prefix_css/2
+  Example:
 
-      # Using a module (must implement prefix_css/2)
-      config :live_style, prefixer: MyApp.Prefixer
+      config :live_style, deprecated_property_level: :ignore
+  """
+  def deprecated_property_level do
+    get_config(:deprecated_property_level, @default_deprecated_property_level)
+  end
 
-  The function signature should be:
+  @doc """
+  Returns the `prefix_css` function for adding vendor prefixes.
+
+  Called during CSS generation to add vendor prefixes. Should be a function
+  that takes `(property, value)` and returns a CSS string with any needed prefixes.
+
+  Default is `nil` (no prefixing).
+
+  ## Configuration
+
+      config :live_style, prefix_css: &MyApp.CSS.prefix/2
+
+  ## Function Signature
 
       @spec prefix_css(String.t(), String.t()) :: String.t()
 
-  Example implementation:
+  ## Example Implementation
 
       def prefix_css("user-select", value) do
         "-webkit-user-select:\#{value};user-select:\#{value}"
       end
       def prefix_css(property, value), do: "\#{property}:\#{value}"
   """
-  def prefixer do
-    get_config(:prefixer, @default_prefixer)
+  def prefix_css do
+    get_config(:prefix_css, @default_prefix_css)
   end
 
   @doc """
-  Applies the configured prefixer to a property-value pair.
+  Applies the configured `prefix_css` function to a property-value pair.
 
-  Returns the CSS string. If no prefixer is configured, returns
+  Returns the CSS string. If no `prefix_css` is configured, returns
   the standard "property:value" format.
   """
-  @spec apply_prefixer(String.t(), String.t()) :: String.t()
-  def apply_prefixer(property, value) do
-    case prefixer() do
+  @spec apply_prefix_css(String.t(), String.t()) :: String.t()
+  def apply_prefix_css(property, value) do
+    case prefix_css() do
       nil ->
         "#{property}:#{value}"
 
       fun when is_function(fun, 2) ->
         fun.(property, value)
-
-      module when is_atom(module) ->
-        module.prefix_css(property, value)
     end
+  end
+
+  @doc """
+  Returns the `deprecated?` function for checking deprecated CSS properties.
+
+  Used during validation to check if properties are deprecated. Should be a
+  function that takes a property name and returns a boolean (or nil if unknown).
+
+  Default is `nil` (no deprecation checking).
+
+  ## Configuration
+
+      config :live_style, deprecated?: &MyApp.CSS.deprecated?/1
+
+  ## Function Signature
+
+      @spec deprecated?(String.t()) :: boolean() | nil
+  """
+  def deprecated? do
+    get_config(:deprecated?, @default_deprecated?)
   end
 end

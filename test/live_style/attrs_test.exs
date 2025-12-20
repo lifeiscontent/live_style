@@ -77,8 +77,11 @@ defmodule LiveStyle.AttrsTest do
     test "later styles override earlier styles for same property" do
       # StyleX: stylex.props(styles.primary, styles.secondary)
       # -> only secondary's color is applied (later wins)
-      primary_rule = LiveStyle.get_metadata(LiveStyle.AttrsTest.ConflictingStyles, {:class, :primary})
-      secondary_rule = LiveStyle.get_metadata(LiveStyle.AttrsTest.ConflictingStyles, {:class, :secondary})
+      primary_rule =
+        LiveStyle.get_metadata(LiveStyle.AttrsTest.ConflictingStyles, {:class, :primary})
+
+      secondary_rule =
+        LiveStyle.get_metadata(LiveStyle.AttrsTest.ConflictingStyles, {:class, :secondary})
 
       class = LiveStyle.get_css_class(ConflictingStyles, [:primary, :secondary])
       classes = String.split(class, " ")
@@ -97,7 +100,8 @@ defmodule LiveStyle.AttrsTest do
 
     test "multiple style overrides - last wins" do
       # StyleX: stylex.props(styles.primary, styles.secondary, styles.warning)
-      warning_rule = LiveStyle.get_metadata(LiveStyle.AttrsTest.ConflictingStyles, {:class, :warning})
+      warning_rule =
+        LiveStyle.get_metadata(LiveStyle.AttrsTest.ConflictingStyles, {:class, :warning})
 
       class = LiveStyle.get_css_class(ConflictingStyles, [:primary, :secondary, :warning])
       classes = String.split(class, " ")

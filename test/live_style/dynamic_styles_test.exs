@@ -361,4 +361,66 @@ defmodule LiveStyle.DynamicStylesTest do
       assert rule.class_string =~ ~r/^[a-z0-9 ]+$/
     end
   end
+
+  # ============================================================================
+  # Property Prefixing Tests
+  # ============================================================================
+
+  defmodule DynamicWithPrefixedProperty do
+    use LiveStyle
+
+    # background-clip requires -webkit-background-clip for Safari
+    css_class(:clip, fn clip -> [background_clip: clip] end)
+  end
+
+  describe "property prefixing" do
+    setup do
+      # Store original config
+      original_prefix_css = Application.get_env(:live_style, :prefix_css)
+
+      on_exit(fn ->
+        # Restore original config
+        if original_prefix_css do
+          Application.put_env(:live_style, :prefix_css, original_prefix_css)
+        else
+          Application.delete_env(:live_style, :prefix_css)
+        end
+      end)
+
+      :ok
+    end
+
+    test "dynamic classes get property prefixing applied" do
+      # Configure a prefix_css function that adds -webkit-background-clip
+      Application.put_env(:live_style, :prefix_css, fn property, value ->
+        if property == "background-clip" do
+          "-webkit-background-clip:#{value};background-clip:#{value}"
+        else
+          "#{property}:#{value}"
+        end
+      end)
+
+      # The CSS rule generator uses Config.apply_prefix_css when building rules
+      # generate_css() calls the rule generator which applies the prefix_css config
+      css = generate_css()
+
+      # The CSS should include both the prefixed and standard properties for dynamic class
+      assert css =~ "-webkit-background-clip:var(--x-background-clip)"
+      assert css =~ "background-clip:var(--x-background-clip)"
+    end
+
+    test "dynamic class has correct structure" do
+      rule =
+        LiveStyle.get_metadata(
+          LiveStyle.DynamicStylesTest.DynamicWithPrefixedProperty,
+          {:class, :clip}
+        )
+
+      # Dynamic class should have the background-clip property with a CSS variable
+      clip_class = rule.atomic_classes["background-clip"]
+      assert clip_class != nil
+      assert clip_class.value == "var(--x-background-clip)"
+      assert clip_class.var == "--x-background-clip"
+    end
+  end
 end

@@ -3,10 +3,12 @@ defmodule LiveStyle.Class.DynamicProcessor do
   Processes dynamic CSS declarations into atomic classes.
 
   Dynamic classes use CSS variables that are set at runtime via inline styles.
-  For example, a dynamic opacity class generates CSS like:
+  For example, with the default prefix "x", a dynamic opacity class generates CSS like:
   `.x1234 { opacity: var(--x-opacity); }`
 
   The actual value is then set at runtime: `style="--x-opacity: 0.5"`
+
+  The CSS variable prefix is derived from the configured `class_name_prefix`.
 
   ## Responsibilities
 
@@ -15,7 +17,7 @@ defmodule LiveStyle.Class.DynamicProcessor do
   - Building the class string for dynamic classes
   """
 
-  alias LiveStyle.{Hash, Value}
+  alias LiveStyle.{Config, Hash, Value}
 
   @doc """
   Processes a list of property atoms into dynamic atomic class entries.
@@ -24,25 +26,19 @@ defmodule LiveStyle.Class.DynamicProcessor do
   - `atomic_classes` is a map of CSS property names to class entries
   - `class_string` is the space-separated string of all class names
 
-  ## Example
-
-      iex> process([:opacity, :color])
-      {
-        %{
-          "opacity" => %{class: "x1234", value: "var(--x-opacity)", var: "--x-opacity"},
-          "color" => %{class: "x5678", value: "var(--x-color)", var: "--x-color"}
-        },
-        "x1234 x5678"
-      }
+  The CSS variable names use the configured `class_name_prefix` (default: "x").
+  For example, with prefix "x": `--x-opacity`, with prefix "my": `--my-opacity`.
   """
   @spec process([atom()]) :: {map(), String.t()}
   def process(props) do
-    # For dynamic rules, the CSS value is var(--x-prop)
+    # For dynamic rules, the CSS value is var(--<prefix>-prop)
     # This allows runtime values to be set via inline style
+    prefix = Config.class_name_prefix()
+
     atomic =
       Map.new(props, fn prop ->
         css_prop = Value.to_css_property(prop)
-        css_var = "--x-#{css_prop}"
+        css_var = "--#{prefix}-#{css_prop}"
         css_value = "var(#{css_var})"
         class_name = Hash.atomic_class(css_prop, css_value, nil, nil, nil)
         {css_prop, %{class: class_name, value: css_value, var: css_var}}

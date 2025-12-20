@@ -14,8 +14,8 @@ defmodule LiveStyle.Class.SimpleProcessor do
   - Generating atomic class entries with LTR/RTL metadata
   """
 
-  alias LiveStyle.Class.CSS, as: ClassCSS
   alias LiveStyle.Class.Conditional
+  alias LiveStyle.Class.CSS, as: ClassCSS
   alias LiveStyle.{Config, Hash, Priority, Value}
   alias LiveStyle.Property.Validation
   alias LiveStyle.ShorthandBehavior
@@ -30,6 +30,11 @@ defmodule LiveStyle.Class.SimpleProcessor do
   - `:rtl` - RTL CSS metadata
   - `:priority` - Priority for ordering
 
+  ## Options
+
+  - `:file` - Source file path for validation warnings
+  - `:line` - Source line number for validation warnings
+
   ## Example
 
       iex> process([{:display, "flex"}, {:padding, "8px"}])
@@ -38,14 +43,14 @@ defmodule LiveStyle.Class.SimpleProcessor do
         "padding" => %{class: "x5678", value: "8px", ...}
       }
   """
-  @spec process(list()) :: map()
-  def process(declarations) do
+  @spec process(list(), keyword()) :: map()
+  def process(declarations, opts \\ []) do
     # Convert keys to CSS strings at boundary, validate, then expand shorthand properties
     expanded =
       declarations
       |> Enum.flat_map(fn {prop, value} ->
         css_prop = Value.to_css_property(prop)
-        maybe_validate_property(css_prop)
+        maybe_validate_property(css_prop, opts)
         ShorthandBehavior.expand_declaration(css_prop, value)
       end)
 
@@ -68,7 +73,7 @@ defmodule LiveStyle.Class.SimpleProcessor do
   defp process_nil_declarations(nil_decls) do
     # Store a special marker indicating these properties should be unset
     Map.new(nil_decls, fn {css_prop, _value} ->
-      {css_prop, %{class: nil, null: true}}
+      {css_prop, %{class: nil, unset: true}}
     end)
   end
 
@@ -132,9 +137,9 @@ defmodule LiveStyle.Class.SimpleProcessor do
   end
 
   # Validate property name if validation is enabled
-  defp maybe_validate_property(css_prop) do
+  defp maybe_validate_property(css_prop, opts) do
     if Config.validate_properties?() do
-      Validation.validate!(css_prop)
+      Validation.validate!(css_prop, opts)
     end
   end
 end

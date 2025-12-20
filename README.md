@@ -18,7 +18,7 @@ Add `live_style` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:live_style, "~> 0.5.0"}
+    {:live_style, "~> 0.7.0"}
   ]
 end
 ```
@@ -705,12 +705,10 @@ The watcher monitors the LiveStyle manifest file and regenerates CSS whenever st
   to { transform: rotate(360deg); }
 }
 
-/* Atomic classes wrapped in @layer for specificity control */
-@layer live_style {
-  .x1a2a7pz { outline: none }
-  .xh72szh { padding: var(--vdccikb) }
-  .x5u4613 { border-color: var(--vublb2l) }
-}
+/* Atomic classes (uses :not(#\#) hack for specificity by default) */
+.x1a2a7pz { outline: none }
+.xh72szh { padding: var(--vdccikb) }
+.x5u4613:not(#\#):hover { border-color: var(--vublb2l) }
 ```
 
 ## API Reference
@@ -768,18 +766,12 @@ The watcher monitors the LiveStyle manifest file and regenerates CSS whenever st
 | `LiveStyle.Compiler.install_and_run/2` | Same as `run/2` (for Tailwind API compatibility) |
 | `LiveStyle.Compiler.write_css/1` | Write CSS to file if changed |
 
-### Validation Functions (via `LiveStyle.Vars`)
-
-| Function | Description |
-|----------|-------------|
-| `LiveStyle.Vars.validate_references!/0` | Validate CSS variable references in manifest |
-
 ### Config Functions (via `LiveStyle.Config`)
 
 | Function | Description |
 |----------|-------------|
 | `LiveStyle.Config.output_path/0` | Get configured CSS output path |
-| `LiveStyle.Config.shorthand_strategy/0` | Get configured shorthand strategy |
+| `LiveStyle.Config.shorthand_behavior/0` | Get configured shorthand behavior |
 | `LiveStyle.Config.config_for!/1` | Get configuration for a profile |
 
 ### Storage Functions (via `LiveStyle.Storage`)
@@ -813,37 +805,37 @@ The watcher monitors the LiveStyle manifest file and regenerates CSS whenever st
 | `time/1` | CSS `<time>` type |
 | `percentage/1` | CSS `<percentage>` type |
 
-## Shorthand Strategies
+## Shorthand Behaviors
 
-LiveStyle supports three strategies for handling CSS shorthand properties:
+LiveStyle supports three behaviors for handling CSS shorthand properties:
 
 ```elixir
 config :live_style,
-  shorthand_strategy: :keep_shorthands  # default
+  shorthand_behavior: :accept_shorthands  # default
 ```
 
-### Available Strategies
+### Available Behaviors
 
-| Strategy | Description |
+| Behavior | Description |
 |----------|-------------|
-| `:keep_shorthands` | Pass through with null resets for cascade control (default) |
-| `:expand_to_longhands` | Expand to longhand properties |
-| `:reject_shorthands` | Error on disallowed shorthands |
+| `:accept_shorthands` | Pass through with nil resets for cascade control (default) |
+| `:flatten_shorthands` | Expand to longhand properties |
+| `:forbid_shorthands` | Error on disallowed shorthands |
 
-### `:keep_shorthands` (Default)
+### `:accept_shorthands` (Default)
 
-Keeps shorthands intact and allows all shorthand properties. Uses null resets internally for cascade control. Last style wins, matching developer expectations from traditional CSS.
+Keeps shorthands intact and allows all shorthand properties. Uses nil resets internally for cascade control. Last style wins, matching developer expectations from traditional CSS.
 
-### `:expand_to_longhands`
+### `:flatten_shorthands`
 
 Expands shorthand properties to their longhand equivalents. Produces more verbose CSS but provides maximum specificity predictability.
 
-### `:reject_shorthands`
+### `:forbid_shorthands`
 
 Certain shorthands are disallowed and raise compile-time errors. Use this mode for large codebases where you want to enforce explicit property declarations:
 
 ```elixir
-# These raise compile errors in :reject_shorthands mode:
+# These raise compile errors in :forbid_shorthands mode:
 css_class :button, border: "1px solid red"      # Use border_width, border_style, border_color
 css_class :card, background: "red url(...)"     # Use background_color, background_image
 ```

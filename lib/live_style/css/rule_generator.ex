@@ -5,8 +5,7 @@ defmodule LiveStyle.CSS.RuleGenerator do
   This module handles the generation of the main CSS rules for atomic classes,
   including:
   - LTR and RTL rule generation
-  - CSS layer wrapping (optional)
-  - Priority-based layer grouping (optional)
+  - CSS layer wrapping (optional, matching StyleX's `useLayers` option)
   - Selector building with specificity bumping
   - Fallback value processing
   - Selector prefixing (e.g., `::thumb`, `::placeholder`)
@@ -14,8 +13,8 @@ defmodule LiveStyle.CSS.RuleGenerator do
   ## Configuration
 
   Behavior is controlled by `LiveStyle.Config`:
-  - `use_css_layers` - Wrap rules in `@layer live_style` (default: true)
-  - `use_priority_layers` - Group rules by priority in separate layers (default: false)
+  - `use_css_layers: true` - Group rules by priority in `@layer priorityN` blocks (StyleX `useLayers: true`)
+  - `use_css_layers: false` (default) - Use `:not(#\\#)` selector hack (StyleX default)
   """
 
   alias LiveStyle.RTL
@@ -34,13 +33,10 @@ defmodule LiveStyle.CSS.RuleGenerator do
   def generate(manifest) do
     all_classes = collect_and_sort_classes(manifest)
 
-    use_layers = LiveStyle.Config.use_css_layers?()
-    use_priority_layers = LiveStyle.Config.use_priority_layers?()
-
-    if use_layers and use_priority_layers do
+    if LiveStyle.Config.use_css_layers?() do
       generate_with_priority_layers(all_classes)
     else
-      generate_simple(all_classes, use_layers)
+      generate_simple(all_classes)
     end
   end
 
@@ -91,14 +87,11 @@ defmodule LiveStyle.CSS.RuleGenerator do
     end)
   end
 
-  # Generate rules with simple @layer wrapper or no wrapper
-  defp generate_simple(all_classes, use_layers) do
-    all_classes |> generate_ltr_rtl_css() |> wrap_rules(use_layers)
+  # Generate rules without layer wrapping (uses :not(#\#) hack for specificity)
+  defp generate_simple(all_classes) do
+    css = generate_ltr_rtl_css(all_classes)
+    if css == "", do: "", else: css <> "\n"
   end
-
-  defp wrap_rules("", _use_layers), do: ""
-  defp wrap_rules(rules_css, true), do: "@layer live_style {\n#{rules_css}\n}\n"
-  defp wrap_rules(rules_css, false), do: rules_css <> "\n"
 
   defp generate_ltr_rtl_css(classes) do
     {ltr_rules, rtl_rules} = generate_rules_for_classes(classes)
@@ -135,7 +128,7 @@ defmodule LiveStyle.CSS.RuleGenerator do
   end
 
   # Extract class tuples from atomic_classes entries
-  defp extract_class_tuples({_property, %{null: true}}), do: []
+  defp extract_class_tuples({_property, %{unset: true}}), do: []
 
   defp extract_class_tuples({property, %{class: class_name, value: value} = data})
        when not is_map_key(data, :classes) do
@@ -200,7 +193,7 @@ defmodule LiveStyle.CSS.RuleGenerator do
 
   # Inner rule building
   defp build_inner_rule(selector, prop, val, nil) do
-    declarations = LiveStyle.Config.apply_prefixer(prop, val)
+    declarations = LiveStyle.Config.apply_prefix_css(prop, val)
     "#{selector}{#{declarations}}"
   end
 
@@ -236,7 +229,7 @@ defmodule LiveStyle.CSS.RuleGenerator do
     else
       values
       |> Enum.reverse()
-      |> Enum.map_join(";", &LiveStyle.Config.apply_prefixer(property, &1))
+      |> Enum.map_join(";", &LiveStyle.Config.apply_prefix_css(property, &1))
     end
   end
 
@@ -250,7 +243,7 @@ defmodule LiveStyle.CSS.RuleGenerator do
 
     final_output
     |> Enum.reverse()
-    |> Enum.map_join(";", &LiveStyle.Config.apply_prefixer(property, &1))
+    |> Enum.map_join(";", &LiveStyle.Config.apply_prefix_css(property, &1))
   end
 
   defp process_var_fallback_step(value, {out, nil}), do: {out, value}

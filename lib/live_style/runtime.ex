@@ -9,6 +9,7 @@ defmodule LiveStyle.Runtime do
   - Cross-module reference resolution
   """
 
+  alias LiveStyle.Config
   alias LiveStyle.Manifest
   alias LiveStyle.Value
 
@@ -32,10 +33,10 @@ defmodule LiveStyle.Runtime do
       end)
 
     # Return unique class names in order
-    # Filter out any :__null__ values (shouldn't exist but defensive)
+    # Filter out any :__unset__ values (shouldn't exist but defensive)
     merged
     |> Map.values()
-    |> Enum.reject(&(&1 == :__null__ or &1 == nil))
+    |> Enum.reject(&(&1 == :__unset__ or &1 == nil))
     |> Enum.uniq()
     |> Enum.join(" ")
   end
@@ -49,7 +50,7 @@ defmodule LiveStyle.Runtime do
   def resolve_attrs(module, refs, _class_strings) when is_list(refs) do
     property_classes_map = module.__live_style__(:property_classes)
 
-    # Use property-based merging to correctly handle :__null__ values (StyleX behavior)
+    # Use property-based merging to correctly handle :__unset__ values (StyleX behavior)
     # This ensures that nil values properly "unset" properties
     {merged_props, var_styles} =
       refs
@@ -61,11 +62,11 @@ defmodule LiveStyle.Runtime do
       end)
 
     # Build class string from merged properties
-    # Filter out :__null__ values and nil classes
+    # Filter out :__unset__ values and nil classes
     class_string =
       merged_props
       |> Map.values()
-      |> Enum.reject(&(&1 == :__null__ or &1 == nil or &1 == ""))
+      |> Enum.reject(&(&1 == :__unset__ or &1 == nil or &1 == ""))
       |> Enum.uniq()
       |> Enum.join(" ")
 
@@ -100,8 +101,8 @@ defmodule LiveStyle.Runtime do
 
   defp merge_resolved_ref(:skip, props_acc, vars_acc), do: {props_acc, vars_acc}
 
-  # Merge a single property class - handle :__null__ values
-  defp merge_prop_class({prop, :__null__}, acc), do: Map.delete(acc, prop)
+  # Merge a single property class - handle :__unset__ values
+  defp merge_prop_class({prop, :__unset__}, acc), do: Map.delete(acc, prop)
   defp merge_prop_class({prop, class}, acc), do: Map.put(acc, prop, class)
 
   @doc """
@@ -131,6 +132,8 @@ defmodule LiveStyle.Runtime do
     # Build a list of values
     values_list = if is_list(values), do: values, else: [values]
 
+    prefix = Config.class_name_prefix()
+
     var_map =
       if has_computed do
         # For computed values, call the module's compute function
@@ -140,14 +143,14 @@ defmodule LiveStyle.Runtime do
 
         # Build CSS variables from the resulting declarations
         Map.new(declarations, fn {prop, value} ->
-          {"--x-#{Value.to_css_property(prop)}", format_css_value(value)}
+          {"--#{prefix}-#{Value.to_css_property(prop)}", format_css_value(value)}
         end)
       else
         # Simple bindings - map params to props directly
         all_props
         |> Enum.zip(values_list)
         |> Map.new(fn {prop, value} ->
-          {"--x-#{Value.to_css_property(prop)}", format_css_value(value)}
+          {"--#{prefix}-#{Value.to_css_property(prop)}", format_css_value(value)}
         end)
       end
 
@@ -155,16 +158,16 @@ defmodule LiveStyle.Runtime do
   end
 
   # Merge classes from a ref into the accumulator, with later properties overriding earlier
-  # StyleX behavior: :__null__ sentinel value indicates property should be removed
+  # StyleX behavior: :__unset__ sentinel value indicates property should be removed
   defp merge_ref_classes(_module, ref, property_classes_map, acc) when is_atom(ref) do
     prop_classes = Map.get(property_classes_map, ref, %{})
 
     # For each property in prop_classes:
-    # - If value is :__null__, delete the property from acc
+    # - If value is :__unset__, delete the property from acc
     # - Otherwise, merge (override) the property
     Enum.reduce(prop_classes, acc, fn
-      {prop, :__null__}, acc_inner ->
-        # Null value - remove this property from the accumulator
+      {prop, :__unset__}, acc_inner ->
+        # Unset value - remove this property from the accumulator
         Map.delete(acc_inner, prop)
 
       {prop, class}, acc_inner ->
@@ -181,9 +184,9 @@ defmodule LiveStyle.Runtime do
         other_prop_classes = other_module.__live_style__(:property_classes)
         prop_classes = Map.get(other_prop_classes, name, %{})
 
-        # Handle :__null__ sentinel values for cross-module references
+        # Handle :__unset__ sentinel values for cross-module references
         Enum.reduce(prop_classes, acc, fn
-          {prop, :__null__}, acc_inner ->
+          {prop, :__unset__}, acc_inner ->
             Map.delete(acc_inner, prop)
 
           {prop, class}, acc_inner ->

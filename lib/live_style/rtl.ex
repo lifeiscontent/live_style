@@ -55,7 +55,7 @@ defmodule LiveStyle.RTL do
   end
 
   @doc false
-  @spec generate_ltr_rtl(String.t(), String.t(), String.t(), String.t(), String.t() | nil) ::
+  @spec generate_ltr_rtl(String.t(), String.t(), String.t(), String.t() | nil, String.t() | nil) ::
           {String.t(), String.t(), String.t() | nil}
   def generate_ltr_rtl(css_property, css_value, class_name, selector_suffix, at_rule) do
     {ltr_prop, ltr_val} = generate_ltr(css_property, css_value)

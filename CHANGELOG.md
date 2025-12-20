@@ -5,47 +5,87 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.0] - 2024-12-19
+## [0.7.0] - 2024-12-20
+
+### Changed
+
+- **BREAKING**: CSS layers behavior now matches StyleX defaults:
+  - `use_css_layers: false` (default) - Uses `:not(#\#)` selector hack for specificity (StyleX default)
+  - `use_css_layers: true` - Groups rules by priority in `@layer priorityN` blocks (StyleX `useLayers: true`)
+  - Removed `use_priority_layers` config option (no longer needed)
+
+- **BREAKING**: Renamed shorthand behavior config and modes:
+  - Config key: `shorthand_strategy` → `shorthand_behavior`
+  - `:keep_shorthands` → `:accept_shorthands`
+  - `:reject_shorthands` → `:forbid_shorthands`
+  - `:expand_to_longhands` → `:flatten_shorthands`
+
+- **BREAKING**: Renamed shorthand modules:
+  - `LiveStyle.Shorthand.Strategy` → `LiveStyle.ShorthandBehavior`
+  - `LiveStyle.Shorthand.Strategy.KeepShorthands` → `LiveStyle.ShorthandBehavior.AcceptShorthands`
+  - `LiveStyle.Shorthand.Strategy.ExpandToLonghands` → `LiveStyle.ShorthandBehavior.FlattenShorthands`
+  - `LiveStyle.Shorthand.Strategy.RejectShorthands` → `LiveStyle.ShorthandBehavior.ForbidShorthands`
+
+- **BREAKING**: Renamed config function:
+  - `shorthand_strategy/0` → `LiveStyle.Config.shorthand_behavior/0`
+
+- Renamed internal terminology from "null" to "nil" (Elixir idiom):
+  - `%{null: true}` → `%{unset: true}` in atomic class maps
+  - `:__null__` → `:__unset__` sentinel atom
+
+- CSS variable prefix now uses configurable `class_name_prefix` instead of hardcoded `--x-`
+
+### Added
+
+- CSS property validation with "did you mean?" suggestions for typos
+  - `validate_properties: true` config option (default: true)
+  - `unknown_property_level: :warn` - `:error`, `:warn`, or `:ignore`
+  - `vendor_prefix_level: :warn` - warns when vendor prefixes are used unnecessarily
+  - `deprecated_property_level: :warn` - warns when deprecated properties are used
+  - `deprecated?: &MyApp.CSS.deprecated?/1` - configurable deprecation check function
+
+- Configurable CSS prefixing via `prefix_css` config option
+  - `prefix_css: &MyApp.CSS.prefix/2` - function to add vendor prefixes
+  - `LiveStyle.Config.apply_prefix_css/2` - applies configured prefixer
+
+- Automatic selector prefixing for pseudo-elements (e.g., `::thumb`, `::placeholder`)
+  - Generates vendor-prefixed variants automatically
+
+### Fixed
+
+- Validation warnings now appear on recompile (file/line info threaded through call chain)
+- RTL type spec now correctly accepts `nil` for selector_suffix parameter
+- Support for comma-separated keyframe keys like `"0%, 100%"`
+
+### Internal
+
+- Extracted SRP-focused modules from monolithic `LiveStyle.Class` and `LiveStyle.CSS`
+- Optimized `Property.Validation.known?` with pattern matching (~7% faster)
+- Optimized `Selector.Prefixer.prefix` with binary slicing (~43% faster)
+- Extracted `LiveStyle.Hash.Murmur` module for MurmurHash3 implementation
+- Removed specific package references from documentation (now uses generic examples)
+
+## [0.6.2] - 2024-12-19
 
 ### Changed
 
 - **BREAKING**: Renamed all macros to use `css_` prefix for consistency with StyleX naming:
-  - `style/2` → `css_rule/2`
+  - `style/2` → `css_class/2`
   - `defvars/2` → `css_vars/2`
   - `defconsts/2` → `css_consts/2`
   - `defkeyframes/2` → `css_keyframes/2`
   - `keyframes/1` → `css_keyframes/1` (reference form)
   - `var/1` → `css_var/1`
+  - `const/1` → `css_const/1`
   - `create_theme/3` → `css_theme/3`
   - `position_try/1` → `css_position_try/1`
   - `view_transition/2` → `css_view_transition/2`
   - `view_transition_class/1` → `css_view_transition/1` (reference form)
-  
-- **BREAKING**: Configuration changes:
-  - `style_resolution` replaced with `shorthand_strategy` config
-  
-  ```elixir
-  # Before
-  config :live_style,
-    manifest_path: "_build/live_style_manifest.etf",
-    style_resolution: :atomic
-  
-  # After  
-  config :live_style,
-    manifest_path: "_build/live_style_manifest.etf",
-    shorthand_strategy: :keep_shorthands
-  ```
-
-- **BREAKING**: Style resolution modes renamed:
-  - `:atomic` → `:keep_shorthands`
-  - `:strict` → `:reject_shorthands`
-  - `:expanded` → `:expand_to_longhands`
 
 - **BREAKING**: Moved tooling functions out of `LiveStyle`:
   - `run/2` → `LiveStyle.Compiler.run/2`
   - `install_and_run/2` → `LiveStyle.Compiler.install_and_run/2`
   - `write_css/1` → `LiveStyle.Compiler.write_css/1`
-  - `validate_var_references!/0` → `LiveStyle.Vars.validate_references!/0`
   
   Update your Phoenix watcher config:
   ```elixir
@@ -63,30 +103,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `LiveStyle.Compiler` module for all tooling/compilation functions
 
-### Internal
-
-- Removed all `# ===...===` section divider comments from source files
-
 ## [0.6.0] - 2024-12-17
 
 ### Changed
 
-- **BREAKING**: Default style resolution changed from `:strict` to `:atomic` for more intuitive CSS behavior (last style wins)
-- **BREAKING**: Renamed style resolution modes for clarity:
-  - `:property_specificity` → `:strict`
-  - `:application_order` → `:atomic`
-  - `:legacy_expand` → `:expanded`
-
+- **BREAKING**: Default shorthand behavior changed to `:accept_shorthands` for more intuitive CSS behavior (last style wins)
 - Simplified `props/1` API - now only accepts a single value or a list (removed variadic `props/2-5`)
 
 ### Added
 
-- `LiveStyle.StyleResolution` behaviour for custom style resolution strategies
-- `LiveStyle.StyleResolution.Strict`, `LiveStyle.StyleResolution.Atomic`, `LiveStyle.StyleResolution.Expanded` implementations
+- `LiveStyle.ShorthandBehavior` behaviour for custom shorthand handling strategies
+- `LiveStyle.ShorthandBehavior.AcceptShorthands`, `FlattenShorthands`, `ForbidShorthands` implementations
 - `LiveStyle.Storage` module for file-based manifest storage
 - `LiveStyle.Config` module for unified configuration management with per-process overrides
 - `LiveStyle.Compiler.write_css/1` function for writing CSS with change detection
-- `LiveStyle.Storage.has_styles?/1` helper function
 
 ### Removed
 
@@ -103,7 +133,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **BREAKING**: `css_keyframes/1` (was `keyframes/1`) now takes only frames and returns the generated name (matching StyleX API)
+- **BREAKING**: `css_keyframes/1` now takes only frames and returns the generated name (matching StyleX API)
   ```elixir
   # Before (0.4.x)
   keyframes :spin, from: [...], to: [...]
@@ -114,17 +144,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     from: [...],
     to: [...]
   
-  css_rule :spinner,
+  css_class :spinner,
     animation_name: css_keyframes(:spin)
   ```
 
-- **BREAKING**: `css_view_transition/1` (was `view_transition_class/1`) now takes only styles and returns the generated class name
+- **BREAKING**: `css_view_transition/1` now takes only styles and returns the generated class name
 
 - Keyframe names now use `x<hash>-B` format (matching StyleX) instead of `k<hash>`
 
 ### Added
 
-- `css_position_try/2` (was `position_try/1`) macro for CSS Anchor Positioning (`@position-try` at-rules)
+- `css_position_try/2` macro for CSS Anchor Positioning (`@position-try` at-rules)
   - Creates fallback positioning options for anchor-positioned elements
   - Returns a dashed-ident string (e.g., `"--x1a2b3c4"`) for use with `position_try_fallbacks`
   - Validates that only allowed properties are used (position, inset, margin, size, self-alignment)
@@ -137,7 +167,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tuple list syntax support for computed keys as an alternative to map syntax:
   ```elixir
   # Now you can use tuple lists with computed keys
-  css_rule :responsive,
+  css_class :responsive,
     font_size: [
       {:default, "1rem"},
       {css_const({MyApp.Tokens, :breakpoint, :lg}), "1.5rem"}
@@ -180,7 +210,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- `css_keyframes/2` (was `defkeyframes/2`) now defines a function that returns the hashed keyframe name
+- `css_keyframes/2` now defines a function that returns the hashed keyframe name
   - Allows keyframes to be used in both styles and view transitions
   - Example: `MyApp.Tokens.spin()` returns `"x1a2b3c4-B"`
 
@@ -203,7 +233,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Initial release of LiveStyle
-- `css_rule/2` macro for declaring named styles with CSS declarations
+- `css_class/2` macro for declaring named styles with CSS declarations
 - `css_keyframes/2` macro for defining CSS animations
 - `css_var/1` macro for referencing CSS custom properties
 - `first_that_works/1` macro for CSS fallback values

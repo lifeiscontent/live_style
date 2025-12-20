@@ -42,6 +42,11 @@ defmodule LiveStyle.Selector.Prefixer do
   # Pre-compile the list of selectors we handle for fast checking
   @handled_selectors Map.keys(@selector_expansions)
 
+  # Pre-compile a regex for fast matching
+  @selector_pattern @handled_selectors
+                    |> Enum.map_join("|", &Regex.escape/1)
+                    |> then(&Regex.compile!("(#{&1})"))
+
   # Generate pattern-matched function clauses for variants_for/1
   for {selector, variants} <- @selector_expansions do
     defp do_variants_for(unquote(selector)), do: unquote(variants)
@@ -89,7 +94,7 @@ defmodule LiveStyle.Selector.Prefixer do
   def prefix(selector) do
     case find_expansion(selector) do
       nil -> selector
-      {pattern, variants} -> expand_selector(selector, pattern, variants)
+      {prefix, suffix, variants} -> expand_selector(selector, prefix, suffix, variants)
     end
   end
 
@@ -106,7 +111,7 @@ defmodule LiveStyle.Selector.Prefixer do
   """
   @spec needs_prefix?(String.t()) :: boolean()
   def needs_prefix?(selector) do
-    Enum.any?(@handled_selectors, &String.contains?(selector, &1))
+    Regex.match?(@selector_pattern, selector)
   end
 
   @doc """
@@ -125,19 +130,26 @@ defmodule LiveStyle.Selector.Prefixer do
   @spec variants_for(String.t()) :: [String.t()] | nil
   def variants_for(pseudo), do: do_variants_for(pseudo)
 
-  # Find the first matching expansion pattern in the selector
+  # Find the first matching expansion pattern in the selector using regex
+  # Returns {prefix, pattern, suffix, variants} for efficient expansion
   defp find_expansion(selector) do
-    Enum.find_value(@handled_selectors, fn pattern ->
-      if String.contains?(selector, pattern) do
-        {pattern, do_variants_for(pattern)}
-      end
-    end)
+    case Regex.run(@selector_pattern, selector, return: :index) do
+      [{start, length}, _] ->
+        pattern = binary_part(selector, start, length)
+        prefix = binary_part(selector, 0, start)
+        suffix = binary_part(selector, start + length, byte_size(selector) - start - length)
+        {prefix, suffix, do_variants_for(pattern)}
+
+      _ ->
+        nil
+    end
   end
 
-  # Expand selector by replacing the pattern with each variant
-  defp expand_selector(selector, pattern, variants) do
+  # Expand selector by concatenating prefix + variant + suffix
+  # This is faster than repeated String.replace calls
+  defp expand_selector(_selector, prefix, suffix, variants) do
     Enum.map_join(variants, ", ", fn variant ->
-      String.replace(selector, pattern, variant)
+      prefix <> variant <> suffix
     end)
   end
 end

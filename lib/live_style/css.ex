@@ -21,8 +21,8 @@ defmodule LiveStyle.CSS do
 
   CSS output can be configured via `LiveStyle.Config`:
 
-  - `use_css_layers` - Wrap rules in `@layer live_style` (default: true)
-  - `use_priority_layers` - Group rules by priority in separate layers (default: false)
+  - `use_css_layers: true` - Group rules by priority in `@layer priorityN` blocks (StyleX `useLayers: true`)
+  - `use_css_layers: false` (default) - Use `:not(#\\#)` selector hack (StyleX default)
 
   ## Writing CSS
 

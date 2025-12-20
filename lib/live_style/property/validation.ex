@@ -4,7 +4,8 @@ defmodule LiveStyle.Property.Validation do
 
   Validates property names at compile time and provides helpful suggestions
   for typos using string similarity matching. Also warns when vendor-prefixed
-  properties are used that could be handled automatically by the prefixer.
+  properties are used that could be handled automatically by `prefix_css`,
+  and when deprecated properties are used.
 
   ## Configuration
 
@@ -19,6 +20,12 @@ defmodule LiveStyle.Property.Validation do
       # Treat unnecessary vendor prefixes as warnings (default: :warn)
       config :live_style, vendor_prefix_level: :warn  # :warn | :ignore
 
+      # Treat deprecated properties as warnings (default: :warn)
+      config :live_style, deprecated_property_level: :warn  # :warn | :ignore
+
+      # Configure deprecation checking function (any function that returns boolean)
+      config :live_style, deprecated?: &MyApp.CSS.deprecated?/1
+
   ## Examples
 
       # This will warn with a suggestion:
@@ -28,6 +35,10 @@ defmodule LiveStyle.Property.Validation do
       # This will warn about vendor prefix:
       css_class :button,
         "-webkit-mask-image": "url(...)"  # Warning: Use 'mask-image' instead...
+
+      # This will warn about deprecated property:
+      css_class :button,
+        clip: "rect(0,0,0,0)"  # Warning: CSS property 'clip' is deprecated...
 
       # Custom properties are always allowed:
       css_class :button,
@@ -42,14 +53,12 @@ defmodule LiveStyle.Property.Validation do
   @known_properties_path Path.join(@data_dir, "css_properties.txt")
   @external_resource @known_properties_path
 
-  @known_properties @known_properties_path
-                    |> File.read!()
-                    |> String.split("\n", trim: true)
-                    |> Enum.reject(&String.starts_with?(&1, "#"))
-                    |> MapSet.new()
+  @known_properties_list @known_properties_path
+                         |> File.read!()
+                         |> String.split("\n", trim: true)
+                         |> Enum.reject(&String.starts_with?(&1, "#"))
 
-  # Vendor prefix patterns
-  @vendor_prefixes ["-webkit-", "-moz-", "-ms-", "-o-"]
+  @known_properties MapSet.new(@known_properties_list)
 
   @doc """
   Returns the set of known CSS properties.
@@ -61,10 +70,17 @@ defmodule LiveStyle.Property.Validation do
   Checks if a property is a known CSS property.
 
   Custom properties (starting with `--`) are always considered valid.
+  Uses pattern matching for optimal runtime performance.
   """
   @spec known?(String.t()) :: boolean()
   def known?(<<"--", _rest::binary>>), do: true
-  def known?(property), do: MapSet.member?(@known_properties, property)
+
+  # Generate pattern-matched function clauses for all known properties
+  for property <- @known_properties_list do
+    def known?(unquote(property)), do: true
+  end
+
+  def known?(_), do: false
 
   @doc """
   Validates a property name and returns suggestions if unknown.
@@ -98,12 +114,16 @@ defmodule LiveStyle.Property.Validation do
   Validates a property and raises or warns based on configuration.
 
   Called during compilation to catch typos early. Also checks for
-  vendor-prefixed properties that have standard equivalents.
+  vendor-prefixed properties that have standard equivalents, and
+  warns about deprecated properties.
   """
   @spec validate!(String.t(), keyword()) :: :ok
   def validate!(property, opts \\ []) do
-    # First check for vendor prefixes that could be handled by the prefixer
+    # First check for vendor prefixes that could be handled by prefix_css
     check_vendor_prefix(property, opts)
+
+    # Check for deprecated properties (if deprecated? is configured)
+    check_deprecated_property(property, opts)
 
     # Then validate the property is known
     case validate(property) do
@@ -172,7 +192,7 @@ defmodule LiveStyle.Property.Validation do
         :ok
 
       standard_property ->
-        if prefixer_handles_property?(standard_property) do
+        if prefix_css_handles_property?(standard_property) do
           handle_vendor_prefix(property, standard_property, opts)
         else
           :ok
@@ -182,30 +202,21 @@ defmodule LiveStyle.Property.Validation do
 
   # Extract the standard property name from a vendor-prefixed property
   # Returns nil if not a vendor-prefixed property
-  defp extract_standard_property(property) do
-    Enum.find_value(@vendor_prefixes, fn prefix ->
-      if String.starts_with?(property, prefix) do
-        String.replace_prefix(property, prefix, "")
-      end
-    end)
-  end
+  # Uses binary pattern matching for performance
+  defp extract_standard_property(<<"-webkit-", rest::binary>>), do: rest
+  defp extract_standard_property(<<"-moz-", rest::binary>>), do: rest
+  defp extract_standard_property(<<"-ms-", rest::binary>>), do: rest
+  defp extract_standard_property(<<"-o-", rest::binary>>), do: rest
+  defp extract_standard_property(_), do: nil
 
-  # Check if the configured prefixer handles this property
-  defp prefixer_handles_property?(property) do
-    case LiveStyle.Config.prefixer() do
+  # Check if the configured prefix_css handles this property
+  defp prefix_css_handles_property?(property) do
+    case LiveStyle.Config.prefix_css() do
       nil ->
         false
 
-      module when is_atom(module) ->
-        # Check if module has needs_prefix?/1 function
-        if function_exported?(module, :needs_prefix?, 1) do
-          module.needs_prefix?(property)
-        else
-          false
-        end
-
       fun when is_function(fun, 2) ->
-        # For function prefixers, check if the output differs from input
+        # Check if the output differs from input (meaning it added prefixes)
         result = fun.(property, "test")
         result != "#{property}:test"
     end
@@ -231,7 +242,51 @@ defmodule LiveStyle.Property.Validation do
 
   defp build_vendor_prefix_message(prefixed_property, standard_property) do
     "Unnecessary vendor prefix '#{prefixed_property}'. " <>
-      "Use '#{standard_property}' instead - the prefixer will add vendor prefixes automatically."
+      "Use '#{standard_property}' instead - prefix_css will add vendor prefixes automatically."
+  end
+
+  # Deprecated property checking (requires deprecated? config)
+  # Skip custom properties (starting with --)
+  defp check_deprecated_property(<<"--", _::binary>>, _opts), do: :ok
+
+  defp check_deprecated_property(property, opts) do
+    if property_deprecated?(property) do
+      handle_deprecated_property(property, opts)
+    else
+      :ok
+    end
+  end
+
+  defp property_deprecated?(property) do
+    case LiveStyle.Config.deprecated?() do
+      nil ->
+        false
+
+      fun when is_function(fun, 1) ->
+        fun.(property)
+    end
+  end
+
+  defp handle_deprecated_property(property, opts) do
+    level = Keyword.get(opts, :deprecated_property_level, deprecated_property_level())
+    file = Keyword.get(opts, :file, "unknown")
+    line = Keyword.get(opts, :line, 0)
+
+    message = build_deprecated_message(property)
+    location = if line > 0, do: "#{file}:#{line}: ", else: ""
+
+    case level do
+      :warn ->
+        IO.warn("#{location}#{message}", [])
+        :ok
+
+      :ignore ->
+        :ok
+    end
+  end
+
+  defp build_deprecated_message(property) do
+    "CSS property '#{property}' is deprecated. Consider using a modern alternative."
   end
 
   # Configuration helpers
@@ -241,5 +296,9 @@ defmodule LiveStyle.Property.Validation do
 
   defp vendor_prefix_level do
     LiveStyle.Config.vendor_prefix_level()
+  end
+
+  defp deprecated_property_level do
+    LiveStyle.Config.deprecated_property_level()
   end
 end

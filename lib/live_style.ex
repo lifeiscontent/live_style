@@ -352,7 +352,7 @@ defmodule LiveStyle do
   defmacro css_position_try(name, declarations) when is_atom(name) do
     # Evaluate declarations at compile time for content-based hashing (StyleX behavior)
     {evaluated, _} = Code.eval_quoted(declarations, [], __CALLER__)
-    normalized = normalize_to_map(evaluated)
+    normalized = LiveStyle.Utils.normalize_to_map(evaluated)
 
     # Normalize values (add px to numbers, etc.)
     normalized_values =
@@ -388,7 +388,7 @@ defmodule LiveStyle do
   defmacro css_position_try(declarations) when is_list(declarations) do
     module = __CALLER__.module
     {evaluated, _} = Code.eval_quoted(declarations, [], __CALLER__)
-    normalized = normalize_to_map(evaluated)
+    normalized = LiveStyle.Utils.normalize_to_map(evaluated)
 
     # Validate and normalize declarations
     case LiveStyle.PositionTry.validate_declarations(normalized) do
@@ -423,7 +423,7 @@ defmodule LiveStyle do
     {evaluated_styles, _} = Code.eval_quoted(styles, [], __CALLER__)
 
     # Validate keys at compile time
-    style_map = normalize_to_map(evaluated_styles)
+    style_map = LiveStyle.Utils.normalize_to_map(evaluated_styles)
 
     case LiveStyle.ViewTransition.validate_keys(style_map) do
       :ok ->
@@ -508,15 +508,19 @@ defmodule LiveStyle do
     # Static class - keyword list of declarations
     # Defer evaluation to runtime within the module to access module attributes
     module = __CALLER__.module
+    file = __CALLER__.file
+    line = __CALLER__.line
 
     quote do
       declarations_evaluated = unquote(declarations)
-      normalized = LiveStyle.normalize_to_map(declarations_evaluated)
+      normalized = LiveStyle.Utils.normalize_to_map(declarations_evaluated)
 
       LiveStyle.Class.define(
         unquote(module),
         unquote(name),
-        normalized
+        normalized,
+        file: unquote(file),
+        line: unquote(line)
       )
 
       @__live_style_classes__ {unquote(name), normalized}
@@ -526,15 +530,19 @@ defmodule LiveStyle do
   # Static class with map syntax - css_class(:name, %{...})
   defmacro css_class(name, {:%{}, _, _} = declarations) when is_atom(name) do
     module = __CALLER__.module
+    file = __CALLER__.file
+    line = __CALLER__.line
 
     quote do
       declarations_evaluated = unquote(declarations)
-      normalized = LiveStyle.normalize_to_map(declarations_evaluated)
+      normalized = LiveStyle.Utils.normalize_to_map(declarations_evaluated)
 
       LiveStyle.Class.define(
         unquote(module),
         unquote(name),
-        normalized
+        normalized,
+        file: unquote(file),
+        line: unquote(line)
       )
 
       @__live_style_classes__ {unquote(name), normalized}
@@ -797,9 +805,6 @@ defmodule LiveStyle do
   defdelegate process_dynamic_rule(all_props, param_names, values, module, name, has_computed),
     to: LiveStyle.Runtime
 
-  @doc false
-  defdelegate normalize_to_map(value), to: LiveStyle.Utils
-
   @doc """
   Returns the default marker class name for use with `LiveStyle.When` selectors.
 
@@ -1009,8 +1014,8 @@ defmodule LiveStyle do
     |> Map.new()
   end
 
-  defp build_prop_class_entry({prop, %{class: nil, null: true}}) do
-    [{prop, :__null__}]
+  defp build_prop_class_entry({prop, %{class: nil, unset: true}}) do
+    [{prop, :__unset__}]
   end
 
   defp build_prop_class_entry({prop, %{class: class}}) when class != nil do
@@ -1024,7 +1029,7 @@ defmodule LiveStyle do
   defp build_prop_class_entry(_), do: []
 
   defp build_conditional_entry(prop, {condition, %{class: nil}}) do
-    [{"#{prop}::#{condition}", :__null__}]
+    [{"#{prop}::#{condition}", :__unset__}]
   end
 
   defp build_conditional_entry(prop, {condition, %{class: class}}) when class != nil do

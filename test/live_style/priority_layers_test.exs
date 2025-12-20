@@ -1,14 +1,17 @@
 defmodule LiveStyle.PriorityLayersTest do
   @moduledoc """
-  Tests for CSS priority layers feature.
+  Tests for CSS layers feature.
 
-  When `use_priority_layers: true` is set, LiveStyle groups CSS rules
+  When `use_css_layers: true` is set, LiveStyle groups CSS rules
   by priority level into separate `@layer priorityN` blocks, matching
   StyleX's `useLayers: true` behavior.
 
+  When `use_css_layers: false` (default), LiveStyle uses the `:not(#\\#)`
+  selector hack for specificity bumping, matching StyleX's default behavior.
+
   Note: This test runs with async: false because it needs to modify
-  global config (use_priority_layers, use_css_layers) that affects
-  CSS generation for the entire manifest.
+  global config (use_css_layers) that affects CSS generation for the
+  entire manifest.
   """
   use LiveStyle.TestCase, async: false
 
@@ -55,23 +58,40 @@ defmodule LiveStyle.PriorityLayersTest do
   # Tests
   # ============================================================================
 
-  describe "use_priority_layers: false (default)" do
-    test "wraps all rules in single @layer live_style block" do
-      # Default behavior - single @layer wrapper
+  describe "use_css_layers: false (default, StyleX default)" do
+    test "does not use @layer blocks" do
+      # Default behavior - no layers, use :not(#\#) hack
       manifest = get_manifest()
       css = LiveStyle.CSS.generate(manifest)
 
-      # Should have single @layer live_style wrapper
-      assert css =~ "@layer live_style {"
-      # Should NOT have @layer priority blocks
-      refute css =~ ~r/@layer priority\d+\{/
+      # Should NOT have any @layer blocks
+      refute css =~ "@layer "
+    end
+
+    test "uses :not(#\\#) hack for specificity bumping on conditional selectors" do
+      manifest = get_manifest()
+      css = LiveStyle.CSS.generate(manifest)
+
+      # Hover styles should use :not(#\#) hack for specificity
+      # The hover_style has a :hover condition which needs bumping
+      assert css =~ ":not(#\\#)"
+    end
+
+    test "rules from test modules are included in CSS" do
+      manifest = get_manifest()
+      css = LiveStyle.CSS.generate(manifest)
+
+      # Verify our test module's rules are in the generated CSS
+      assert css =~ "color:red"
+      assert css =~ "background-color:blue"
+      assert css =~ "margin:10px"
     end
   end
 
-  describe "use_priority_layers: true" do
+  describe "use_css_layers: true (StyleX useLayers: true)" do
     setup do
-      LiveStyle.Config.put(:use_priority_layers, true)
-      on_exit(fn -> LiveStyle.Config.reset(:use_priority_layers) end)
+      LiveStyle.Config.put(:use_css_layers, true)
+      on_exit(fn -> LiveStyle.Config.reset(:use_css_layers) end)
       :ok
     end
 
@@ -125,25 +145,29 @@ defmodule LiveStyle.PriorityLayersTest do
       end
     end
 
-    test "rules from this test module are included in CSS" do
+    test "rules from test modules are included in CSS" do
       manifest = get_manifest()
       css = LiveStyle.CSS.generate(manifest)
 
       # Verify our test module's rules are in the generated CSS
-      # StyleX uses minified format: .class{prop:value}
-      # color:red from BasicStyles.color_style
       assert css =~ "color:red"
-      # background-color:blue from BasicStyles.background_style
       assert css =~ "background-color:blue"
-      # margin from BasicStyles.margin_style
       assert css =~ "margin:10px"
+    end
+
+    test "does not use :not(#\\#) hack when layers are enabled" do
+      manifest = get_manifest()
+      css = LiveStyle.CSS.generate(manifest)
+
+      # When using layers, specificity is handled by layer order, not :not(#\#) hack
+      refute css =~ ":not(#\\#)"
     end
   end
 
   describe "priority layer grouping" do
     setup do
-      LiveStyle.Config.put(:use_priority_layers, true)
-      on_exit(fn -> LiveStyle.Config.reset(:use_priority_layers) end)
+      LiveStyle.Config.put(:use_css_layers, true)
+      on_exit(fn -> LiveStyle.Config.reset(:use_css_layers) end)
       :ok
     end
 
@@ -176,49 +200,20 @@ defmodule LiveStyle.PriorityLayersTest do
     end
   end
 
-  describe "interaction with use_css_layers: false" do
-    setup do
-      LiveStyle.Config.put(:use_css_layers, false)
-      LiveStyle.Config.put(:use_priority_layers, true)
-
-      on_exit(fn ->
-        LiveStyle.Config.reset(:use_css_layers)
-        LiveStyle.Config.reset(:use_priority_layers)
-      end)
-
-      :ok
-    end
-
-    test "priority layers are ignored when use_css_layers is false" do
-      manifest = get_manifest()
-      css = LiveStyle.CSS.generate(manifest)
-
-      # Should NOT have @layer priority blocks (priority layers need css layers enabled)
-      refute css =~ ~r/@layer priority\d+\{/
-
-      # Should NOT have @layer live_style wrapper either
-      refute css =~ "@layer live_style"
-
-      # Should have rules without wrapper - verify our test styles are present
-      assert css =~ "color:red"
-      assert css =~ "background-color:blue"
-    end
-  end
-
   describe "config documentation" do
-    test "use_priority_layers? defaults to false" do
+    test "use_css_layers? defaults to false (matching StyleX default)" do
       # Reset any overrides
-      LiveStyle.Config.reset(:use_priority_layers)
+      LiveStyle.Config.reset(:use_css_layers)
 
-      assert LiveStyle.Config.use_priority_layers?() == false
+      assert LiveStyle.Config.use_css_layers?() == false
     end
 
-    test "use_priority_layers? can be set via config override" do
-      LiveStyle.Config.put(:use_priority_layers, true)
-      assert LiveStyle.Config.use_priority_layers?() == true
+    test "use_css_layers? can be set via config override" do
+      LiveStyle.Config.put(:use_css_layers, true)
+      assert LiveStyle.Config.use_css_layers?() == true
 
-      LiveStyle.Config.put(:use_priority_layers, false)
-      assert LiveStyle.Config.use_priority_layers?() == false
+      LiveStyle.Config.put(:use_css_layers, false)
+      assert LiveStyle.Config.use_css_layers?() == false
     end
   end
 end

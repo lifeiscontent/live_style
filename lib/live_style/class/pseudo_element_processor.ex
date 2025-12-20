@@ -34,8 +34,8 @@ defmodule LiveStyle.Class.PseudoElementProcessor do
         "display::after" => %{class: "x5678", value: "block", ...}
       }
   """
-  @spec process(list()) :: map()
-  def process(declarations) do
+  @spec process(list(), keyword()) :: map()
+  def process(declarations, _opts \\ []) do
     declarations
     |> Enum.flat_map(fn {pseudo_element, props_map} ->
       process_props(to_string(pseudo_element), props_map)
