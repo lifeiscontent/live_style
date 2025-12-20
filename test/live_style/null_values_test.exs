@@ -33,10 +33,6 @@ defmodule LiveStyle.NullValuesTest do
       color: "blue",
       background_color: nil
     )
-
-    # Expose test helpers
-    def test_css(args), do: css(args)
-    def test_css_class(args), do: css_class(args)
   end
 
   # ============================================================================
@@ -63,10 +59,6 @@ defmodule LiveStyle.NullValuesTest do
         ":hover": "red"
       ]
     )
-
-    # Expose test helpers
-    def test_css(args), do: css(args)
-    def test_css_class(args), do: css_class(args)
   end
 
   # ============================================================================
@@ -99,7 +91,7 @@ defmodule LiveStyle.NullValuesTest do
 
     test "nil value results in empty class string" do
       # When only nil values exist, the class string should be empty
-      class = NullStaticStyles.test_css_class(:revert)
+      class = LiveStyle.get_css_class(NullStaticStyles, :revert)
       assert class == "" or class == nil
     end
 
@@ -140,7 +132,7 @@ defmodule LiveStyle.NullValuesTest do
     test "nil value after regular value removes the property" do
       # StyleX: stylex.props([styles.red, styles.revert]) -> {}
       # The nil value removes the previously applied style
-      attrs = NullStaticStyles.test_css([:red, :revert])
+      attrs = LiveStyle.get_css(NullStaticStyles, [:red, :revert])
 
       # Result should have no classes (empty string)
       assert attrs.class == "" or attrs.class == nil
@@ -149,7 +141,7 @@ defmodule LiveStyle.NullValuesTest do
     test "regular value after nil value applies the value" do
       # StyleX: stylex.props([styles.revert, styles.red]) -> { className: "x1e2nbdu" }
       # The regular value wins since it comes after
-      attrs = NullStaticStyles.test_css([:revert, :red])
+      attrs = LiveStyle.get_css(NullStaticStyles, [:revert, :red])
 
       # Result should have the red class
       assert attrs.class != nil
@@ -167,7 +159,7 @@ defmodule LiveStyle.NullValuesTest do
       # red has color:red
       # revert has color:nil (removes red's color)
       # partial_nil has color:blue (re-applies color)
-      attrs = NullStaticStyles.test_css([:red, :revert, :partial_nil])
+      attrs = LiveStyle.get_css(NullStaticStyles, [:red, :revert, :partial_nil])
 
       # Result should have partial_nil's blue color, not red's color
       blue_rule =

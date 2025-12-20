@@ -145,10 +145,6 @@ defmodule LiveStyle.APIContractTest.StylesModule do
       "@supports (display: grid)": "grid"
     ]
   )
-
-  # Expose test helpers that call the private css/css_class functions
-  def test_css(args), do: css(args)
-  def test_css_class(args), do: css_class(args)
 end
 
 defmodule LiveStyle.APIContractTest.PositionTryModule do
@@ -354,7 +350,7 @@ defmodule LiveStyle.APIContractTest.Tests do
 
   describe "css/1 generated function API" do
     test "returns Attrs struct for single rule" do
-      attrs = StylesModule.test_css(:button)
+      attrs = LiveStyle.get_css(StylesModule, :button)
 
       assert %LiveStyle.Attrs{} = attrs
       assert is_binary(attrs.class)
@@ -362,21 +358,21 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
 
     test "returns Attrs struct for list of rules" do
-      attrs = StylesModule.test_css([:button, :link])
+      attrs = LiveStyle.get_css(StylesModule, [:button, :link])
 
       assert %LiveStyle.Attrs{} = attrs
       assert is_binary(attrs.class)
     end
 
     test "handles nil and false in list (conditionals)" do
-      attrs = StylesModule.test_css([:button, nil, false, :link])
+      attrs = LiveStyle.get_css(StylesModule, [:button, nil, false, :link])
 
       assert %LiveStyle.Attrs{} = attrs
       assert is_binary(attrs.class)
     end
 
     test "handles dynamic rules with values" do
-      attrs = StylesModule.test_css([:button, {:dynamic_opacity, ["0.5"]}])
+      attrs = LiveStyle.get_css(StylesModule, [:button, {:dynamic_opacity, ["0.5"]}])
 
       assert %LiveStyle.Attrs{} = attrs
       assert is_binary(attrs.class)
@@ -385,7 +381,7 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
 
     test "dynamic rules return CSS variables in style" do
-      attrs = StylesModule.test_css([{:dynamic_opacity, ["0.5"]}])
+      attrs = LiveStyle.get_css(StylesModule, [{:dynamic_opacity, ["0.5"]}])
 
       assert %LiveStyle.Attrs{} = attrs
       assert is_binary(attrs.class)
@@ -395,7 +391,7 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
 
     test "dynamic rules with multiple params return all CSS variables" do
-      attrs = StylesModule.test_css([{:dynamic_size, ["100px", "200px"]}])
+      attrs = LiveStyle.get_css(StylesModule, [{:dynamic_size, ["100px", "200px"]}])
 
       assert %LiveStyle.Attrs{} = attrs
       assert is_binary(attrs.class)
@@ -410,14 +406,14 @@ defmodule LiveStyle.APIContractTest.Tests do
 
   describe "css_class/1 generated function API" do
     test "returns string for single rule" do
-      class = StylesModule.test_css_class(:button)
+      class = LiveStyle.get_css_class(StylesModule, :button)
 
       assert is_binary(class)
       assert class != ""
     end
 
     test "returns string for list of rules" do
-      class = StylesModule.test_css_class([:button, :link])
+      class = LiveStyle.get_css_class(StylesModule, [:button, :link])
 
       assert is_binary(class)
     end

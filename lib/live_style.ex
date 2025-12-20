@@ -97,6 +97,9 @@ defmodule LiveStyle do
           css_position_try: 1,
           css_view_transition: 1,
           css_theme: 1,
+          # Runtime resolution macros (validates at compile time, resolves at runtime)
+          css_class: 1,
+          css: 1,
           # Utilities
           first_that_works: 1
         ]
@@ -138,30 +141,6 @@ defmodule LiveStyle do
       def __live_style__(:class_strings), do: @__class_strings__
       def __live_style__(:property_classes), do: @__property_classes__
       def __live_style__(:dynamic_names), do: @__dynamic_names__
-
-      # css_class/1 - returns just the class string for use with class={...}
-      # Private to avoid conflicts when importing other LiveStyle modules
-      @doc false
-      defp css_class(refs) when is_list(refs) do
-        LiveStyle.resolve_class_string(__MODULE__, refs, @__class_strings__)
-      end
-
-      @doc false
-      defp css_class(ref) when is_atom(ref) do
-        Map.get(@__class_strings__, ref, "")
-      end
-
-      # css/1 - returns %Attrs{} for spreading with {css(...)}
-      # Private to avoid conflicts when importing other LiveStyle modules
-      @doc false
-      defp css(refs) when is_list(refs) do
-        LiveStyle.resolve_attrs(__MODULE__, refs, @__class_strings__)
-      end
-
-      @doc false
-      defp css(ref) when is_atom(ref) do
-        %LiveStyle.Attrs{class: Map.get(@__class_strings__, ref, ""), style: nil}
-      end
     end
   end
 
@@ -645,6 +624,7 @@ defmodule LiveStyle do
 
       css_class({MyApp.Button, :button})
   """
+  # Cross-module reference: css_class({OtherModule, :name})
   defmacro css_class({module, name}) do
     key = Manifest.simple_key(module, name)
 
@@ -661,9 +641,66 @@ defmodule LiveStyle do
     end
   end
 
+  # Single atom reference: css_class(:button)
+  # Returns the class string for the given name
   defmacro css_class(name) when is_atom(name) do
     quote do
-      Map.get(@__class_strings__, unquote(name), "")
+      Map.get(__MODULE__.__live_style__(:class_strings), unquote(name), "")
+    end
+  end
+
+  # List of refs: css_class([:base, :primary, @active && :active])
+  # Resolves and merges multiple refs at runtime
+  defmacro css_class(refs) do
+    quote do
+      LiveStyle.resolve_class_string(
+        __MODULE__,
+        unquote(refs),
+        __MODULE__.__live_style__(:class_strings),
+        __MODULE__.__live_style__(:dynamic_names)
+      )
+    end
+  end
+
+  @doc """
+  Returns CSS attributes for spreading in HEEx templates.
+
+  Similar to `css_class/1` but returns `%LiveStyle.Attrs{}` for use with
+  the spread syntax `{css(...)}` in templates. This is needed for dynamic
+  styles that set CSS variables via inline style.
+
+  ## Examples
+
+      # Single ref
+      <div {css(:button)}>
+
+      # List of refs with conditionals
+      <div {css([:base, @active && :active])}>
+
+      # Dynamic styles
+      <div {css([{:dynamic_color, @color}])}>
+  """
+  # Single atom reference: css(:button)
+  # Returns Attrs struct for spreading in templates
+  defmacro css(name) when is_atom(name) do
+    quote do
+      %LiveStyle.Attrs{
+        class: Map.get(__MODULE__.__live_style__(:class_strings), unquote(name), ""),
+        style: nil
+      }
+    end
+  end
+
+  # List of refs: css([:base, :primary, @active && :active])
+  # Resolves and merges multiple refs at runtime, returns Attrs struct
+  defmacro css(refs) do
+    quote do
+      LiveStyle.resolve_attrs(
+        __MODULE__,
+        unquote(refs),
+        __MODULE__.__live_style__(:class_strings),
+        __MODULE__.__live_style__(:dynamic_names)
+      )
     end
   end
 
@@ -796,10 +833,11 @@ defmodule LiveStyle do
 
   # Delegate to Runtime module
   @doc false
-  defdelegate resolve_class_string(module, refs, class_strings), to: LiveStyle.Runtime
+  defdelegate resolve_class_string(module, refs, class_strings, dynamic_names),
+    to: LiveStyle.Runtime
 
   @doc false
-  defdelegate resolve_attrs(module, refs, class_strings), to: LiveStyle.Runtime
+  defdelegate resolve_attrs(module, refs, class_strings, dynamic_names), to: LiveStyle.Runtime
 
   @doc false
   defdelegate process_dynamic_rule(all_props, param_names, values, module, name, has_computed),
@@ -856,7 +894,8 @@ defmodule LiveStyle do
   """
   def get_css(module, refs) when is_atom(module) and is_list(refs) do
     class_strings = module.__live_style__(:class_strings)
-    resolve_attrs(module, refs, class_strings)
+    dynamic_names = module.__live_style__(:dynamic_names)
+    resolve_attrs(module, refs, class_strings, dynamic_names)
   end
 
   def get_css(module, ref) when is_atom(module) and is_atom(ref) do
@@ -898,7 +937,8 @@ defmodule LiveStyle do
   """
   def get_css_class(module, refs) when is_atom(module) and is_list(refs) do
     class_strings = module.__live_style__(:class_strings)
-    resolve_class_string(module, refs, class_strings)
+    dynamic_names = module.__live_style__(:dynamic_names)
+    resolve_class_string(module, refs, class_strings, dynamic_names)
   end
 
   def get_css_class(module, ref) when is_atom(module) and is_atom(ref) do

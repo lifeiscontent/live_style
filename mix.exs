@@ -61,7 +61,7 @@ defmodule LiveStyle.MixProject do
 
   defp package do
     [
-      maintainers: ["Aaron Buckley"],
+      maintainers: ["Aaron Reisman"],
       licenses: ["MIT"],
       links: %{
         "GitHub" => @source_url
@@ -72,8 +72,21 @@ defmodule LiveStyle.MixProject do
 
   defp docs do
     [
-      main: "LiveStyle",
-      extras: ["README.md", "CHANGELOG.md", "LICENSE"],
+      main: "readme",
+      extras: [
+        "README.md",
+        "guides/getting-started.md",
+        "guides/design-tokens.md",
+        "guides/styling-components.md",
+        "guides/theming.md",
+        "guides/advanced-features.md",
+        "guides/configuration.md",
+        "CHANGELOG.md",
+        "LICENSE"
+      ],
+      groups_for_extras: [
+        Guides: ~r/guides\/.*/
+      ],
       source_ref: "v#{@version}",
       source_url: @source_url
     ]

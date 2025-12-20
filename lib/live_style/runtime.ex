@@ -7,6 +7,9 @@ defmodule LiveStyle.Runtime do
   - Property-based merging (StyleX behavior)
   - Dynamic rule processing
   - Cross-module reference resolution
+
+  Note: Class reference validation is done at compile time by the
+  css_class/1 and css/1 macros in LiveStyle.
   """
 
   alias LiveStyle.Config
@@ -17,9 +20,10 @@ defmodule LiveStyle.Runtime do
   Resolve a list of refs into a class string.
 
   Later refs override earlier ones (StyleX merge behavior).
+  Validation is done at compile time by the css_class/1 macro.
   """
-  @spec resolve_class_string(module(), list(), term()) :: String.t()
-  def resolve_class_string(module, refs, _class_strings) when is_list(refs) do
+  @spec resolve_class_string(module(), list(), map(), list()) :: String.t()
+  def resolve_class_string(module, refs, _class_strings, _dynamic_names) when is_list(refs) do
     property_classes_map = module.__live_style__(:property_classes)
 
     # Build a map of property_key -> class_name
@@ -45,9 +49,10 @@ defmodule LiveStyle.Runtime do
   Resolve a list of refs into an Attrs struct with class and style.
 
   Handles both static rules and dynamic rules with CSS variables.
+  Validation is done at compile time by the css/1 macro.
   """
-  @spec resolve_attrs(module(), list(), term()) :: LiveStyle.Attrs.t()
-  def resolve_attrs(module, refs, _class_strings) when is_list(refs) do
+  @spec resolve_attrs(module(), list(), map(), list()) :: LiveStyle.Attrs.t()
+  def resolve_attrs(module, refs, _class_strings, _dynamic_names) when is_list(refs) do
     property_classes_map = module.__live_style__(:property_classes)
 
     # Use property-based merging to correctly handle :__unset__ values (StyleX behavior)

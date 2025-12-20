@@ -190,13 +190,11 @@ defmodule LiveStyle.DynamicStylesTest do
     css_class(:opacity, fn opacity -> [opacity: opacity] end)
     css_class(:colors, fn bg, fg -> [background_color: bg, color: fg] end)
     css_class(:static_base, display: "block", padding: "10px")
-
-    def test_css(args), do: css(args)
   end
 
   describe "dynamic style runtime behavior" do
     test "dynamic rule returns attrs with style containing CSS variables" do
-      attrs = RuntimeDynamic.test_css([{:opacity, ["0.5"]}])
+      attrs = LiveStyle.get_css(RuntimeDynamic, [{:opacity, ["0.5"]}])
 
       assert %LiveStyle.Attrs{} = attrs
       assert is_binary(attrs.class)
@@ -206,7 +204,7 @@ defmodule LiveStyle.DynamicStylesTest do
     end
 
     test "multi-param dynamic rule returns all CSS variables in style" do
-      attrs = RuntimeDynamic.test_css([{:colors, ["red", "blue"]}])
+      attrs = LiveStyle.get_css(RuntimeDynamic, [{:colors, ["red", "blue"]}])
 
       assert %LiveStyle.Attrs{} = attrs
       assert is_binary(attrs.style)
@@ -217,7 +215,7 @@ defmodule LiveStyle.DynamicStylesTest do
     end
 
     test "mixing static and dynamic rules works" do
-      attrs = RuntimeDynamic.test_css([:static_base, {:opacity, ["0.8"]}])
+      attrs = LiveStyle.get_css(RuntimeDynamic, [:static_base, {:opacity, ["0.8"]}])
 
       assert %LiveStyle.Attrs{} = attrs
       # Should have classes from both rules
@@ -228,7 +226,7 @@ defmodule LiveStyle.DynamicStylesTest do
     end
 
     test "static rule alone returns no style attribute" do
-      attrs = RuntimeDynamic.test_css([:static_base])
+      attrs = LiveStyle.get_css(RuntimeDynamic, [:static_base])
 
       assert %LiveStyle.Attrs{} = attrs
       assert is_binary(attrs.class)

@@ -164,6 +164,9 @@ defmodule LiveStyle.Sheet do
           css_position_try: 1,
           css_view_transition: 1,
           css_theme: 1,
+          # Runtime resolution macros
+          css_class: 1,
+          css: 1,
           # Utilities
           first_that_works: 1
         ]
