@@ -3,7 +3,6 @@ defmodule LiveStyle.TestCase do
   Base test case for LiveStyle tests.
 
   This module provides a consistent test environment with:
-  - File-based storage with unique tmp paths for test isolation
   - CSS generation via `generate_css/0`
   - Hash computation helpers
   - Per-process config overrides
@@ -56,20 +55,6 @@ defmodule LiveStyle.TestCase do
 
   @doc false
   def setup_test(config_opts) do
-    # Generate a unique tmp path for this test process
-    unique_id = :erlang.unique_integer([:positive, :monotonic])
-    tmp_path = Path.join(System.tmp_dir!(), "live_style_test_#{unique_id}_manifest.etf")
-
-    # Read the manifest from the default storage BEFORE setting the test path.
-    # This ensures we get all compiled test modules.
-    manifest = LiveStyle.Storage.read()
-
-    # Set the storage path for this test process
-    LiveStyle.Storage.set_path(tmp_path)
-
-    # Write the manifest to the test's tmp file
-    LiveStyle.Storage.write(manifest)
-
     # Apply any config overrides for this test
     for {key, value} <- config_opts do
       LiveStyle.Config.put(key, value)
@@ -77,10 +62,6 @@ defmodule LiveStyle.TestCase do
 
     # Cleanup on test exit
     ExUnit.Callbacks.on_exit(fn ->
-      # Clean up the tmp file
-      File.rm(tmp_path)
-      File.rm(tmp_path <> ".lock")
-      LiveStyle.Storage.clear_path()
       LiveStyle.Config.reset_all()
     end)
 
@@ -91,16 +72,6 @@ defmodule LiveStyle.TestCase do
     @moduledoc """
     Helper functions available in all LiveStyle tests.
     """
-
-    @doc """
-    Gets the current manifest from storage.
-
-    DEPRECATED: Use `LiveStyle.get_metadata/2` instead for accessing specific entries.
-    This function will be removed in a future version.
-    """
-    def get_manifest do
-      LiveStyle.Storage.read()
-    end
 
     @doc """
     Generates CSS from all registered styles.

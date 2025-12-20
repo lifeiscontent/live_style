@@ -61,16 +61,14 @@ defmodule LiveStyle.PriorityLayersTest do
   describe "use_css_layers: false (default, StyleX default)" do
     test "does not use @layer blocks" do
       # Default behavior - no layers, use :not(#\#) hack
-      manifest = get_manifest()
-      css = LiveStyle.CSS.generate(manifest)
+      css = generate_css()
 
       # Should NOT have any @layer blocks
       refute css =~ "@layer "
     end
 
     test "uses :not(#\\#) hack for specificity bumping on conditional selectors" do
-      manifest = get_manifest()
-      css = LiveStyle.CSS.generate(manifest)
+      css = generate_css()
 
       # Hover styles should use :not(#\#) hack for specificity
       # The hover_style has a :hover condition which needs bumping
@@ -78,8 +76,7 @@ defmodule LiveStyle.PriorityLayersTest do
     end
 
     test "rules from test modules are included in CSS" do
-      manifest = get_manifest()
-      css = LiveStyle.CSS.generate(manifest)
+      css = generate_css()
 
       # Verify our test module's rules are in the generated CSS
       assert css =~ "color:red"
@@ -96,24 +93,21 @@ defmodule LiveStyle.PriorityLayersTest do
     end
 
     test "generates @layer declaration header" do
-      manifest = get_manifest()
-      css = LiveStyle.CSS.generate(manifest)
+      css = generate_css()
 
       # Should have layer declaration header
       assert css =~ ~r/@layer priority\d+(, priority\d+)*;/
     end
 
     test "groups rules by priority level into @layer blocks" do
-      manifest = get_manifest()
-      css = LiveStyle.CSS.generate(manifest)
+      css = generate_css()
 
       # Should have @layer priorityN blocks (with curly brace, not just semicolon)
       assert css =~ ~r/@layer priority\d+\{/
     end
 
     test "different priorities result in multiple layers" do
-      manifest = get_manifest()
-      css = LiveStyle.CSS.generate(manifest)
+      css = generate_css()
 
       # Count unique priority layer numbers in the output
       layer_matches = Regex.scan(~r/@layer priority(\d+)\{/, css)
@@ -126,8 +120,7 @@ defmodule LiveStyle.PriorityLayersTest do
     end
 
     test "layer declaration lists all layers in ascending order" do
-      manifest = get_manifest()
-      css = LiveStyle.CSS.generate(manifest)
+      css = generate_css()
 
       # Extract layer declaration (should be first @layer statement with semicolon)
       case Regex.run(~r/@layer [^;]+;/, css) do
@@ -146,8 +139,7 @@ defmodule LiveStyle.PriorityLayersTest do
     end
 
     test "rules from test modules are included in CSS" do
-      manifest = get_manifest()
-      css = LiveStyle.CSS.generate(manifest)
+      css = generate_css()
 
       # Verify our test module's rules are in the generated CSS
       assert css =~ "color:red"
@@ -156,8 +148,7 @@ defmodule LiveStyle.PriorityLayersTest do
     end
 
     test "does not use :not(#\\#) hack when layers are enabled" do
-      manifest = get_manifest()
-      css = LiveStyle.CSS.generate(manifest)
+      css = generate_css()
 
       # When using layers, specificity is handled by layer order, not :not(#\#) hack
       refute css =~ ":not(#\\#)"
@@ -172,8 +163,7 @@ defmodule LiveStyle.PriorityLayersTest do
     end
 
     test "shorthand properties appear in earlier layers than longhands" do
-      manifest = get_manifest()
-      css = LiveStyle.CSS.generate(manifest)
+      css = generate_css()
 
       # Find which layer margin:10px is in (shorthand, priority ~1000)
       margin_layer_match = Regex.run(~r/@layer priority(\d+)\{[^}]*margin:10px/s, css)

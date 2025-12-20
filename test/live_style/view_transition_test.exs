@@ -416,7 +416,7 @@ defmodule LiveStyle.ViewTransitionTest do
 
     test "generates CSS with view transition pseudo-elements" do
       # Generate CSS output
-      css = LiveStyle.CSS.generate(get_manifest())
+      css = generate_css()
 
       # The CSS should contain view-transition pseudo-elements
       assert css =~ "::view-transition-group"
@@ -426,7 +426,7 @@ defmodule LiveStyle.ViewTransitionTest do
     end
 
     test "CSS uses wildcard class selector pattern" do
-      css = LiveStyle.CSS.generate(get_manifest())
+      css = generate_css()
 
       # StyleX pattern: ::view-transition-group(*.xchu1hv)
       assert css =~ ~r/::view-transition-\w+\(\*\.x[a-z0-9]+\)/
@@ -503,7 +503,7 @@ defmodule LiveStyle.ViewTransitionTest do
         )
 
       css_name = view_transition.css_name
-      css = LiveStyle.CSS.generate(get_manifest())
+      css = generate_css()
 
       # Should have old and new
       assert css =~ "::view-transition-old(*.#{css_name})"
