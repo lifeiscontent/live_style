@@ -78,22 +78,37 @@ defmodule LiveStyle.Storage do
 
   Returns an empty manifest if the file doesn't exist or can't be parsed.
   Logs warnings for parse errors to help diagnose issues.
+
+  Uses file locking to prevent reading partially-written files during
+  parallel compilation or test execution.
   """
   def read(opts \\ []) do
     file_path = Keyword.get(opts, :path, path())
 
     if File.exists?(file_path) do
-      case File.read(file_path) do
-        {:ok, binary} ->
-          parse_manifest(binary, file_path)
-
-        {:error, reason} ->
-          require Logger
-          Logger.warning("LiveStyle: Failed to read manifest at #{file_path}: #{inspect(reason)}")
-          LiveStyle.Manifest.empty()
-      end
+      read_with_lock(file_path)
     else
       LiveStyle.Manifest.empty()
+    end
+  end
+
+  defp read_with_lock(file_path) do
+    lock_path = file_path <> ".lock"
+
+    with_lock(lock_path, fn ->
+      read_file(file_path)
+    end)
+  end
+
+  defp read_file(file_path) do
+    case File.read(file_path) do
+      {:ok, binary} ->
+        parse_manifest(binary, file_path)
+
+      {:error, reason} ->
+        require Logger
+        Logger.warning("LiveStyle: Failed to read manifest at #{file_path}: #{inspect(reason)}")
+        LiveStyle.Manifest.empty()
     end
   end
 
@@ -112,11 +127,18 @@ defmodule LiveStyle.Storage do
 
   @doc """
   Writes the manifest to file.
+
+  Uses file locking to prevent concurrent writes from corrupting the file.
   """
   def write(manifest, opts \\ []) do
     file_path = Keyword.get(opts, :path, path())
+    lock_path = file_path <> ".lock"
     file_path |> Path.dirname() |> File.mkdir_p!()
-    File.write!(file_path, :erlang.term_to_binary(manifest))
+
+    with_lock(lock_path, fn ->
+      File.write!(file_path, :erlang.term_to_binary(manifest))
+    end)
+
     :ok
   end
 
@@ -136,16 +158,31 @@ defmodule LiveStyle.Storage do
 
     # Use file-based locking to prevent race conditions
     with_lock(lock_path, fn ->
-      manifest = read(path: file_path)
+      # Use internal read/write that don't acquire locks (we already have it)
+      manifest = read_unlocked(file_path)
       new_manifest = fun.(manifest)
 
       # Skip write if manifest unchanged (same reference returned)
       unless new_manifest === manifest do
-        write(new_manifest, path: file_path)
+        write_unlocked(new_manifest, file_path)
       end
     end)
 
     :ok
+  end
+
+  # Internal read without locking - for use within update/2
+  defp read_unlocked(file_path) do
+    if File.exists?(file_path) do
+      read_file(file_path)
+    else
+      LiveStyle.Manifest.empty()
+    end
+  end
+
+  # Internal write without locking - for use within update/2
+  defp write_unlocked(manifest, file_path) do
+    File.write!(file_path, :erlang.term_to_binary(manifest))
   end
 
   @doc """
