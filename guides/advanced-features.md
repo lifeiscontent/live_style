@@ -209,14 +209,19 @@ window.__vtCounter = 0
 
 export function createViewTransitionDom(options = {}) {
   const existingDom = options.dom || {}
+  const animateMode = options.animate || "always"
+  
+  // State for explicit mode
   let transitionTypes = []
+  let explicitTransitionPending = false
 
-  // Listen for view transition events from LiveView
+  // Listen for explicit transition events from LiveView
   window.addEventListener("phx:start-view-transition", (e) => {
     const opts = e.detail || {}
     if (opts.types && Array.isArray(opts.types)) {
       transitionTypes.push(...opts.types)
     }
+    explicitTransitionPending = true
     window.__viewTransitionPending = true
   })
 
@@ -229,6 +234,7 @@ export function createViewTransitionDom(options = {}) {
       const update = () => {
         const types = transitionTypes
         transitionTypes = []
+        explicitTransitionPending = false
         
         if (existingOnDocumentPatch) {
           existingOnDocumentPatch(start)
@@ -239,11 +245,15 @@ export function createViewTransitionDom(options = {}) {
         window.__viewTransitionPending = false
       }
 
-      // Only use View Transitions if scheduled
-      if (!window.__viewTransitionPending || !document.startViewTransition) {
+      // Check if we should animate
+      const shouldAnimate = animateMode === "always" || explicitTransitionPending
+      
+      if (!shouldAnimate || !document.startViewTransition) {
         update()
         return
       }
+
+      window.__viewTransitionPending = true
 
       // Start the view transition
       try {
@@ -278,11 +288,18 @@ import { Socket } from "phoenix"
 import { LiveSocket } from "phoenix_live_view"
 import { createViewTransitionDom } from "./view-transitions"
 
+// Recommended: animate all DOM patches automatically
 const liveSocket = new LiveSocket("/live", Socket, {
   params: { _csrf_token: csrfToken },
-  dom: createViewTransitionDom()
+  dom: createViewTransitionDom({ animate: "always" })
 })
 ```
+
+**Animation Modes:**
+
+- `animate: "always"` (default) - Every LiveView DOM patch is wrapped in a view transition. Elements with `view-transition-name` animate automatically. **This is the recommended mode** as it requires no server-side coordination.
+
+- `animate: "explicit"` - Only patches preceded by a `push_event("start-view-transition", ...)` are animated. Use this for fine-grained control.
 
 #### Step 3: Create a ViewTransition Component
 
@@ -395,9 +412,31 @@ defmodule MyAppWeb.TodoLive do
 end
 ```
 
-#### Step 5: Trigger Transitions from LiveView
+#### Step 5: Write Your Event Handlers
 
-Push a `start-view-transition` event before DOM updates:
+With `animate: "always"` mode, your event handlers are simple - no `push_event` needed:
+
+```elixir
+def handle_event("shuffle", _params, socket) do
+  {:noreply, assign(socket, items: Enum.shuffle(socket.assigns.items))}
+end
+
+def handle_event("add_item", %{"text" => text}, socket) do
+  new_item = %{id: System.unique_integer(), text: text}
+  {:noreply, assign(socket, items: socket.assigns.items ++ [new_item])}
+end
+
+def handle_event("delete_item", %{"id" => id}, socket) do
+  items = Enum.reject(socket.assigns.items, &(&1.id == id))
+  {:noreply, assign(socket, items: items)}
+end
+```
+
+Every DOM patch automatically triggers a view transition. Elements with `view-transition-name` will animate smoothly.
+
+#### Explicit Mode (Optional)
+
+If you prefer fine-grained control, use `animate: "explicit"` and push events:
 
 ```elixir
 def handle_event("shuffle", _params, socket) do
@@ -410,13 +449,15 @@ end
 
 ### Key Insights
 
-1. **Apply names on mount**: The `view-transition-name` must be set **before** `startViewTransition()` captures the old state. The hook applies it immediately in `mounted()`.
+1. **Use `animate: "always"`**: This is the simplest approach - every DOM patch animates automatically. No server-side coordination needed.
 
-2. **Don't use `display: contents`**: It removes the element from the box tree and breaks view transition snapshots. Apply styles directly to the wrapper.
+2. **Apply names on mount**: The `view-transition-name` must be set **before** `startViewTransition()` captures the old state. The hook applies it immediately in `mounted()`.
 
-3. **Use `:only-child` for enter/exit**: When elements are added or removed, use `::view-transition-new(name):only-child` for enter animations and `::view-transition-old(name):only-child` for exit animations.
+3. **Don't use `display: contents`**: It removes the element from the box tree and breaks view transition snapshots. Apply styles directly to the wrapper.
 
-4. **Avoid animations when unchanged**: If you define custom `old`/`new` animations, they play even when elements don't change. Use `:group` for duration/easing on elements that move, and reserve `old`/`new` for actual enter/exit animations.
+4. **Use `:only-child` for enter/exit**: When elements are added or removed, use `::view-transition-new(name):only-child` for enter animations and `::view-transition-old(name):only-child` for exit animations.
+
+5. **Avoid animations when unchanged**: If you define custom `old`/`new` animations, they play even when elements don't change. Use `:group` for duration/easing on elements that move, and reserve `old`/`new` for actual enter/exit animations.
 
 ### Browser Support
 
