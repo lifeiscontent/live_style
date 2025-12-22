@@ -29,9 +29,9 @@ defmodule LiveStyle.CSS do
   Use `LiveStyle.Compiler.write_css/1` or the mix tasks to generate CSS files.
   """
 
+  alias LiveStyle.CSS.AtomicRules
   alias LiveStyle.CSS.Keyframes
   alias LiveStyle.CSS.PositionTry
-  alias LiveStyle.CSS.RuleGenerator
   alias LiveStyle.CSS.Themes
   alias LiveStyle.CSS.Vars
   alias LiveStyle.CSS.ViewTransitions
@@ -48,7 +48,7 @@ defmodule LiveStyle.CSS do
       Keyframes.generate(manifest),
       PositionTry.generate(manifest),
       ViewTransitions.generate(manifest),
-      RuleGenerator.generate(manifest),
+      AtomicRules.generate(manifest),
       Themes.generate(manifest)
     ]
     |> Enum.reject(&(&1 == ""))

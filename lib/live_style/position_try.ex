@@ -112,20 +112,8 @@ defmodule LiveStyle.PositionTry do
   """
   @spec lookup!(module(), atom()) :: String.t()
   def lookup!(module, name) do
-    key = Manifest.simple_key(module, name)
-    manifest = LiveStyle.Storage.read()
-
-    case Manifest.get_position_try(manifest, key) do
-      %{css_name: css_name} ->
-        css_name
-
-      nil ->
-        raise ArgumentError, """
-        Unknown position_try: #{inspect(module)}.#{name}
-
-        Make sure css_position_try(:#{name}, ...) is defined before it's referenced.
-        """
-    end
+    %{css_name: css_name} = LiveStyle.Manifest.Access.position_try!(module, name)
+    css_name
   end
 
   @doc false

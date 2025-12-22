@@ -25,10 +25,10 @@ defmodule LiveStyle.Storage do
   This allows tests to run in parallel with `async: true` without conflicts.
   """
 
-  @default_path "_build/live_style_manifest.etf"
+  alias LiveStyle.Storage.{IO, Lock}
+  alias LiveStyle.Storage.Path, as: StoragePath
+
   @default_lock_timeout 30_000
-  @lock_retry_interval 10
-  @path_key :live_style_manifest_path
 
   @doc """
   Returns the lock timeout in milliseconds.
@@ -45,84 +45,35 @@ defmodule LiveStyle.Storage do
 
   @doc """
   Sets the manifest path for the current process.
-
-  This is primarily used for test isolation, allowing each test to use
-  a separate manifest file without affecting other tests.
   """
-  def set_path(path) when is_binary(path) do
-    Process.put(@path_key, path)
-    :ok
-  end
+  defdelegate set_path(path), to: StoragePath
 
   @doc """
-  Clears the per-process path override, reverting to the default path.
+  Clears the per-process path override.
   """
-  def clear_path do
-    Process.delete(@path_key)
-    :ok
-  end
+  defdelegate clear_path(), to: StoragePath
 
   @doc """
   Returns the current manifest path.
-
-  If a per-process override is set (via `set_path/1`), that is returned.
-  Otherwise, returns the configured path from application config, or the default.
   """
-  def path do
-    Process.get(@path_key) ||
-      Application.get_env(:live_style, :manifest_path, @default_path)
-  end
+  defdelegate path(), to: StoragePath
 
   @doc """
   Reads the manifest from file.
 
   Returns an empty manifest if the file doesn't exist or can't be parsed.
-  Logs warnings for parse errors to help diagnose issues.
-
-  Uses file locking to prevent reading partially-written files during
-  parallel compilation or test execution.
+  Uses file locking to prevent reading partially-written files.
   """
   def read(opts \\ []) do
     file_path = Keyword.get(opts, :path, path())
 
     if File.exists?(file_path) do
-      read_with_lock(file_path)
+      with_lock(file_path, fn ->
+        IO.read(file_path)
+      end)
     else
       LiveStyle.Manifest.empty()
     end
-  end
-
-  defp read_with_lock(file_path) do
-    lock_path = file_path <> ".lock"
-
-    with_lock(lock_path, fn ->
-      read_file(file_path)
-    end)
-  end
-
-  defp read_file(file_path) do
-    case File.read(file_path) do
-      {:ok, binary} ->
-        parse_manifest(binary, file_path)
-
-      {:error, reason} ->
-        require Logger
-        Logger.warning("LiveStyle: Failed to read manifest at #{file_path}: #{inspect(reason)}")
-        LiveStyle.Manifest.empty()
-    end
-  end
-
-  # Parse manifest binary, handling only expected errors from corrupt data.
-  # Programming errors (FunctionClauseError, etc.) are allowed to propagate.
-  defp parse_manifest(binary, file_path) do
-    manifest = :erlang.binary_to_term(binary)
-    LiveStyle.Manifest.ensure_keys(manifest)
-  catch
-    # :erlang.binary_to_term raises :badarg for invalid binary format
-    :error, :badarg ->
-      require Logger
-      Logger.warning("LiveStyle: Corrupt manifest at #{file_path}, starting fresh")
-      LiveStyle.Manifest.empty()
   end
 
   @doc """
@@ -132,11 +83,10 @@ defmodule LiveStyle.Storage do
   """
   def write(manifest, opts \\ []) do
     file_path = Keyword.get(opts, :path, path())
-    lock_path = file_path <> ".lock"
-    file_path |> Path.dirname() |> File.mkdir_p!()
+    file_path |> Elixir.Path.dirname() |> File.mkdir_p!()
 
-    with_lock(lock_path, fn ->
-      File.write!(file_path, :erlang.term_to_binary(manifest))
+    with_lock(file_path, fn ->
+      IO.write(manifest, file_path)
     end)
 
     :ok
@@ -151,38 +101,15 @@ defmodule LiveStyle.Storage do
   """
   def update(fun, opts \\ []) do
     file_path = Keyword.get(opts, :path, path())
-    lock_path = file_path <> ".lock"
+    file_path |> Elixir.Path.dirname() |> File.mkdir_p!()
 
-    # Ensure directory exists
-    file_path |> Path.dirname() |> File.mkdir_p!()
-
-    # Use file-based locking to prevent race conditions
-    with_lock(lock_path, fn ->
-      # Use internal read/write that don't acquire locks (we already have it)
-      manifest = read_unlocked(file_path)
+    with_lock(file_path, fn ->
+      manifest = IO.read(file_path)
       new_manifest = fun.(manifest)
-
-      # Skip write if manifest unchanged (same reference returned)
-      unless new_manifest === manifest do
-        write_unlocked(new_manifest, file_path)
-      end
+      unless new_manifest === manifest, do: IO.write(new_manifest, file_path)
     end)
 
     :ok
-  end
-
-  # Internal read without locking - for use within update/2
-  defp read_unlocked(file_path) do
-    if File.exists?(file_path) do
-      read_file(file_path)
-    else
-      LiveStyle.Manifest.empty()
-    end
-  end
-
-  # Internal write without locking - for use within update/2
-  defp write_unlocked(manifest, file_path) do
-    File.write!(file_path, :erlang.term_to_binary(manifest))
   end
 
   @doc """
@@ -195,45 +122,12 @@ defmodule LiveStyle.Storage do
       File.rm!(file_path)
     end
 
-    # Write empty manifest to ensure it exists
     write(LiveStyle.Manifest.empty(), path: file_path)
     :ok
   end
 
-  # Simple file-based locking using mkdir (atomic on most filesystems)
-  defp with_lock(lock_path, fun) do
-    acquire_lock(lock_path, lock_timeout())
-
-    try do
-      fun.()
-    after
-      release_lock(lock_path)
-    end
-  end
-
-  defp acquire_lock(lock_path, timeout) when timeout > 0 do
-    case File.mkdir(lock_path) do
-      :ok ->
-        :ok
-
-      {:error, :eexist} ->
-        # Lock exists, wait and retry
-        Process.sleep(@lock_retry_interval)
-        acquire_lock(lock_path, timeout - @lock_retry_interval)
-
-      {:error, reason} ->
-        raise RuntimeError,
-          message: "Failed to acquire lock at #{lock_path}: #{inspect(reason)}"
-    end
-  end
-
-  defp acquire_lock(lock_path, _timeout) do
-    # Timeout reached - force remove stale lock and try once more
-    File.rm_rf(lock_path)
-    File.mkdir!(lock_path)
-  end
-
-  defp release_lock(lock_path) do
-    File.rm_rf(lock_path)
+  defp with_lock(file_path, fun) do
+    lock_path = file_path <> ".lock"
+    Lock.with_lock(lock_path, lock_timeout(), fun)
   end
 end

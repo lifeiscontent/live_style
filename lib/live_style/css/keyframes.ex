@@ -99,19 +99,11 @@ defmodule LiveStyle.CSS.Keyframes do
   defp format_declarations(declarations) do
     declarations
     |> Enum.map_join("", fn {prop, val} ->
-      # Unwrap var() from property names (for keyframes that animate CSS variables)
-      # e.g., "var(--v08108998)" -> "--v08108998"
-      css_prop = prop |> to_string() |> unwrap_var()
+      # `Value.to_css_property/1` already handles `var(--x)` used as a property key.
+      css_prop = Value.to_css_property(prop)
       "#{css_prop}:#{val};"
     end)
   end
-
-  # Unwrap var(--name) to just --name for use as property names in keyframes
-  defp unwrap_var("var(" <> rest) do
-    String.trim_trailing(rest, ")")
-  end
-
-  defp unwrap_var(property), do: property
 
   # Sort keys for deterministic output, using shared frame_sort_order.
   # Returns tuple for stable sorting: {order, selector_string}

@@ -15,7 +15,7 @@ Use `LiveStyle.Tokens` to define:
 
 | Use `css_vars` | Use `css_consts` |
 |----------------|------------------|
-| Colors (for theming) | Spacing scales |
+| Colors (for theming) | Spacing scales (unless themeable) |
 | Semantic tokens (themed) | Font families |
 | Values animated via `@property` | Font sizes/weights |
 | Values that change at runtime | Border radii |
@@ -23,7 +23,7 @@ Use `LiveStyle.Tokens` to define:
 | | Breakpoints |
 | | Z-index values |
 
-**Rule of thumb:** If the value might change with a theme or needs to be a CSS variable for animation, use `css_vars`. Otherwise, use `css_consts` for better performance (no CSS variable overhead).
+**Rule of thumb:** If the value might change with a theme (including things like a compact/cozy spacing scale) or needs to be a CSS variable for animation, use `css_vars`. Otherwise, use `css_consts` for better performance (no CSS variable overhead).
 
 ## CSS Variables
 
@@ -179,11 +179,11 @@ defmodule MyApp.Container do
   use LiveStyle.Sheet
 
   css_class :container,
-    padding: [
-      default: css_const({MyApp.Tokens, :space, :md}),
-      "@media #{css_const({MyApp.Tokens, :breakpoint, :md})}": css_const({MyApp.Tokens, :space, :lg}),
-      "@media #{css_const({MyApp.Tokens, :breakpoint, :lg})}": css_const({MyApp.Tokens, :space, :xl})
-    ]
+    padding: %{
+      :default => css_const({MyApp.Tokens, :space, :md}),
+      "@media #{css_const({MyApp.Tokens, :breakpoint, :md})}" => css_const({MyApp.Tokens, :space, :lg}),
+      "@media #{css_const({MyApp.Tokens, :breakpoint, :lg})}" => css_const({MyApp.Tokens, :space, :xl})
+    }
 end
 ```
 

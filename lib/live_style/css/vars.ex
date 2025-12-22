@@ -83,6 +83,8 @@ defmodule LiveStyle.CSS.Vars do
   end
 
   # Generate CSS for a group of variables sharing the same at-rule conditions
+  alias LiveStyle.CSS.AtRules
+
   defp generate_var_group_css({at_rules, vars_list}) do
     declarations =
       vars_list
@@ -93,15 +95,7 @@ defmodule LiveStyle.CSS.Vars do
     inner = ":root{#{declarations}}"
 
     # Wrap with at-rules (no spaces - StyleX format)
-    wrap_with_at_rules(inner, at_rules)
-  end
-
-  @doc """
-  Wrap CSS content in nested at-rules.
-  """
-  @spec wrap_with_at_rules(String.t(), [String.t()]) :: String.t()
-  def wrap_with_at_rules(inner, at_rules) do
-    Enum.reduce(at_rules, inner, fn at_rule, acc -> "#{at_rule}{#{acc}}" end)
+    AtRules.wrap(at_rules, inner)
   end
 
   # Flatten a variable value into a list of {at_rules, css_name, value} tuples

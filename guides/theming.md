@@ -11,7 +11,7 @@ The standard pattern uses two layers:
 
 This separation keeps color values in one place while allowing themes to swap which colors semantic tokens point to.
 
-> **Note:** Only values defined with `css_vars` can be themed. Static values like spacing, typography, and radii should use `css_consts` and don't need theming.
+> **Note:** Only values defined with `css_vars` can be themed. Many teams keep spacing/typography/radii as `css_consts`, but if you want themeable spacing scales (e.g. compact/cozy), define them with `css_vars` and override with `css_theme/3`.
 
 ## Defining Themes
 

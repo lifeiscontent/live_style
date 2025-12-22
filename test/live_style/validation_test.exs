@@ -221,6 +221,26 @@ defmodule LiveStyle.ValidationTest do
       end
     end
 
+    test "raises error for tuple value (legacy conditional shorthand)" do
+      assert_raise ArgumentError, ~r/tuple values are not supported/, fn ->
+        defmodule TupleValueModule do
+          use LiveStyle
+
+          css_class(:test, color: {":hover", "red"})
+        end
+      end
+    end
+
+    test "raises error for legacy nested at-rule object syntax" do
+      assert_raise ArgumentError, ~r/Legacy at-rule object syntax/, fn ->
+        defmodule LegacyAtRuleObjectModule do
+          use LiveStyle
+
+          css_class(:test, %{"@media (min-width: 768px)" => %{color: "red"}})
+        end
+      end
+    end
+
     test "allows number values" do
       # StyleX: 'valid value: number' - should not throw
       defmodule NumberValueModule do

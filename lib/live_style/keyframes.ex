@@ -54,15 +54,16 @@ defmodule LiveStyle.Keyframes do
     key = Manifest.simple_key(module, name)
     manifest = LiveStyle.Storage.read()
 
-    # Return existing if already defined (from pre-compilation)
+    normalized_frames = Utils.normalize_to_map(frames)
+    css_name = Hash.keyframes_name(normalized_frames)
+
+    # If already defined, keep it unless the frames changed.
+    # In dev/code-reload, keyframes need to update so the compiled CSS matches source.
     case Manifest.get_keyframes(manifest, key) do
-      %{css_name: css_name} ->
+      %{css_name: ^css_name, frames: ^normalized_frames} ->
         css_name
 
-      nil ->
-        normalized_frames = Utils.normalize_to_map(frames)
-        css_name = Hash.keyframes_name(normalized_frames)
-
+      _existing ->
         # Generate the StyleX-compatible metadata
         ltr = generate_css(css_name, normalized_frames)
 
@@ -89,21 +90,8 @@ defmodule LiveStyle.Keyframes do
   """
   @spec lookup!(module(), atom()) :: String.t()
   def lookup!(module, name) do
-    key = Manifest.simple_key(module, name)
-    manifest = LiveStyle.Storage.read()
-
-    case Manifest.get_keyframes(manifest, key) do
-      %{css_name: css_name} ->
-        css_name
-
-      nil ->
-        raise ArgumentError, """
-        Unknown keyframes: #{name}
-
-        Make sure css_keyframes(:#{name}, ...) is defined before it's referenced.
-        If referencing from another module, ensure that module is compiled first.
-        """
-    end
+    %{css_name: css_name} = LiveStyle.Manifest.Access.keyframes!(module, name)
+    css_name
   end
 
   @doc """

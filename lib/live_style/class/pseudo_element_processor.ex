@@ -6,7 +6,7 @@ defmodule LiveStyle.Class.PseudoElementProcessor do
   For example: `%{"::after": %{content: "''", display: "block"}}`
 
   It also handles conditional values within pseudo-elements:
-  `%{"::before": %{color: [default: "red", ":hover": "blue"]}}`
+  `%{"::before": %{color: %{:default => "red", ":hover" => "blue"}}}`
 
   ## Responsibilities
 
@@ -17,7 +17,7 @@ defmodule LiveStyle.Class.PseudoElementProcessor do
   """
 
   alias LiveStyle.Class.Conditional
-  alias LiveStyle.Class.CSS, as: ClassCSS
+  alias LiveStyle.CSS.AtomicClass
   alias LiveStyle.{Hash, Priority, Value}
 
   @doc """
@@ -62,7 +62,7 @@ defmodule LiveStyle.Class.PseudoElementProcessor do
   end
 
   # Process a conditional property within a pseudo-element
-  # e.g., "::before": %{color: [default: "red", ":hover": "blue"]}
+  # e.g., "::before": %{color: %{:default => "red", ":hover" => "blue"}}
   defp process_conditional_prop(pseudo_str, css_prop, value) do
     value
     |> Conditional.flatten(nil)
@@ -87,7 +87,7 @@ defmodule LiveStyle.Class.PseudoElementProcessor do
     class_name = Hash.atomic_class(css_prop, css_value, selector, nil, nil)
 
     {ltr_css, rtl_css} =
-      ClassCSS.generate_metadata(class_name, css_prop, css_value, selector, nil)
+      AtomicClass.generate_metadata(class_name, css_prop, css_value, selector, nil)
 
     priority = Priority.calculate(css_prop, selector, nil)
 

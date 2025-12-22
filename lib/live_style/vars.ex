@@ -48,31 +48,24 @@ defmodule LiveStyle.Vars do
   end
 
   @doc """
-  Looks up a CSS variable and returns a var() reference string.
+  Looks up a CSS variable by module/namespace/name.
 
-  Raises if the variable is not found.
+  Returns the raw CSS custom property name (`--...`) or raises if not found.
+
+  This matches the convention across LiveStyle where `lookup!/…` returns the
+  concrete CSS "key" string.
 
   ## Examples
 
-      LiveStyle.Vars.lookup!(MyTokens, :color, :primary)
-      # => "var(--xabc123)"
+      name = LiveStyle.Vars.lookup!(MyTokens, :color, :primary)
+      # => "--vabc123"
+      "var(\#{name})"
+      # => "var(--vabc123)"
   """
   @spec lookup!(module(), atom(), atom()) :: String.t()
   def lookup!(module, namespace, name) do
-    key = Manifest.namespaced_key(module, namespace, name)
-    manifest = LiveStyle.Storage.read()
-
-    case Manifest.get_var(manifest, key) do
-      nil ->
-        raise ArgumentError, """
-        Unknown CSS variable: #{inspect(module)}.#{namespace}.#{name}
-
-        Make sure #{inspect(module)} is compiled before this module.
-        """
-
-      %{css_name: css_name} ->
-        "var(#{css_name})"
-    end
+    %{css_name: css_name} = LiveStyle.Manifest.Access.var!(module, namespace, name)
+    css_name
   end
 
   # Extract value and type info from a variable definition

@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.10.0] - 2025-12-23
+
+### Removed
+
+- Removed nested at-rule map syntax in `css_class/2` (top-level keys like `"@media (...)" => %{...}`); use per-property conditional values instead.
+
 ## [0.9.0] - 2024-12-21
 
 ### Added
@@ -15,16 +23,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     view_transition_class: css_view_transition(:card),
     view_transition_name: "card-#{@id}"
   ])}>
-  ```
-
-- Nested at-rule syntax support (StyleX-style) for cleaner conditional styles:
-  ```elixir
-  css_class :card,
-    padding: "1rem",
-    "@container (min-width: 400px)": %{
-      padding: "2rem",
-      font_size: "1.125rem"
-    }
   ```
 
 - Comprehensive documentation for Phoenix LiveView View Transitions integration:

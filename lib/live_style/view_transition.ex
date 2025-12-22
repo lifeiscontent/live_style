@@ -136,20 +136,8 @@ defmodule LiveStyle.ViewTransition do
   """
   @spec lookup!(module(), atom()) :: String.t()
   def lookup!(module, name) do
-    key = Manifest.simple_key(module, name)
-    manifest = LiveStyle.Storage.read()
-
-    case Manifest.get_view_transition(manifest, key) do
-      %{css_name: css_name} ->
-        css_name
-
-      nil ->
-        raise ArgumentError, """
-        Unknown view_transition: #{inspect(module)}.#{name}
-
-        Make sure css_view_transition(:#{name}, ...) is defined before it's referenced.
-        """
-    end
+    %{css_name: css_name} = LiveStyle.Manifest.Access.view_transition!(module, name)
+    css_name
   end
 
   @doc false

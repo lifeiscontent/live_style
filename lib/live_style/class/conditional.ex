@@ -30,9 +30,6 @@ defmodule LiveStyle.Class.Conditional do
     has_default or all_selector_keys
   end
 
-  # Support tuple syntax: {":hover", "value"} as shorthand for %{":hover" => "value"}
-  def conditional?({key, _value}) when is_binary(key), do: selector_key?(key)
-  def conditional?({key, _value}) when is_atom(key), do: selector_key?(key)
   def conditional?(_), do: false
 
   @doc false
@@ -57,33 +54,13 @@ defmodule LiveStyle.Class.Conditional do
     end)
   end
 
-  # Handle lists (keyword lists or tuple lists) by converting to map
+  # Handle lists (keyword lists) by converting to map
   def flatten(value_list, parent_selector) when is_list(value_list) do
     if conditional?(value_list) do
       # Convert tuple list to map and recurse
       flatten(Map.new(value_list), parent_selector)
     else
       [{parent_selector, value_list}]
-    end
-  end
-
-  # Handle tuple syntax: {":hover", "value"} as shorthand for single condition
-  def flatten({selector, value}, parent_selector)
-      when is_binary(selector) or is_atom(selector) do
-    selector_str = to_string(selector)
-
-    if selector_key?(selector_str) do
-      current_selector = combine_selectors(parent_selector, selector_str)
-
-      # Check if the value itself is a nested conditional
-      if conditional?(value) do
-        # Recurse for nested conditionals like {":hover", {":active", "red"}}
-        flatten(value, current_selector)
-      else
-        [{current_selector, value}]
-      end
-    else
-      [{parent_selector, {selector, value}}]
     end
   end
 

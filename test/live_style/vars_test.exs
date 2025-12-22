@@ -8,6 +8,8 @@ defmodule LiveStyle.VarsTest do
   """
   use LiveStyle.TestCase, async: true
 
+  alias LiveStyle.VarsTest.VarsNameRef
+
   # ============================================================================
   # Basic CSS Variables
   # ============================================================================
@@ -99,9 +101,35 @@ defmodule LiveStyle.VarsTest do
     )
 
     css_class(:styled,
-      color: css_var({__MODULE__, :theme, :primary_color}),
-      font_size: css_var({__MODULE__, :theme, :text_size})
+      color: css_var({:theme, :primary_color}),
+      font_size: css_var({:theme, :text_size})
     )
+  end
+
+  defmodule VarsNameRef do
+    use LiveStyle
+
+    css_vars(:theme,
+      primary_color: "blue"
+    )
+
+    def primary_color_var_name, do: LiveStyle.Vars.lookup!(__MODULE__, :theme, :primary_color)
+
+    def primary_color_var_ref, do: css_var({:theme, :primary_color})
+  end
+
+  defmodule VarsUsedAsCustomPropertyKey do
+    use LiveStyle
+
+    css_vars(:theme,
+      primary_color: "blue"
+    )
+
+    # StyleX pattern: set custom property via computed key.
+    # In LiveStyle we can do the same by using a map.
+    css_class(:set_var, %{
+      css_var({:theme, :primary_color}) => [default: "red", ":hover": "blue"]
+    })
   end
 
   # ============================================================================
@@ -262,6 +290,39 @@ defmodule LiveStyle.VarsTest do
       # Font-size should reference the variable
       font_size = rule.atomic_classes["font-size"]
       assert font_size.ltr =~ "var(#{text_var.css_name})"
+    end
+  end
+
+  describe "getting the raw custom property name" do
+    test "can derive --name from css_var/1" do
+      primary_var =
+        LiveStyle.get_metadata(VarsNameRef, {:var, :theme, :primary_color})
+
+      assert VarsNameRef.primary_color_var_name() == primary_var.css_name
+
+      assert to_string(VarsNameRef.primary_color_var_ref()) ==
+               "var(#{primary_var.css_name})"
+    end
+  end
+
+  describe "using css_var/1 as a custom property key" do
+    test "unwraps var(--x) into --x for property name" do
+      rule =
+        LiveStyle.get_metadata(LiveStyle.VarsTest.VarsUsedAsCustomPropertyKey, {:class, :set_var})
+
+      primary_var =
+        LiveStyle.get_metadata(
+          LiveStyle.VarsTest.VarsUsedAsCustomPropertyKey,
+          {:var, :theme, :primary_color}
+        )
+
+      # The property key should be the raw custom property name.
+      assert Map.has_key?(rule.atomic_classes, primary_var.css_name)
+      refute Map.has_key?(rule.atomic_classes, "var(#{primary_var.css_name})")
+
+      classes = rule.atomic_classes[primary_var.css_name].classes
+      assert classes[:default].ltr =~ "#{primary_var.css_name}:red"
+      assert classes[":hover"].ltr =~ "#{primary_var.css_name}:blue"
     end
   end
 

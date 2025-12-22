@@ -201,17 +201,20 @@ defmodule LiveStyle do
         to: %{css_var({Tokens, :anim, :angle}) => "360deg"}
   """
   defmacro css_var(ref) do
-    case ref do
-      {:{}, _, [module_ast, namespace, name]} ->
-        # Cross-module: {Module, :namespace, :name}
-        {module, _} = Code.eval_quoted(module_ast, [], __CALLER__)
-        LiveStyle.Vars.lookup!(module, namespace, name)
+    var_name =
+      case ref do
+        {:{}, _, [module_ast, namespace, name]} ->
+          # Cross-module: {Module, :namespace, :name}
+          {module, _} = Code.eval_quoted(module_ast, [], __CALLER__)
+          LiveStyle.Vars.lookup!(module, namespace, name)
 
-      {namespace, name} when is_atom(namespace) and is_atom(name) ->
-        # Local reference: {:namespace, :name}
-        module = __CALLER__.module
-        LiveStyle.Vars.lookup!(module, namespace, name)
-    end
+        {namespace, name} when is_atom(namespace) and is_atom(name) ->
+          # Local reference: {:namespace, :name}
+          module = __CALLER__.module
+          LiveStyle.Vars.lookup!(module, namespace, name)
+      end
+
+    Macro.escape("var(#{var_name})")
   end
 
   @doc """
@@ -489,32 +492,16 @@ defmodule LiveStyle do
           "@media (prefers-color-scheme: dark)" => "lightblue"
         }
 
-  ## Nested at-rule syntax (StyleX-style)
+  ## Conditional syntax (StyleX-style)
 
-  For cleaner conditional styles, you can nest CSS properties under at-rules:
-
-      css_class :responsive_card,
-        padding: "1rem",
-        font_size: "1rem",
-        "@container (min-width: 400px)": %{
-          padding: "2rem",
-          font_size: "1.125rem"
-        },
-        "@media (min-width: 768px)": %{
-          padding: "3rem"
-        }
-
-  This is equivalent to:
+  LiveStyle follows modern StyleX conditional syntax: conditions live inside each
+  property's value map (or keyword list), rather than using top-level at-rule keys.
 
       css_class :responsive_card,
         padding: %{
           :default => "1rem",
           "@container (min-width: 400px)" => "2rem",
           "@media (min-width: 768px)" => "3rem"
-        },
-        font_size: %{
-          :default => "1rem",
-          "@container (min-width: 400px)" => "1.125rem"
         }
 
   ## Dynamic classes (StyleX-style with CSS variables)
@@ -586,8 +573,10 @@ defmodule LiveStyle do
     # Extract parameter names from the function
     param_names = extract_param_names(params)
 
-    # Evaluate the function body to get the declarations
-    expanded_body = Macro.expand(body, __CALLER__)
+    # Expand macros in the function body to get the declarations.
+    # We do a deep expansion so css_var/2 can be used
+    # in dynamic class keys.
+    expanded_body = Macro.prewalk(body, fn ast -> Macro.expand(ast, __CALLER__) end)
 
     # The body should be a keyword list like [opacity: opacity]
     # We extract the property names from it

@@ -4,7 +4,7 @@ defmodule LiveStyle.Class.ConditionalProcessor do
 
   This module handles declarations with conditional values like pseudo-classes,
   media queries, and other at-rules. For example:
-  `%{color: [default: "red", ":hover": "blue", "@media (min-width: 768px)": "green"]}`
+  `%{color: %{:default => "red", ":hover" => "blue", "@media (min-width: 768px)" => "green"}}`
 
   ## Responsibilities
 
@@ -15,8 +15,8 @@ defmodule LiveStyle.Class.ConditionalProcessor do
   """
 
   alias LiveStyle.Class.Conditional
-  alias LiveStyle.Class.CSS, as: ClassCSS
-  alias LiveStyle.Class.Selector
+  alias LiveStyle.CSS.AtomicClass
+  alias LiveStyle.CSS.ConditionSelector
   alias LiveStyle.{Hash, Priority, Value}
   alias LiveStyle.MediaQuery.Transform, as: MediaQueryTransform
   alias LiveStyle.ShorthandBehavior
@@ -29,7 +29,7 @@ defmodule LiveStyle.Class.ConditionalProcessor do
 
   ## Example
 
-      iex> process([{:color, [default: "red", ":hover": "blue"]}])
+      iex> process([{:color, %{:default => "red", ":hover" => "blue"}}])
       %{
         "color" => %{
           classes: %{
@@ -77,7 +77,10 @@ defmodule LiveStyle.Class.ConditionalProcessor do
   defp build_class_entry(css_prop, nil, css_value) do
     css_value_str = Value.to_css(css_value, css_prop)
     class_name = Hash.atomic_class(css_prop, css_value_str, nil, nil, nil)
-    {ltr_css, rtl_css} = ClassCSS.generate_metadata(class_name, css_prop, css_value_str, nil, nil)
+
+    {ltr_css, rtl_css} =
+      AtomicClass.generate_metadata(class_name, css_prop, css_value_str, nil, nil)
+
     priority = Priority.calculate(css_prop, nil, nil)
 
     {:default,
@@ -94,11 +97,11 @@ defmodule LiveStyle.Class.ConditionalProcessor do
   # Build a class entry for a conditional value (with selector or at-rule)
   defp build_class_entry(css_prop, selector, css_value) do
     css_value_str = Value.to_css(css_value, css_prop)
-    {selector_suffix, at_rule} = Selector.parse_combined(selector)
+    {selector_suffix, at_rule} = ConditionSelector.parse_combined(selector)
     class_name = Hash.atomic_class(css_prop, css_value_str, nil, selector_suffix, at_rule)
 
     {ltr_css, rtl_css} =
-      ClassCSS.generate_metadata(class_name, css_prop, css_value_str, selector_suffix, at_rule)
+      AtomicClass.generate_metadata(class_name, css_prop, css_value_str, selector_suffix, at_rule)
 
     priority = Priority.calculate(css_prop, selector_suffix, at_rule)
 

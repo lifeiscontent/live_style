@@ -19,7 +19,7 @@ Add `live_style` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:live_style, "~> 0.9.0"}
+    {:live_style, "~> 0.10.0"}
   ]
 end
 ```
@@ -126,16 +126,16 @@ css_theme :semantic, :dark,
 
 ```elixir
 css_class :link,
-  color: [
-    default: "blue",
-    ":hover": "darkblue"
-  ]
+  color: %{
+    :default => "blue",
+    ":hover" => "darkblue"
+  }
 
 css_class :container,
-  padding: [
-    default: css_const({MyApp.Tokens, :space, :md}),
-    "@media (min-width: 768px)": css_const({MyApp.Tokens, :space, :lg})
-  ]
+  padding: %{
+    :default => css_const({MyApp.Tokens, :space, :md}),
+    "@media (min-width: 768px)" => css_const({MyApp.Tokens, :space, :lg})
+  }
 ```
 
 ## Why LiveStyle?
@@ -168,7 +168,7 @@ LiveStyle brings Meta's StyleX philosophy to Phoenix LiveView:
 ```elixir
 def deps do
   [
-    {:live_style, "~> 0.9.0"},
+    {:live_style, "~> 0.10.0"},
     # Automatic vendor prefixing
     {:autoprefixer_ex, "~> 0.1.0"},
     # Deprecation warnings for CSS properties

@@ -50,30 +50,6 @@ defmodule LiveStyle.RTL do
   defp has_rtl_value?(_), do: false
 
   @doc false
-  def generate_ltr_rtl(css_property, css_value, class_name) do
-    generate_ltr_rtl(css_property, css_value, class_name, nil, nil)
-  end
-
-  @doc false
-  @spec generate_ltr_rtl(String.t(), String.t(), String.t(), String.t() | nil, String.t() | nil) ::
-          {String.t(), String.t(), String.t() | nil}
-  def generate_ltr_rtl(css_property, css_value, class_name, selector_suffix, at_rule) do
-    {ltr_prop, ltr_val} = generate_ltr(css_property, css_value)
-    rtl_result = generate_rtl(css_property, css_value)
-
-    rtl_rule =
-      case rtl_result do
-        nil ->
-          nil
-
-        {rtl_prop, rtl_val} ->
-          build_rtl_rule(class_name, rtl_prop, rtl_val, selector_suffix, at_rule)
-      end
-
-    {ltr_prop, ltr_val, rtl_rule}
-  end
-
-  @doc false
   @spec generate_ltr(String.t(), String.t()) :: {String.t(), String.t()}
   def generate_ltr(css_property, css_value) do
     # Check if property needs transformation using generated function
@@ -175,12 +151,5 @@ defmodule LiveStyle.RTL do
     else
       nil
     end
-  end
-
-  # Build RTL CSS rule with html[dir="rtl"] selector
-  defp build_rtl_rule(class_name, property, value, selector_suffix, at_rule) do
-    suffix = selector_suffix || ""
-    inner = "html[dir=\"rtl\"] .#{class_name}#{suffix} { #{property}: #{value}; }"
-    if at_rule, do: "#{at_rule} { #{inner} }", else: inner
   end
 end

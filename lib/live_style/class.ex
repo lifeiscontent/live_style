@@ -147,75 +147,18 @@ defmodule LiveStyle.Class do
     end
   end
 
-  # Transform nested at-rule declarations into conditional format
-  # StyleX syntax: at-rules as top-level keys with nested CSS properties
+  # LiveStyle follows modern StyleX syntax.
   #
-  # Input: {"@container (min-width: 400px)", %{color: "red", padding: "10px"}}
-  # Output: [{:color, %{"@container (min-width: 400px)" => "red"}},
-  #          {:padding, %{"@container (min-width: 400px)" => "10px"}}]
-  defp transform_nested_at_rules(declarations) do
-    declarations
-    |> Enum.flat_map(&transform_declaration/1)
-    |> merge_conditional_declarations()
-  end
-
-  defp transform_declaration({key, value}) when is_map(value) do
-    key_str = to_string(key)
-
-    if at_rule_key?(key_str) and has_css_properties?(value) do
-      # This is a nested at-rule with CSS properties inside
-      # Transform each property into a conditional declaration
-      Enum.map(value, fn {prop, prop_value} ->
-        {prop, %{key => prop_value}}
-      end)
-    else
-      [{key, value}]
-    end
-  end
-
-  defp transform_declaration(other), do: [other]
-
-  # Merge conditional declarations for the same property
-  # e.g., [{:color, %{"@media" => "red"}}, {:color, %{"@container" => "blue"}}]
-  # becomes [{:color, %{"@media" => "red", "@container" => "blue"}}]
-  defp merge_conditional_declarations(declarations) do
-    declarations
-    |> Enum.reduce(%{}, fn {prop, value}, acc ->
-      case {Map.get(acc, prop), value} do
-        {nil, _} ->
-          Map.put(acc, prop, value)
-
-        {existing, new} when is_map(existing) and is_map(new) ->
-          Map.put(acc, prop, Map.merge(existing, new))
-
-        {_existing, new} ->
-          # New value overwrites (e.g., simple value overwrites conditional)
-          Map.put(acc, prop, new)
-      end
-    end)
-    |> Enum.to_list()
-  end
-
-  # Check if key is an at-rule
-  defp at_rule_key?(<<"@", _rest::binary>>), do: true
-  defp at_rule_key?(_), do: false
-
-  defp has_css_properties?(map) when is_map(map) do
-    Enum.any?(Map.keys(map), fn key ->
-      key_str = to_string(key)
-      # CSS properties use snake_case (Elixir) or are known property names
-      # At-rules and pseudo-classes/elements start with @ or :
-      not String.starts_with?(key_str, "@") and
-        not String.starts_with?(key_str, ":") and
-        key not in [:default, "default"]
-    end)
-  end
+  # Conditional selectors like pseudo-classes and at-rules must be nested inside
+  # individual property values (e.g. `color: [default: ..., ":hover": ...]`).
+  # Top-level conditional blocks like `%{"@media (...)" => %{...}}` are considered
+  # legacy contextual styles and are rejected.
 
   defp process_declarations(declarations, opts) do
-    # First, transform nested at-rule declarations into conditional format
-    # e.g., {"@container (min-width: 400px)", %{color: "red"}} becomes
-    #       {:color, %{"@container (min-width: 400px)" => "red"}}
-    transformed_declarations = transform_nested_at_rules(declarations)
+    transformed_declarations =
+      declarations
+      |> Enum.to_list()
+      |> expand_nested_condition_blocks()
 
     # Separate into: simple values, conditional values, and pseudo-element declarations
     {pseudo_decls, rest} =
@@ -250,5 +193,79 @@ defmodule LiveStyle.Class do
       |> Enum.join(" ")
 
     {atomic, class_string}
+  end
+
+  defp expand_nested_condition_blocks(declarations) do
+    {pseudo, rest} =
+      Enum.split_with(declarations, fn {prop, _value} ->
+        LiveStyle.Pseudo.element?(prop)
+      end)
+
+    expanded = expand_declarations(rest)
+    pseudo ++ expanded
+  end
+
+  defp expand_declarations(declarations) do
+    declarations
+    |> Enum.reduce(%{}, fn {prop, value}, acc ->
+      prop_str = to_string(prop)
+
+      if nested_condition_key?(prop_str) and map_or_kw?(value) do
+        raise ArgumentError, legacy_condition_error(prop_str)
+      else
+        merge_property_value(acc, prop, value)
+      end
+    end)
+    |> Enum.to_list()
+  end
+
+  defp legacy_condition_error("@" <> _rest) do
+    "Legacy at-rule object syntax is not supported. " <>
+      "Nest at-rules under properties instead (e.g. color: [default: ..., \"@media (...)\": ...])."
+  end
+
+  defp legacy_condition_error(<<":", _rest::binary>>) do
+    "Legacy pseudo-class object syntax is not supported. " <>
+      "Nest pseudo-classes under properties instead (e.g. color: [default: ..., \":hover\": ...])."
+  end
+
+  defp nested_condition_key?("::" <> _rest), do: false
+  defp nested_condition_key?(<<":", _rest::binary>>), do: true
+  defp nested_condition_key?(<<"@", _rest::binary>>), do: true
+  defp nested_condition_key?(_), do: false
+
+  defp map_or_kw?(value) when is_map(value), do: true
+  defp map_or_kw?(value) when is_list(value), do: Keyword.keyword?(value)
+  defp map_or_kw?(_), do: false
+
+  defp merge_property_value(acc, prop, value) do
+    existing = Map.get(acc, prop)
+
+    cond do
+      existing == nil ->
+        Map.put(acc, prop, value)
+
+      Conditional.conditional?(existing) and Conditional.conditional?(value) ->
+        Map.put(
+          acc,
+          prop,
+          Map.merge(
+            LiveStyle.Utils.normalize_to_map(existing),
+            LiveStyle.Utils.normalize_to_map(value)
+          )
+        )
+
+      Conditional.conditional?(existing) ->
+        # Simple value overwrites default, keep existing conditions.
+        existing_map = LiveStyle.Utils.normalize_to_map(existing)
+        Map.put(acc, prop, Map.put(existing_map, :default, value))
+
+      Conditional.conditional?(value) ->
+        new_map = LiveStyle.Utils.normalize_to_map(value)
+        Map.put(acc, prop, Map.put_new(new_map, :default, existing))
+
+      true ->
+        Map.put(acc, prop, value)
+    end
   end
 end

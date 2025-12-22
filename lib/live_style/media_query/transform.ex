@@ -7,24 +7,24 @@ defmodule LiveStyle.MediaQuery.Transform do
   earlier max-width queries.
 
   Example transformation for min-width queries:
-    default: 'red'
-    '@media (min-width: 1000px)': 'blue'
-    '@media (min-width: 2000px)': 'purple'
+    :default => 'red'
+    '@media (min-width: 1000px)' => 'blue'
+    '@media (min-width: 2000px)' => 'purple'
 
   Becomes:
-    default: 'red'
-    '@media (min-width: 1000px) and (max-width: 1999.99px)': 'blue'
-    '@media (min-width: 2000px)': 'purple'
+    :default => 'red'
+    '@media (min-width: 1000px) and (max-width: 1999.99px)' => 'blue'
+    '@media (min-width: 2000px)' => 'purple'
 
   Example transformation for max-width queries:
-    default: 'red'
-    '@media (max-width: 900px)': 'blue'
-    '@media (max-width: 500px)': 'purple'
+    :default => 'red'
+    '@media (max-width: 900px)' => 'blue'
+    '@media (max-width: 500px)' => 'purple'
 
   Becomes:
-    default: 'red'
-    '@media (min-width: 500.01px) and (max-width: 900px)': 'blue'
-    '@media (max-width: 500px)': 'purple'
+    :default => 'red'
+    '@media (min-width: 500.01px) and (max-width: 900px)' => 'blue'
+    '@media (max-width: 500px)' => 'purple'
 
   Regex patterns compiled at module level for efficiency.
   """
@@ -38,16 +38,16 @@ defmodule LiveStyle.MediaQuery.Transform do
 
   Takes a map like:
     %{
-      default: "red",
-      "@media (min-width: 1000px)": "blue",
-      "@media (min-width: 2000px)": "purple"
+      :default => "red",
+      "@media (min-width: 1000px)" => "blue",
+      "@media (min-width: 2000px)" => "purple"
     }
 
   And returns:
     %{
-      default: "red",
-      "@media (min-width: 1000px) and (max-width: 1999.99px)": "blue",
-      "@media (min-width: 2000px)": "purple"
+      :default => "red",
+      "@media (min-width: 1000px) and (max-width: 1999.99px)" => "blue",
+      "@media (min-width: 2000px)" => "purple"
     }
   """
   def transform(value_map) when is_map(value_map) do

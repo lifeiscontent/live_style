@@ -86,7 +86,7 @@ defmodule LiveStyle.Marker do
 
       css_class :heading,
         transform: %{
-          default: "translateX(0)",
+          :default => "translateX(0)",
           When.ancestor(":hover", @card_marker) => "translateX(10px)"
         }
   """

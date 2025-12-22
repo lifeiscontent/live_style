@@ -78,7 +78,7 @@ defmodule LiveStyle.When do
 
       css_class :item,
         opacity: %{
-          default: "1",
+          :default => "1",
           When.ancestor(":hover") => "0.5"
         }
 
@@ -106,7 +106,7 @@ defmodule LiveStyle.When do
 
       css_class :container,
         border_color: %{
-          default: "gray",
+          :default => "gray",
           When.descendant(":focus") => "blue"
         }
 
@@ -134,7 +134,7 @@ defmodule LiveStyle.When do
 
       css_class :item,
         background_color: %{
-          default: "white",
+          :default => "white",
           When.sibling_before(":hover") => "lightblue"
         }
 
@@ -162,7 +162,7 @@ defmodule LiveStyle.When do
 
       css_class :label,
         color: %{
-          default: "black",
+          :default => "black",
           When.sibling_after(":focus") => "blue"
         }
 
@@ -190,7 +190,7 @@ defmodule LiveStyle.When do
 
       css_class :tab,
         opacity: %{
-          default: "1",
+          :default => "1",
           When.any_sibling(":hover") => "0.7"
         }
 

@@ -97,22 +97,22 @@ Use the StyleX pattern of condition-in-value:
 
 ```elixir
 css_class :link,
-  color: [
-    default: css_var({MyApp.Tokens, :semantic, :text_link}),
-    ":hover": css_var({MyApp.Tokens, :colors, :indigo_700}),
-    ":focus": css_var({MyApp.Tokens, :colors, :indigo_800})
-  ],
-  text_decoration: [
-    default: "none",
-    ":hover": "underline"
-  ]
+  color: %{
+    :default => css_var({MyApp.Tokens, :semantic, :text_link}),
+    ":hover" => css_var({MyApp.Tokens, :colors, :indigo_700}),
+    ":focus" => css_var({MyApp.Tokens, :colors, :indigo_800})
+  },
+  text_decoration: %{
+    :default => "none",
+    ":hover" => "underline"
+  }
 
 css_class :input,
-  border_color: [
-    default: css_var({MyApp.Tokens, :semantic, :border_default}),
-    ":focus": css_var({MyApp.Tokens, :semantic, :border_focus}),
-    ":disabled": css_var({MyApp.Tokens, :colors, :gray_200})
-  ]
+  border_color: %{
+    :default => css_var({MyApp.Tokens, :semantic, :border_default}),
+    ":focus" => css_var({MyApp.Tokens, :semantic, :border_focus}),
+    ":disabled" => css_var({MyApp.Tokens, :colors, :gray_200})
+  }
 ```
 
 ## Media Queries
@@ -121,15 +121,15 @@ Responsive styles follow the same pattern:
 
 ```elixir
 css_class :container,
-  padding: [
-    default: css_const({MyApp.Tokens, :space, :md}),
-    "@media (min-width: 768px)": css_const({MyApp.Tokens, :space, :lg}),
-    "@media (min-width: 1024px)": css_const({MyApp.Tokens, :space, :xl})
-  ],
-  max_width: [
-    default: "100%",
-    "@media (min-width: 1280px)": "1280px"
-  ]
+  padding: %{
+    :default => css_const({MyApp.Tokens, :space, :md}),
+    "@media (min-width: 768px)" => css_const({MyApp.Tokens, :space, :lg}),
+    "@media (min-width: 1024px)" => css_const({MyApp.Tokens, :space, :xl})
+  },
+  max_width: %{
+    :default => "100%",
+    "@media (min-width: 1280px)" => "1280px"
+  }
 ```
 
 Using constants for breakpoints:
@@ -137,11 +137,11 @@ Using constants for breakpoints:
 ```elixir
 css_class :grid,
   display: "grid",
-  grid_template_columns: [
-    default: "1fr",
-    "@media #{css_const({MyApp.Tokens, :breakpoint, :md})}": "repeat(2, 1fr)",
-    "@media #{css_const({MyApp.Tokens, :breakpoint, :lg})}": "repeat(3, 1fr)"
-  ]
+  grid_template_columns: %{
+    :default => "1fr",
+    "@media #{css_const({MyApp.Tokens, :breakpoint, :md})}" => "repeat(2, 1fr)",
+    "@media #{css_const({MyApp.Tokens, :breakpoint, :lg})}" => "repeat(3, 1fr)"
+  }
 ```
 
 ## Pseudo-elements
@@ -162,10 +162,10 @@ css_class :custom_checkbox,
     display: "block",
     width: "16px",
     height: "16px",
-    background_color: [
-      default: "transparent",
-      ":checked": css_var({MyApp.Tokens, :semantic, :fill_primary})
-    ]
+    background_color: %{
+      :default => "transparent",
+      ":checked" => css_var({MyApp.Tokens, :semantic, :fill_primary})
+    }
   ]
 ```
 

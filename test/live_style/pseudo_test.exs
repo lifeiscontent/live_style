@@ -15,12 +15,12 @@ defmodule LiveStyle.PseudoTest do
     use LiveStyle
 
     css_class(:hover,
-      background_color: {:":hover", "red"},
-      color: {:":hover", "blue"}
+      background_color: [":hover": "red"],
+      color: [":hover": "blue"]
     )
 
-    css_class(:focus, color: {:":focus", "yellow"})
-    css_class(:active, color: {:":active", "red"})
+    css_class(:focus, color: [":focus": "yellow"])
+    css_class(:active, color: [":active": "red"])
 
     # Multiple pseudo-classes on same property
     css_class(:multiple_pseudos,
@@ -38,7 +38,7 @@ defmodule LiveStyle.PseudoTest do
 
     # Nested pseudo-classes: :hover + :active
     css_class(:nested,
-      color: {:":hover", {:":active", "red"}}
+      color: [":hover": [":active": "red"]]
     )
   end
 
@@ -75,8 +75,10 @@ defmodule LiveStyle.PseudoTest do
     # ::before with :hover inside
     css_class(:before_hover,
       "::before": [
-        color: "red",
-        color: {:":hover", "blue"}
+        color: [
+          default: "red",
+          ":hover": "blue"
+        ]
       ]
     )
   end

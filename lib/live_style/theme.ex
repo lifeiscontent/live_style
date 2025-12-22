@@ -130,19 +130,7 @@ defmodule LiveStyle.Theme do
   """
   @spec lookup!(module(), atom(), atom()) :: String.t()
   def lookup!(module, namespace, theme_name) do
-    key = Manifest.namespaced_key(module, namespace, theme_name)
-    manifest = LiveStyle.Storage.read()
-
-    case Manifest.get_theme(manifest, key) do
-      %{css_name: css_name} ->
-        css_name
-
-      nil ->
-        raise ArgumentError, """
-        Unknown theme: #{inspect(module)}.#{namespace}.#{theme_name}
-
-        Make sure css_theme(:#{namespace}, :#{theme_name}, ...) is defined before it's referenced.
-        """
-    end
+    %{css_name: css_name} = LiveStyle.Manifest.Access.theme!(module, namespace, theme_name)
+    css_name
   end
 end

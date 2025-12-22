@@ -70,17 +70,17 @@ defmodule LiveStyle.Sheet do
   Use the condition-in-value pattern for pseudo-classes and media queries:
 
       css_class :link,
-        color: [
-          default: "blue",
-          ":hover": "darkblue",
-          ":focus": "navy"
-        ]
+        color: %{
+          :default => "blue",
+          ":hover" => "darkblue",
+          ":focus" => "navy"
+        }
 
       css_class :responsive,
-        padding: [
-          default: "16px",
-          "@media (min-width: 768px)": "32px"
-        ]
+        padding: %{
+          :default => "16px",
+          "@media (min-width: 768px)" => "32px"
+        }
 
   ## Pseudo-elements
 
@@ -167,6 +167,7 @@ defmodule LiveStyle.Sheet do
           # Runtime resolution macros
           css_class: 1,
           css: 1,
+          css: 2,
           # Utilities
           first_that_works: 1
         ]

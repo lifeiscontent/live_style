@@ -3,7 +3,7 @@ defmodule LiveStyle.Fallback do
   # Internal module for CSS fallback value processing.
   # Implements StyleX-compatible fallback value handling.
 
-  alias LiveStyle.Class.CSS, as: ClassCss
+  alias LiveStyle.CSS.AtomicClass
   alias LiveStyle.Hash
   alias LiveStyle.Priority
   alias LiveStyle.Value
@@ -27,7 +27,7 @@ defmodule LiveStyle.Fallback do
 
     # Generate StyleX-compatible metadata
     {ltr_css, rtl_css} =
-      ClassCss.generate_metadata(class_name, css_prop, transformed, nil, nil)
+      AtomicClass.generate_metadata(class_name, css_prop, transformed, nil, nil)
 
     priority = Priority.calculate(css_prop, nil, nil)
 
@@ -50,7 +50,7 @@ defmodule LiveStyle.Fallback do
 
     # Generate StyleX-compatible metadata
     {ltr_css, rtl_css} =
-      ClassCss.generate_metadata(class_name, css_prop, transformed, nil, nil)
+      AtomicClass.generate_metadata(class_name, css_prop, transformed, nil, nil)
 
     priority = Priority.calculate(css_prop, nil, nil)
 
@@ -92,18 +92,7 @@ defmodule LiveStyle.Fallback do
   end
 
   @spec css_var?(term()) :: boolean()
-  defp css_var?(value) when is_binary(value) do
-    String.starts_with?(value, "var(") and String.ends_with?(value, ")")
-  end
-
-  defp css_var?(_), do: false
-
-  @spec extract_var_name(String.t()) :: String.t()
-  defp extract_var_name(value) do
-    value
-    |> String.trim_leading("var(")
-    |> String.trim_trailing(")")
-  end
+  defp css_var?(value), do: Value.css_var_expr?(value)
 
   # StyleX validation: array values can only contain strings or numbers
   # Matches validation-stylex-create-test.js: "A style array value can only contain strings or numbers."
@@ -141,30 +130,23 @@ defmodule LiveStyle.Fallback do
     var_values = Enum.slice(values, first_var, last_var - first_var + 1)
     values_after = Enum.slice(values, last_var + 1, length(values) - last_var - 1)
 
-    # Extract var names (unwrap var(--x) to --x)
-    var_names = extract_var_names(var_values)
+    # Keep var() expressions intact; we only "unwrap" by inserting fallbacks
+    # (i.e. `var(--x)` becomes `var(--x, fallback)` when needed).
+    var_exprs = Enum.reverse(var_values)
 
-    nested = build_nested_vars(values_before, var_names)
+    nested = build_nested_vars(values_before, var_exprs)
     nested ++ values_after
   end
 
-  defp extract_var_names(var_values) do
-    var_values
-    |> Enum.reverse()
-    |> Enum.map(fn val ->
-      if css_var?(val), do: extract_var_name(val), else: val
-    end)
-  end
-
-  defp build_nested_vars([], var_names) do
+  defp build_nested_vars([], var_exprs) do
     # No values before first var - just compose vars (no nesting with after values)
-    [compose_vars(var_names)]
+    [compose_vars(var_exprs)]
   end
 
-  defp build_nested_vars(values_before, var_names) do
+  defp build_nested_vars(values_before, var_exprs) do
     # Values before first var get nested with the vars
     # compose_vars expects innermost first, so val goes at the beginning
-    Enum.map(values_before, fn val -> compose_vars([val | var_names]) end)
+    Enum.map(values_before, fn val -> compose_vars([val | var_exprs]) end)
   end
 
   # StyleX firstThatWorks transformation
@@ -199,12 +181,7 @@ defmodule LiveStyle.Fallback do
   defp compose_var_parts(var_parts) do
     var_parts
     |> Enum.reverse()
-    |> Enum.map(&extract_var_or_value/1)
     |> compose_vars()
-  end
-
-  defp extract_var_or_value(val) do
-    if css_var?(val), do: extract_var_name(val), else: val
   end
 
   # Find last index matching predicate (returns -1 if not found)
@@ -214,31 +191,28 @@ defmodule LiveStyle.Fallback do
     |> Enum.reduce(-1, fn {val, idx}, acc -> if pred.(val), do: idx, else: acc end)
   end
 
-  # Compose CSS variables using StyleX's reduce pattern
-  # Input: ["fallback", "--b", "--a"] (reversed - innermost first)
-  # Output: "var(--a, var(--b, fallback))"
+  # Compose CSS variables using StyleX's reduce pattern.
   #
-  # The reduce wraps previous result inside current var:
-  # "" + "fallback" → "fallback"
-  # "fallback" + "--b" → "var(--b, fallback)"
-  # "var(--b, fallback)" + "--a" → "var(--a, var(--b, fallback))"
+  # We keep `var(...)` expressions intact and only add fallbacks when nesting.
+  #
+  # Input: ["fallback", "var(--b)", "var(--a)"] (reversed - innermost first)
+  # Output: "var(--a,var(--b,fallback))"
   defp compose_vars(vars) do
-    Enum.reduce(vars, "", fn var_name, so_far ->
+    Enum.reduce(vars, "", fn value, so_far ->
       cond do
-        so_far == "" and String.starts_with?(var_name, "--") ->
-          "var(#{var_name})"
+        so_far == "" and css_var?(value) ->
+          value
 
         so_far == "" ->
           # Non-var as innermost fallback
-          var_name
+          value
 
-        String.starts_with?(var_name, "--") ->
-          # Wrap so_far inside this var
-          "var(#{var_name},#{so_far})"
+        css_var?(value) ->
+          # Turn `var(--x)` into `var(--x,so_far)`
+          String.trim_trailing(value, ")") <> ",#{so_far})"
 
         true ->
           # Non-var after first element - shouldn't happen in valid input
-          # But if it does, just return as-is
           so_far
       end
     end)

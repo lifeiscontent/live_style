@@ -103,7 +103,8 @@ defmodule LiveStyle.Config do
   @default_prefix_css nil
   @default_deprecated? nil
 
-  @config_key :live_style_config_overrides
+  alias LiveStyle.Config.CSS
+  alias LiveStyle.Config.Overrides
 
   @doc """
   Returns the configuration for the given profile.
@@ -134,43 +135,15 @@ defmodule LiveStyle.Config do
   This is primarily used for test isolation, allowing each test to use
   different configuration without affecting other tests.
   """
-  def put(key, value) do
-    overrides = Process.get(@config_key, %{})
-    Process.put(@config_key, Map.put(overrides, key, value))
-    :ok
-  end
+  def put(key, value), do: Overrides.put(key, value)
 
-  # Gets a per-process configuration override.
-  # Returns `nil` if no override is set.
-  defp get_override(key) do
-    overrides = Process.get(@config_key, %{})
-    Map.get(overrides, key)
-  end
+  def reset_all, do: Overrides.reset_all()
 
-  # Gets a config value with override support and a default fallback.
-  defp get_config(key, default) do
-    case get_override(key) do
-      nil -> Application.get_env(:live_style, key, default)
-      value -> value
-    end
-  end
+  def reset(key), do: Overrides.reset(key)
 
-  @doc """
-  Resets all per-process configuration overrides.
-  """
-  def reset_all do
-    Process.delete(@config_key)
-    :ok
-  end
+  defp get_override(key), do: Overrides.get(key)
 
-  @doc """
-  Resets a specific per-process configuration override.
-  """
-  def reset(key) do
-    overrides = Process.get(@config_key, %{})
-    Process.put(@config_key, Map.delete(overrides, key))
-    :ok
-  end
+  defp get_config(key, default), do: Overrides.get_config(key, default)
 
   @doc """
   Returns the configured output path for CSS.
@@ -447,15 +420,7 @@ defmodule LiveStyle.Config do
   the standard "property:value" format.
   """
   @spec apply_prefix_css(String.t(), String.t()) :: String.t()
-  def apply_prefix_css(property, value) do
-    case prefix_css() do
-      nil ->
-        "#{property}:#{value}"
-
-      fun when is_function(fun, 2) ->
-        fun.(property, value)
-    end
-  end
+  def apply_prefix_css(property, value), do: CSS.apply_prefix_css(property, value)
 
   @doc """
   Returns the `deprecated?` function for checking deprecated CSS properties.

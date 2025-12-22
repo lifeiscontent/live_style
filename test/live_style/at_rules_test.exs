@@ -30,6 +30,16 @@ defmodule LiveStyle.AtRulesTest do
     )
   end
 
+  defmodule MediaQueryNoDefault do
+    use LiveStyle
+
+    # StyleX supports conditional objects without a default branch:
+    # maxWidth: { '@media (min-width: 800px)': '800px' }
+    css_class(:root,
+      max_width: ["@media (min-width: 800px)": "800px"]
+    )
+  end
+
   defmodule MediaQueryWithPseudo do
     use LiveStyle
 
@@ -39,6 +49,26 @@ defmodule LiveStyle.AtRulesTest do
         "@media (min-width: 800px)": [
           default: "2rem",
           ":hover": "2.2rem"
+        ]
+      ]
+    )
+  end
+
+  defmodule ReducedMotionKeyframes do
+    use LiveStyle
+
+    css_keyframes(:shift,
+      from: %{opacity: "0"},
+      to: %{opacity: "1"}
+    )
+
+    css_class(:animated,
+      animation_name: [
+        default: css_keyframes(:shift),
+        ":hover": css_keyframes(:shift),
+        "@media (prefers-reduced-motion: reduce)": [
+          default: "none",
+          ":hover": "none"
         ]
       ]
     )
@@ -153,6 +183,16 @@ defmodule LiveStyle.AtRulesTest do
   end
 
   describe "media queries" do
+    test "supports media query values without default" do
+      # StyleX supports conditional objects without a default branch:
+      # https://github.com/stylexjs/stylex/blob/main/packages/%40stylexjs/stylex/README.md
+      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.MediaQueryNoDefault, {:class, :root})
+      classes = rule.atomic_classes["max-width"].classes
+
+      assert Map.has_key?(classes, "@media (min-width: 800px)")
+      refute Map.has_key?(classes, :default)
+    end
+
     test "generates CSS with @media rules - exact StyleX output" do
       # StyleX test: 'media queries'
       # Input: backgroundColor: { default: 'red', '@media ...': 'blue', '@media ...': 'purple' }
@@ -226,6 +266,37 @@ defmodule LiveStyle.AtRulesTest do
       assert media_hover.ltr ==
                "@media (min-width: 800px){.xicay7j.xicay7j:hover{font-size:2.2rem}}"
 
+      assert media_hover.priority == 3330
+    end
+
+    test "supports reduced-motion overrides inside nested media query objects" do
+      rule =
+        LiveStyle.get_metadata(LiveStyle.AtRulesTest.ReducedMotionKeyframes, {:class, :animated})
+
+      keyframes =
+        LiveStyle.get_metadata(LiveStyle.AtRulesTest.ReducedMotionKeyframes, {:keyframes, :shift})
+
+      classes = rule.atomic_classes["animation-name"].classes
+
+      # Default: keyframes reference
+      default = classes[:default]
+      assert default.ltr =~ ~r/^\.x[a-z0-9]+\{animation-name:#{keyframes.css_name}\}$/
+      assert default.priority == 3000
+
+      # :hover: keyframes reference
+      hover = classes[":hover"]
+      assert hover.ltr =~ ~r/^\.x[a-z0-9]+:hover\{animation-name:#{keyframes.css_name}\}$/
+      assert hover.priority == 3130
+
+      # Reduced motion: override both default and hover with "none"
+      media_default = classes["@media (prefers-reduced-motion: reduce)"]
+      assert media_default.ltr =~ "@media (prefers-reduced-motion: reduce)"
+      assert media_default.ltr =~ "{animation-name:none}"
+      assert media_default.priority == 3200
+
+      media_hover = classes["@media (prefers-reduced-motion: reduce):hover"]
+      assert media_hover.ltr =~ "@media (prefers-reduced-motion: reduce)"
+      assert media_hover.ltr =~ ":hover{animation-name:none}"
       assert media_hover.priority == 3330
     end
   end

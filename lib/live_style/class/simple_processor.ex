@@ -15,10 +15,13 @@ defmodule LiveStyle.Class.SimpleProcessor do
   """
 
   alias LiveStyle.Class.Conditional
-  alias LiveStyle.Class.CSS, as: ClassCSS
-  alias LiveStyle.{Config, Hash, Priority, Value}
+  alias LiveStyle.Config
+  alias LiveStyle.CSS.AtomicClass
+  alias LiveStyle.Hash
+  alias LiveStyle.Priority
   alias LiveStyle.Property.Validation
   alias LiveStyle.ShorthandBehavior
+  alias LiveStyle.Value
 
   @doc """
   Processes a list of simple (non-conditional) declarations into atomic class entries.
@@ -107,7 +110,7 @@ defmodule LiveStyle.Class.SimpleProcessor do
     class_name = Hash.atomic_class(css_prop, css_value, nil, nil, nil)
 
     # Generate StyleX-compatible metadata
-    {ltr_css, rtl_css} = ClassCSS.generate_metadata(class_name, css_prop, css_value, nil, nil)
+    {ltr_css, rtl_css} = AtomicClass.generate_metadata(class_name, css_prop, css_value, nil, nil)
 
     priority = Priority.calculate(css_prop, nil, nil)
 
@@ -122,7 +125,7 @@ defmodule LiveStyle.Class.SimpleProcessor do
   end
 
   # Check if a list is a plain fallback list (not a conditional value list)
-  # Conditional values are keyword lists like [default: "red", ":hover": "blue"]
+  # Conditional values can be maps or keyword lists (e.g. %{":hover" => "blue"} or [":hover": "blue"]).
   defp is_plain_fallback_list?(list) when is_list(list) do
     not Conditional.conditional?(list)
   end

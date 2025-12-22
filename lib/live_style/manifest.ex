@@ -59,105 +59,49 @@ defmodule LiveStyle.Manifest do
           themes: %{String.t() => theme_entry()}
         }
 
-  # Manifest sections with their entry types for documentation
-  @sections [
-    {:var, :vars, "CSS variable"},
-    {:const, :consts, "constant"},
-    {:keyframes, :keyframes, "keyframes"},
-    {:position_try, :position_try, "position-try"},
-    {:view_transition, :view_transitions, "view transition"},
-    {:class, :classes, "style class"},
-    {:theme, :themes, "theme"}
-  ]
+  alias LiveStyle.Manifest.{Entry, Keys, Ops}
 
-  @doc """
-  Returns an empty manifest with all required keys.
-  """
   @spec empty() :: t()
-  def empty do
-    %{
-      vars: %{},
-      consts: %{},
-      keyframes: %{},
-      position_try: %{},
-      view_transitions: %{},
-      classes: %{},
-      themes: %{}
-    }
-  end
+  def empty, do: Ops.empty()
 
-  @doc """
-  Ensures manifest has all required keys, adding missing ones.
-  """
-  @spec ensure_keys(map()) :: t()
-  def ensure_keys(manifest) when is_map(manifest) do
-    empty()
-    |> Map.merge(manifest)
-  end
+  @spec ensure_keys(term()) :: t()
+  def ensure_keys(manifest), do: Ops.ensure_keys(manifest)
 
-  @doc """
-  Generates a manifest key for a namespaced artifact (vars, consts).
-
-  ## Examples
-
-      iex> namespaced_key(MyApp.Tokens, :color, :white)
-      "MyApp.Tokens.color.white"
-  """
   @spec namespaced_key(module(), atom(), atom()) :: String.t()
-  def namespaced_key(module, namespace, name) do
-    "#{inspect(module)}.#{namespace}.#{name}"
-  end
+  def namespaced_key(module, namespace, name), do: Keys.namespaced_key(module, namespace, name)
 
-  @doc """
-  Generates a manifest key for a non-namespaced artifact (keyframes, rules, etc).
-
-  ## Examples
-
-      iex> simple_key(MyApp.Tokens, :spin)
-      "MyApp.Tokens.spin"
-  """
   @spec simple_key(module(), atom()) :: String.t()
-  def simple_key(module, name) do
-    "#{inspect(module)}.#{name}"
-  end
+  def simple_key(module, name), do: Keys.simple_key(module, name)
 
-  @doc """
-  Checks if the manifest contains any styles to generate CSS from.
-
-  Returns true if there are any vars, keyframes, classes, position-try rules,
-  or view transitions defined.
-  """
   @spec has_styles?(t()) :: boolean()
-  def has_styles?(manifest) do
-    has_entries?(manifest, :vars) or
-      has_entries?(manifest, :keyframes) or
-      has_entries?(manifest, :classes) or
-      has_entries?(manifest, :position_try) or
-      has_entries?(manifest, :view_transitions) or
-      has_entries?(manifest, :themes)
-  end
+  def has_styles?(manifest), do: Ops.has_styles?(manifest)
 
-  defp has_entries?(manifest, key) do
-    map_size(Map.get(manifest, key, %{})) > 0
-  end
+  # Entry helpers (kept as explicit functions for clarity)
+  def put_var(manifest, entry_key, entry), do: Entry.put(manifest, :vars, entry_key, entry)
+  def get_var(manifest, entry_key), do: Entry.get(manifest, :vars, entry_key)
 
-  # Generate put_* and get_* functions for each section
-  for {name, key, description} <- @sections do
-    put_fn = :"put_#{name}"
-    get_fn = :"get_#{name}"
+  def put_const(manifest, entry_key, entry), do: Entry.put(manifest, :consts, entry_key, entry)
+  def get_const(manifest, entry_key), do: Entry.get(manifest, :consts, entry_key)
 
-    @doc """
-    Registers a #{description} in the manifest.
-    """
-    def unquote(put_fn)(manifest, entry_key, entry) do
-      put_in(manifest, [unquote(key), entry_key], entry)
-    end
+  def put_keyframes(manifest, entry_key, entry),
+    do: Entry.put(manifest, :keyframes, entry_key, entry)
 
-    @doc """
-    Gets a #{description} from the manifest.
-    """
-    def unquote(get_fn)(manifest, entry_key) do
-      get_in(manifest, [unquote(key), entry_key])
-    end
-  end
+  def get_keyframes(manifest, entry_key), do: Entry.get(manifest, :keyframes, entry_key)
+
+  def put_position_try(manifest, entry_key, entry),
+    do: Entry.put(manifest, :position_try, entry_key, entry)
+
+  def get_position_try(manifest, entry_key), do: Entry.get(manifest, :position_try, entry_key)
+
+  def put_view_transition(manifest, entry_key, entry),
+    do: Entry.put(manifest, :view_transitions, entry_key, entry)
+
+  def get_view_transition(manifest, entry_key),
+    do: Entry.get(manifest, :view_transitions, entry_key)
+
+  def put_class(manifest, entry_key, entry), do: Entry.put(manifest, :classes, entry_key, entry)
+  def get_class(manifest, entry_key), do: Entry.get(manifest, :classes, entry_key)
+
+  def put_theme(manifest, entry_key, entry), do: Entry.put(manifest, :themes, entry_key, entry)
+  def get_theme(manifest, entry_key), do: Entry.get(manifest, :themes, entry_key)
 end
