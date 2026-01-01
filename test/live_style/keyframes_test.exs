@@ -193,9 +193,9 @@ defmodule LiveStyle.KeyframesTest do
       css = LiveStyle.Compiler.generate_css()
 
       # Should have keyframes with both opacity and transform
-      # Preserves insertion order like StyleX (JavaScript Object.entries)
+      # Properties are sorted alphabetically for deterministic output across Elixir versions
       assert css =~
-               ~r/@keyframes x[a-z0-9]+-B\{from\{transform:translateX\(-100%\);opacity:0;\}to\{transform:translateX\(0\);opacity:1;\}\}/
+               ~r/@keyframes x[a-z0-9]+-B\{from\{opacity:0;transform:translateX\(-100%\);\}to\{opacity:1;transform:translateX\(0\);\}\}/
     end
   end
 

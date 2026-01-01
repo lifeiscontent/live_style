@@ -54,17 +54,30 @@ defmodule LiveStyle.Compiler.CSS.ViewTransitions do
 
   # Generate CSS for a single view transition entry
   # All pseudo-elements for one view transition on a single line
-  # StyleX preserves insertion order for both pseudo-elements and declarations
+  # Sort by pseudo-element for deterministic output across Elixir/OTP versions
   defp generate_entry(%{ident: ident, styles: styles}) do
     styles
+    # Sort by pseudo key for deterministic iteration order
+    |> Enum.sort_by(fn {pseudo_key, _} -> pseudo_sort_order(pseudo_key) end)
     |> Enum.map_join("", fn {pseudo_key, declarations} ->
       # Normalize string keys to atoms
       normalized_key = normalize_pseudo_key(pseudo_key)
       pseudo_element = Keyword.get(@pseudo_element_map, normalized_key, to_string(pseudo_key))
       selector = "::#{pseudo_element}(*.#{ident})"
-      # Preserve insertion order (StyleX uses JavaScript Object.entries order)
-      decl_str = Utils.format_declarations(declarations, sort: false)
+      # Sort declarations for deterministic output
+      decl_str = Utils.format_declarations(declarations, sort: true)
       "#{selector}{#{decl_str}}"
     end)
   end
+
+  # Sort order for view transition pseudo-elements (group, image_pair, old, new)
+  defp pseudo_sort_order(:group), do: 0
+  defp pseudo_sort_order("group"), do: 0
+  defp pseudo_sort_order(:image_pair), do: 1
+  defp pseudo_sort_order("image-pair"), do: 1
+  defp pseudo_sort_order(:old), do: 2
+  defp pseudo_sort_order("old"), do: 2
+  defp pseudo_sort_order(:new), do: 3
+  defp pseudo_sort_order("new"), do: 3
+  defp pseudo_sort_order(other), do: {4, to_string(other)}
 end

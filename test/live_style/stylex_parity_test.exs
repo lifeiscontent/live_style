@@ -483,12 +483,12 @@ defmodule LiveStyle.StyleXParityTest do
       assert css =~ "@keyframes x18re5ia-B{from{opacity:0;}to{opacity:1;}}"
       assert css =~ "@keyframes x1jn504y-B{from{opacity:1;}to{opacity:0;}}"
 
-      # View transition should reference keyframes (preserving insertion order like StyleX)
+      # View transition should reference keyframes (sorted alphabetically for deterministic output)
       assert css =~
-               "::view-transition-old(*.xfh0f9i){animation-name:x1jn504y-B;animation-duration:1s;}"
+               "::view-transition-old(*.xfh0f9i){animation-duration:1s;animation-name:x1jn504y-B;}"
 
       assert css =~
-               "::view-transition-new(*.xfh0f9i){animation-name:x18re5ia-B;animation-duration:1s;}"
+               "::view-transition-new(*.xfh0f9i){animation-duration:1s;animation-name:x18re5ia-B;}"
     end
   end
 

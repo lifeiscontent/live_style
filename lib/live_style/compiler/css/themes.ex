@@ -70,7 +70,10 @@ defmodule LiveStyle.Compiler.CSS.Themes do
   # Recursively collect theme rules, tracking the condition path
   # Conditional values are sorted lists at this point (converted at storage time)
   defp collect_rules(overrides, conditions_path) do
-    Enum.flat_map(overrides, fn {name, value} ->
+    overrides
+    # Sort by name for deterministic iteration order across Elixir/OTP versions
+    |> Enum.sort_by(fn {name, _value} -> name end)
+    |> Enum.flat_map(fn {name, value} ->
       collect_value(name, value, conditions_path)
     end)
   end

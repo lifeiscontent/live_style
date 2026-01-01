@@ -97,9 +97,10 @@ defmodule LiveStyle.Compiler.CSS.Keyframes do
   end
 
   # Format keyframe declarations in minified format (prop:value;)
-  # Preserves insertion order like StyleX (JavaScript Object.entries)
+  # Sort by property name for deterministic output across Elixir/OTP versions
   defp format_declarations(declarations) do
     declarations
+    |> Enum.sort_by(fn {prop, _val} -> to_string(prop) end)
     |> Enum.map_join("", fn {prop, val} ->
       # `CSSValue.to_css_property/1` already handles `var(--x)` used as a property key.
       css_prop = CSSValue.to_css_property(prop)
