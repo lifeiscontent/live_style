@@ -55,12 +55,12 @@ defmodule Mix.Tasks.Compile.LiveStyle do
     end
   end
 
-  defp log_write({:written, var_count, keyframe_count, rule_count, output_path}) do
+  defp log_write({:written, stats, output_path}) do
     Mix.shell().info([
       :green,
       "LiveStyle: ",
       :reset,
-      "#{var_count} vars, #{keyframe_count} keyframes, #{rule_count} rules → ",
+      "#{stats.vars} vars, #{stats.keyframes} keyframes, #{stats.classes} rules → ",
       :cyan,
       output_path
     ])

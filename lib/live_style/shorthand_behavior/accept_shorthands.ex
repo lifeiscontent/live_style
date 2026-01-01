@@ -30,6 +30,7 @@ defmodule LiveStyle.ShorthandBehavior.AcceptShorthands do
   @behaviour LiveStyle.ShorthandBehavior
 
   alias LiveStyle.PropertyMetadata
+  alias LiveStyle.Utils
 
   # Load data at compile time
   @keep_shorthands_expansions PropertyMetadata.keep_shorthands_expansions()
@@ -81,21 +82,13 @@ defmodule LiveStyle.ShorthandBehavior.AcceptShorthands do
   defp merge_condition_entries({prop, cond_entries}) do
     merged =
       cond_entries
-      |> Enum.reduce([], &merge_entry/2)
-      |> Enum.sort_by(fn {k, _v} -> to_string(k) end)
+      |> Enum.reject(fn {_condition, val} -> is_nil(val) end)
+      |> Enum.reduce([], fn {condition, val}, acc ->
+        Utils.tuple_put(acc, condition, val)
+      end)
+      |> Utils.tuple_sort_by_key()
 
     {prop, merged}
-  end
-
-  # Skip nil values
-  defp merge_entry({_condition, nil}, acc), do: acc
-
-  # Replace existing or prepend
-  defp merge_entry({condition, val}, acc) do
-    case List.keyfind(acc, condition, 0) do
-      nil -> [{condition, val} | acc]
-      _ -> List.keyreplace(acc, condition, 0, {condition, val})
-    end
   end
 
   # ==========================================================================

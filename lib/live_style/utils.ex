@@ -170,4 +170,110 @@ defmodule LiveStyle.Utils do
     |> Enum.with_index()
     |> Enum.reduce(-1, fn {val, idx}, acc -> if pred.(val), do: idx, else: acc end)
   end
+
+  # ============================================================================
+  # Tuple List Helpers
+  #
+  # These functions work with lists of 2-tuples where keys can be any term
+  # (atoms, strings, structs, etc.), unlike Keyword which requires atom keys.
+  # Used for conditional CSS values where keys include atoms (:default),
+  # strings (":hover"), and complex terms (When.ancestor(":hover")).
+  # ============================================================================
+
+  @doc """
+  Puts a value in a tuple list, replacing any existing entry with the same key.
+
+  Similar to `List.keystore/4` but with a simpler API. Maintains insertion order
+  by appending new keys at the end.
+
+  ## Examples
+
+      iex> LiveStyle.Utils.tuple_put([{:a, 1}], :b, 2)
+      [{:a, 1}, {:b, 2}]
+
+      iex> LiveStyle.Utils.tuple_put([{:a, 1}, {:b, 2}], :a, 3)
+      [{:a, 3}, {:b, 2}]
+  """
+  @spec tuple_put(list({term(), term()}), term(), term()) :: list({term(), term()})
+  def tuple_put(list, key, value) when is_list(list) do
+    List.keystore(list, key, 0, {key, value})
+  end
+
+  @doc """
+  Puts a value in a tuple list only if the key doesn't already exist.
+
+  Similar to `Keyword.put_new/3` but works with any key type.
+  Appends at the end to maintain insertion order.
+
+  ## Examples
+
+      iex> LiveStyle.Utils.tuple_put_new([{:a, 1}], :b, 2)
+      [{:a, 1}, {:b, 2}]
+
+      iex> LiveStyle.Utils.tuple_put_new([{:a, 1}], :a, 2)
+      [{:a, 1}]
+  """
+  @spec tuple_put_new(list({term(), term()}), term(), term()) :: list({term(), term()})
+  def tuple_put_new(list, key, value) when is_list(list) do
+    case List.keyfind(list, key, 0) do
+      nil -> list ++ [{key, value}]
+      _ -> list
+    end
+  end
+
+  @doc """
+  Gets a value from a tuple list by key.
+
+  Similar to `Keyword.get/3` but works with any key type.
+
+  ## Examples
+
+      iex> LiveStyle.Utils.tuple_get([{:a, 1}, {:b, 2}], :a)
+      1
+
+      iex> LiveStyle.Utils.tuple_get([{:a, 1}], :b)
+      nil
+
+      iex> LiveStyle.Utils.tuple_get([{:a, 1}], :b, :default)
+      :default
+  """
+  @spec tuple_get(list({term(), term()}), term(), term()) :: term()
+  def tuple_get(list, key, default \\ nil) when is_list(list) do
+    case List.keyfind(list, key, 0) do
+      {^key, value} -> value
+      nil -> default
+    end
+  end
+
+  @doc """
+  Merges two tuple lists with last-wins semantics for duplicate keys.
+
+  Values from the second list override values from the first list.
+
+  ## Examples
+
+      iex> LiveStyle.Utils.tuple_merge([{:a, 1}, {:b, 2}], [{:b, 3}, {:c, 4}])
+      [{:a, 1}, {:b, 3}, {:c, 4}]
+  """
+  @spec tuple_merge(list({term(), term()}), list({term(), term()})) :: list({term(), term()})
+  def tuple_merge(list1, list2) when is_list(list1) and is_list(list2) do
+    Enum.reduce(list2, list1, fn {key, value}, acc ->
+      tuple_put(acc, key, value)
+    end)
+  end
+
+  @doc """
+  Sorts a tuple list by key for deterministic iteration.
+
+  Keys are converted to strings for comparison to handle mixed atom/string keys.
+
+  ## Examples
+
+      iex> LiveStyle.Utils.tuple_sort_by_key([{:b, 2}, {:a, 1}])
+      [{:a, 1}, {:b, 2}]
+  """
+  @spec tuple_sort_by_key(list({term(), term()})) :: list({term(), term()})
+  def tuple_sort_by_key(list) when is_list(list) do
+    Enum.sort_by(list, fn {k, _v} -> to_string(k) end)
+  end
 end

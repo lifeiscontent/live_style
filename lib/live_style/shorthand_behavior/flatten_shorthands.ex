@@ -40,6 +40,7 @@ defmodule LiveStyle.ShorthandBehavior.FlattenShorthands do
   @behaviour LiveStyle.ShorthandBehavior
 
   alias LiveStyle.PropertyMetadata
+  alias LiveStyle.Utils
 
   # Load data at compile time
   @shorthand_properties PropertyMetadata.shorthand_properties()
@@ -254,13 +255,9 @@ defmodule LiveStyle.ShorthandBehavior.FlattenShorthands do
     merged =
       cond_entries
       |> Enum.reduce([], fn {condition, val}, acc ->
-        # Replace existing or prepend
-        case List.keyfind(acc, condition, 0) do
-          nil -> [{condition, val} | acc]
-          _ -> List.keyreplace(acc, condition, 0, {condition, val})
-        end
+        Utils.tuple_put(acc, condition, val)
       end)
-      |> Enum.sort_by(fn {k, _v} -> to_string(k) end)
+      |> Utils.tuple_sort_by_key()
 
     {prop, merged}
   end

@@ -16,89 +16,54 @@ defmodule LiveStyle.Compiler.Class.DeclarationMerger do
   """
 
   alias LiveStyle.Compiler.Class.Conditional
+  alias LiveStyle.Utils
 
   @doc """
   Merges a property value into an accumulator.
 
+  The accumulator is a tuple list where keys can be atoms (CSS property names)
+  or strings (CSS custom properties via `var()`). Conditional values also use
+  tuple lists since their keys can be atoms, strings, or complex terms.
+
   ## Parameters
 
-    * `acc` - Current accumulator list of {prop, value} tuples
-    * `prop` - Property name (atom)
+    * `acc` - Current accumulator (list of {prop, value} tuples)
+    * `prop` - Property name (atom or string for custom properties)
     * `value` - New value to merge
 
   ## Returns
 
   Updated accumulator with merged property.
   """
-  @spec merge(list(), atom(), term()) :: list()
+  @spec merge(list(), atom() | String.t(), term()) :: list()
   def merge(acc, prop, value) do
-    existing = get_prop(acc, prop)
+    existing = Utils.tuple_get(acc, prop)
 
     cond do
       existing == nil ->
-        put_prop(acc, prop, value)
+        Utils.tuple_put(acc, prop, value)
 
       Conditional.conditional?(existing) and Conditional.conditional?(value) ->
         # Both conditional: merge lists and sort
-        merged = merge_lists(to_list(existing), to_list(value))
-        put_prop(acc, prop, sort_list(merged))
+        merged = Utils.tuple_merge(to_list(existing), to_list(value))
+        Utils.tuple_put(acc, prop, Utils.tuple_sort_by_key(merged))
 
       Conditional.conditional?(existing) ->
         # Existing conditional, new simple: simple becomes :default
-        merged = put_key(to_list(existing), :default, value)
-        put_prop(acc, prop, sort_list(merged))
+        merged = Utils.tuple_put(to_list(existing), :default, value)
+        Utils.tuple_put(acc, prop, Utils.tuple_sort_by_key(merged))
 
       Conditional.conditional?(value) ->
         # Existing simple, new conditional: existing becomes :default if not set
-        merged = put_new_key(to_list(value), :default, existing)
-        put_prop(acc, prop, sort_list(merged))
+        merged = Utils.tuple_put_new(to_list(value), :default, existing)
+        Utils.tuple_put(acc, prop, Utils.tuple_sort_by_key(merged))
 
       true ->
         # Both simple: last wins
-        put_prop(acc, prop, value)
+        Utils.tuple_put(acc, prop, value)
     end
-  end
-
-  defp get_prop(acc, prop) do
-    case List.keyfind(acc, prop, 0) do
-      {^prop, value} -> value
-      nil -> nil
-    end
-  end
-
-  defp put_prop(acc, prop, value) do
-    List.keystore(acc, prop, 0, {prop, value})
   end
 
   # Conditional values should already be lists
   defp to_list(value) when is_list(value), do: value
-
-  # Merge two lists, later values override earlier ones
-  defp merge_lists(list1, list2) do
-    # Start with list1, then apply all updates from list2
-    Enum.reduce(list2, list1, fn {key, value}, acc ->
-      put_key(acc, key, value)
-    end)
-  end
-
-  # Put a key in a list (replaces existing or appends)
-  defp put_key(list, key, value) do
-    case List.keyfind(list, key, 0) do
-      nil -> [{key, value} | list]
-      _ -> List.keyreplace(list, key, 0, {key, value})
-    end
-  end
-
-  # Put a key only if it doesn't exist
-  defp put_new_key(list, key, value) do
-    case List.keyfind(list, key, 0) do
-      nil -> [{key, value} | list]
-      _ -> list
-    end
-  end
-
-  # Sort list by key for deterministic iteration
-  defp sort_list(list) do
-    Enum.sort_by(list, fn {k, _v} -> to_string(k) end)
-  end
 end
