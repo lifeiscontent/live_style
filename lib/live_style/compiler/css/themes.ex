@@ -24,6 +24,7 @@ defmodule LiveStyle.Compiler.CSS.Themes do
   @spec generate(Manifest.t()) :: String.t()
   def generate(manifest) do
     manifest.themes
+    |> Enum.sort_by(fn {_key, entry} -> entry.ident end)
     |> Enum.flat_map(fn {_key, entry} ->
       %{ident: ident, overrides: overrides} = entry
 

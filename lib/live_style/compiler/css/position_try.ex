@@ -24,6 +24,7 @@ defmodule LiveStyle.Compiler.CSS.PositionTry do
   @spec generate(LiveStyle.Manifest.t()) :: String.t()
   def generate(manifest) do
     manifest.position_try
+    |> Enum.sort_by(fn {_key, entry} -> entry.ident end)
     |> Enum.flat_map(fn {_key, entry} -> generate_entry(entry) end)
     |> Enum.join("\n")
   end

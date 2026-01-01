@@ -46,15 +46,25 @@ defmodule LiveStyle.Compiler.CSS.ViewTransitions do
   """
   @spec generate(LiveStyle.Manifest.t()) :: String.t()
   def generate(manifest) do
-    Enum.map_join(manifest.view_transitions, "\n", fn {_key, entry} ->
+    manifest.view_transitions
+    |> Enum.sort_by(fn {_key, entry} -> entry.ident end)
+    |> Enum.map_join("\n", fn {_key, entry} ->
       generate_entry(entry)
     end)
   end
 
   # Generate CSS for a single view transition entry
   # All pseudo-elements for one view transition on a single line
+  # Ordering for deterministic output: group, image_pair, new, old
+  @pseudo_sort_order %{group: 0, image_pair: 1, new: 2, old: 3}
+
   defp generate_entry(%{ident: ident, styles: styles}) do
-    Enum.map_join(styles, "", fn {pseudo_key, declarations} ->
+    styles
+    |> Enum.sort_by(fn {pseudo_key, _} ->
+      normalized = Map.get(@string_to_atom_keys, pseudo_key, pseudo_key)
+      {Map.get(@pseudo_sort_order, normalized, 99), to_string(pseudo_key)}
+    end)
+    |> Enum.map_join("", fn {pseudo_key, declarations} ->
       # Normalize string keys to atoms
       normalized_key = Map.get(@string_to_atom_keys, pseudo_key, pseudo_key)
       pseudo_element = Map.get(@pseudo_element_map, normalized_key, to_string(pseudo_key))

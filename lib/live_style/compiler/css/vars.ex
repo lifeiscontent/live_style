@@ -78,7 +78,7 @@ defmodule LiveStyle.Compiler.CSS.Vars do
 
       # Generate CSS for each group
       grouped
-      |> Enum.sort_by(fn {at_rules, _} -> length(at_rules) end)
+      |> Enum.sort_by(fn {at_rules, _} -> {length(at_rules), at_rules} end)
       |> Enum.map_join("\n", &generate_var_group_css/1)
     end
   end
