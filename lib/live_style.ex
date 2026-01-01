@@ -324,9 +324,7 @@ defmodule LiveStyle do
 
     # Normalize values (add px to numbers, etc.)
     normalized_values =
-      normalized
-      |> Enum.map(fn {k, v} -> {k, LiveStyle.PositionTry.normalize_value(v)} end)
-      |> Map.new()
+      Enum.map(normalized, fn {k, v} -> {k, LiveStyle.PositionTry.normalize_value(v)} end)
 
     # Generate CSS string for hashing (StyleX format: sorted keys, "key:value;" no spaces)
     ident = LiveStyle.PositionTry.generate_ident(normalized_values)

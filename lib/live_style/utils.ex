@@ -71,15 +71,16 @@ defmodule LiveStyle.Utils do
     sort = Keyword.get(opts, :sort, true)
 
     declarations
-    |> then(fn decls ->
-      if sort, do: Enum.sort_by(decls, fn {k, _} -> to_string(k) end), else: decls
-    end)
+    |> maybe_sort(sort)
     |> Enum.map_join("", fn {k, v} ->
       css_prop = CSSValue.to_css_property(k)
       css_value = CSSValue.to_css(v, css_prop)
       "#{css_prop}:#{css_value};"
     end)
   end
+
+  defp maybe_sort(decls, true), do: Enum.sort_by(decls, fn {k, _} -> to_string(k) end)
+  defp maybe_sort(decls, false), do: decls
 
   @doc """
   Splits a CSS value string on whitespace, respecting parentheses nesting.
