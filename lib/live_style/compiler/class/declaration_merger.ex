@@ -44,19 +44,19 @@ defmodule LiveStyle.Compiler.Class.DeclarationMerger do
           acc,
           prop,
           Map.merge(
-            LiveStyle.Utils.normalize_to_map(existing),
-            LiveStyle.Utils.normalize_to_map(value)
+            to_map(existing),
+            to_map(value)
           )
         )
 
       Conditional.conditional?(existing) ->
         # Existing conditional, new simple: simple becomes :default
-        existing_map = LiveStyle.Utils.normalize_to_map(existing)
+        existing_map = to_map(existing)
         Map.put(acc, prop, Map.put(existing_map, :default, value))
 
       Conditional.conditional?(value) ->
         # Existing simple, new conditional: existing becomes :default if not set
-        new_map = LiveStyle.Utils.normalize_to_map(value)
+        new_map = to_map(value)
         Map.put(acc, prop, Map.put_new(new_map, :default, existing))
 
       true ->
@@ -64,4 +64,8 @@ defmodule LiveStyle.Compiler.Class.DeclarationMerger do
         Map.put(acc, prop, value)
     end
   end
+
+  # Convert conditional values (keyword lists or maps) to maps for merging
+  defp to_map(value) when is_list(value), do: Enum.into(value, %{})
+  defp to_map(value) when is_map(value), do: value
 end

@@ -44,13 +44,13 @@ defmodule LiveStyle.APIContractTest.TokensModule do
 
   # keyframes/2 - Define keyframe animations
   keyframes(:spin,
-    from: %{transform: "rotate(0deg)"},
-    to: %{transform: "rotate(360deg)"}
+    from: [transform: "rotate(0deg)"],
+    to: [transform: "rotate(360deg)"]
   )
 
   keyframes(:fade_in,
-    "0%": %{opacity: "0"},
-    "100%": %{opacity: "1"}
+    "0%": [opacity: "0"],
+    "100%": [opacity: "1"]
   )
 
   # theme/2 - Define theme overrides (in same module as vars)
@@ -161,13 +161,13 @@ defmodule LiveStyle.APIContractTest.ViewTransitionModule do
   use LiveStyle
 
   keyframes(:vt_fade_out,
-    from: %{opacity: "1"},
-    to: %{opacity: "0"}
+    from: [opacity: "1"],
+    to: [opacity: "0"]
   )
 
   keyframes(:vt_fade_in,
-    from: %{opacity: "0"},
-    to: %{opacity: "1"}
+    from: [opacity: "0"],
+    to: [opacity: "1"]
   )
 
   view_transition_class(:card_transition,

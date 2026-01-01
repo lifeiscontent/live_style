@@ -218,7 +218,8 @@ defmodule LiveStyle.ValidationTest do
     end
 
     test "raises error for legacy nested at-rule object syntax" do
-      assert_raise ArgumentError, ~r/Legacy at-rule object syntax/, fn ->
+      # Now raises a general "maps not supported" error since we reject maps entirely
+      assert_raise ArgumentError, ~r/Maps are not supported/, fn ->
         defmodule LegacyAtRuleObjectModule do
           use LiveStyle
 
@@ -291,7 +292,7 @@ defmodule LiveStyle.ValidationTest do
   describe "keyframes value validation" do
     test "raises error for non-object keyframe value" do
       # StyleX: 'only argument must be an object of objects' - throws messages.NON_OBJECT_KEYFRAME
-      assert_raise ArgumentError, ~r/Keyframe value must be a keyword list or map/, fn ->
+      assert_raise ArgumentError, ~r/Keyframe value must be a keyword list/, fn ->
         defmodule BooleanKeyframeModule do
           use LiveStyle
 

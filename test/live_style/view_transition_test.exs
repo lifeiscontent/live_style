@@ -46,10 +46,10 @@ defmodule LiveStyle.ViewTransitionTest do
       assert is_binary(view_transition.ident)
 
       # Should have styles for all four pseudo-element types
-      assert Map.has_key?(view_transition.styles, :group)
-      assert Map.has_key?(view_transition.styles, :image_pair)
-      assert Map.has_key?(view_transition.styles, :old)
-      assert Map.has_key?(view_transition.styles, :new)
+      assert Keyword.has_key?(view_transition.styles, :group)
+      assert Keyword.has_key?(view_transition.styles, :image_pair)
+      assert Keyword.has_key?(view_transition.styles, :old)
+      assert Keyword.has_key?(view_transition.styles, :new)
     end
 
     defmodule GroupOnlyViewTransition do
@@ -77,10 +77,10 @@ defmodule LiveStyle.ViewTransitionTest do
 
       assert view_transition != nil
       assert view_transition.ident != nil
-      assert Map.has_key?(view_transition.styles, :group)
-      refute Map.has_key?(view_transition.styles, :image_pair)
-      refute Map.has_key?(view_transition.styles, :old)
-      refute Map.has_key?(view_transition.styles, :new)
+      assert Keyword.has_key?(view_transition.styles, :group)
+      refute Keyword.has_key?(view_transition.styles, :image_pair)
+      refute Keyword.has_key?(view_transition.styles, :old)
+      refute Keyword.has_key?(view_transition.styles, :new)
     end
 
     defmodule ImagePairOnlyViewTransition do
@@ -95,7 +95,7 @@ defmodule LiveStyle.ViewTransitionTest do
       view_transition = LiveStyle.ViewTransition.lookup!({ImagePairOnlyViewTransition, :image})
 
       assert view_transition != nil
-      assert Map.has_key?(view_transition.styles, :image_pair)
+      assert Keyword.has_key?(view_transition.styles, :image_pair)
     end
 
     defmodule OldOnlyViewTransition do
@@ -110,7 +110,7 @@ defmodule LiveStyle.ViewTransitionTest do
       view_transition = LiveStyle.ViewTransition.lookup!({OldOnlyViewTransition, :fade_out})
 
       assert view_transition != nil
-      assert Map.has_key?(view_transition.styles, :old)
+      assert Keyword.has_key?(view_transition.styles, :old)
     end
 
     defmodule NewOnlyViewTransition do
@@ -125,7 +125,7 @@ defmodule LiveStyle.ViewTransitionTest do
       view_transition = LiveStyle.ViewTransition.lookup!({NewOnlyViewTransition, :fade_in})
 
       assert view_transition != nil
-      assert Map.has_key?(view_transition.styles, :new)
+      assert Keyword.has_key?(view_transition.styles, :new)
     end
   end
 
@@ -138,13 +138,13 @@ defmodule LiveStyle.ViewTransitionTest do
       use LiveStyle
 
       keyframes(:fade_in,
-        from: %{opacity: 0},
-        to: %{opacity: 1}
+        from: [opacity: 0],
+        to: [opacity: 1]
       )
 
       keyframes(:fade_out,
-        from: %{opacity: 1},
-        to: %{opacity: 0}
+        from: [opacity: 1],
+        to: [opacity: 0]
       )
 
       view_transition_class(:crossfade,
@@ -195,13 +195,13 @@ defmodule LiveStyle.ViewTransitionTest do
       use LiveStyle
 
       keyframes(:slide_in,
-        from: %{transform: "translateX(100%)"},
-        to: %{transform: "translateX(0)"}
+        from: [transform: "translateX(100%)"],
+        to: [transform: "translateX(0)"]
       )
 
       keyframes(:slide_out,
-        from: %{transform: "translateX(0)"},
-        to: %{transform: "translateX(-100%)"}
+        from: [transform: "translateX(0)"],
+        to: [transform: "translateX(-100%)"]
       )
 
       view_transition_class(:slide,
@@ -215,8 +215,8 @@ defmodule LiveStyle.ViewTransitionTest do
         LiveStyle.ViewTransition.lookup!({ViewTransitionWithSlideKeyframes, :slide})
 
       assert view_transition != nil
-      assert Map.has_key?(view_transition.styles, :old)
-      assert Map.has_key?(view_transition.styles, :new)
+      assert Keyword.has_key?(view_transition.styles, :old)
+      assert Keyword.has_key?(view_transition.styles, :new)
     end
   end
 
@@ -269,16 +269,16 @@ defmodule LiveStyle.ViewTransitionTest do
       assert view_transition != nil
 
       # Group should have 2 properties
-      assert length(view_transition.styles.group) == 2
+      assert length(view_transition.styles[:group]) == 2
 
       # Image pair should have 2 properties
-      assert length(view_transition.styles.image_pair) == 2
+      assert length(view_transition.styles[:image_pair]) == 2
 
       # Old should have 2 properties
-      assert length(view_transition.styles.old) == 2
+      assert length(view_transition.styles[:old]) == 2
 
       # New should have 2 properties
-      assert length(view_transition.styles.new) == 2
+      assert length(view_transition.styles[:new]) == 2
     end
   end
 
@@ -307,7 +307,7 @@ defmodule LiveStyle.ViewTransitionTest do
       assert view_transition != nil
 
       # Check that border_radius value is stored
-      image_pair_styles = view_transition.styles.image_pair
+      image_pair_styles = view_transition.styles[:image_pair]
       assert Keyword.has_key?(image_pair_styles, :border_radius)
     end
 
@@ -328,7 +328,7 @@ defmodule LiveStyle.ViewTransitionTest do
 
       assert view_transition != nil
 
-      old_styles = view_transition.styles.old
+      old_styles = view_transition.styles[:old]
 
       assert Keyword.get(old_styles, :animation_timing_function) ==
                "cubic-bezier(0.4, 0, 0.2, 1)"
@@ -489,7 +489,7 @@ defmodule LiveStyle.ViewTransitionTest do
       assert view_transition != nil
 
       # Zero opacity should be stored
-      assert Keyword.get(view_transition.styles.old, :opacity) == 0
+      assert Keyword.get(view_transition.styles[:old], :opacity) == 0
     end
 
     defmodule ViewTransitionEmptyGroup do
@@ -523,10 +523,10 @@ defmodule LiveStyle.ViewTransitionTest do
       assert view_transition != nil
 
       # Should only have old and new
-      assert Map.has_key?(view_transition.styles, :old)
-      assert Map.has_key?(view_transition.styles, :new)
-      refute Map.has_key?(view_transition.styles, :group)
-      refute Map.has_key?(view_transition.styles, :image_pair)
+      assert Keyword.has_key?(view_transition.styles, :old)
+      assert Keyword.has_key?(view_transition.styles, :new)
+      refute Keyword.has_key?(view_transition.styles, :group)
+      refute Keyword.has_key?(view_transition.styles, :image_pair)
     end
 
     defmodule ViewTransitionCSSMinimalOutput do

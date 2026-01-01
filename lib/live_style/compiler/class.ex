@@ -15,14 +15,14 @@ defmodule LiveStyle.Compiler.Class do
   ## Internal API Example
 
       # Static class (called by class macro)
-      LiveStyle.Compiler.Class.define(MyModule, :button, %{display: "flex", padding: "8px"})
+      LiveStyle.Compiler.Class.define(MyModule, :button, [display: "flex", padding: "8px"])
 
       # Dynamic class
       LiveStyle.Compiler.Class.define_dynamic(MyModule, :opacity, [:opacity], [:opacity])
 
       # Lookup
       LiveStyle.Compiler.Class.lookup!(MyModule, :button)
-      # => %{class_string: "x1234 x5678", atomic_classes: %{...}, ...}
+      # => %{class_string: "x1234 x5678", atomic_classes: [...], ...}
   """
 
   alias LiveStyle.Compiler.Class.{Conditional, DeclarationMerger}
@@ -42,14 +42,14 @@ defmodule LiveStyle.Compiler.Class do
 
     * `module` - The module defining the class
     * `name` - The class name (atom)
-    * `declarations` - Map of CSS property declarations
+    * `declarations` - Keyword list of CSS property declarations
     * `opts` - Options including `:file` and `:line` for validation warnings
 
   ## Example
 
-      LiveStyle.Class.define(MyModule, :button, %{display: "flex"})
+      LiveStyle.Class.define(MyModule, :button, [display: "flex"])
   """
-  @spec define(module(), atom(), map(), keyword()) :: :ok
+  @spec define(module(), atom(), keyword(), keyword()) :: :ok
   def define(module, name, declarations, opts \\ []) do
     key = Manifest.simple_key(module, name)
 

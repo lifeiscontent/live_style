@@ -62,8 +62,8 @@ defmodule LiveStyle.AtRulesTest do
     use LiveStyle
 
     keyframes(:shift,
-      from: %{opacity: "0"},
-      to: %{opacity: "1"}
+      from: [opacity: "0"],
+      to: [opacity: "1"]
     )
 
     class(:animated,

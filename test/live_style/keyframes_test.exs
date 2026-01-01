@@ -19,14 +19,14 @@ defmodule LiveStyle.KeyframesTest do
     # from: { color: 'red' }, to: { color: 'blue' }
     # Expected: name = "x2up61p-B", ltr = "@keyframes x2up61p-B{from{color:red;}to{color:blue;}}"
     keyframes(:color_change,
-      from: %{color: "red"},
-      to: %{color: "blue"}
+      from: [color: "red"],
+      to: [color: "blue"]
     )
 
     # Simple fade animation
     keyframes(:fade,
-      from: %{opacity: "0"},
-      to: %{opacity: "1"}
+      from: [opacity: "0"],
+      to: [opacity: "1"]
     )
 
     # Rule that references keyframes
@@ -44,9 +44,9 @@ defmodule LiveStyle.KeyframesTest do
     use LiveStyle
 
     keyframes(:bounce,
-      "0%": %{transform: "translateY(0)"},
-      "50%": %{transform: "translateY(-20px)"},
-      "100%": %{transform: "translateY(0)"}
+      "0%": [transform: "translateY(0)"],
+      "50%": [transform: "translateY(-20px)"],
+      "100%": [transform: "translateY(0)"]
     )
   end
 
@@ -58,8 +58,8 @@ defmodule LiveStyle.KeyframesTest do
     use LiveStyle
 
     keyframes(:pulse,
-      from: %{transform: "scale(1)"},
-      to: %{transform: "scale(1.1)"}
+      from: [transform: "scale(1)"],
+      to: [transform: "scale(1.1)"]
     )
 
     class(:pulse,
@@ -76,15 +76,16 @@ defmodule LiveStyle.KeyframesTest do
   defmodule MultipleProperties do
     use LiveStyle
 
+    # Use keyword lists to preserve insertion order (like StyleX's Object.entries)
     keyframes(:slide_in,
-      from: %{
-        opacity: "0",
-        transform: "translateX(-100%)"
-      },
-      to: %{
-        opacity: "1",
-        transform: "translateX(0)"
-      }
+      from: [
+        transform: "translateX(-100%)",
+        opacity: "0"
+      ],
+      to: [
+        transform: "translateX(0)",
+        opacity: "1"
+      ]
     )
   end
 
@@ -98,21 +99,21 @@ defmodule LiveStyle.KeyframesTest do
     # StyleX supports comma-separated keyframe keys like "0%, 100%"
     # See: packages/benchmarks/size/fixtures/lotsOfStyles.js
     keyframes(:pulse_glow,
-      "0%, 100%": %{opacity: "1"},
-      "50%": %{opacity: "0.5"}
+      "0%, 100%": [opacity: "1"],
+      "50%": [opacity: "0.5"]
     )
 
     keyframes(:bounce_scale,
-      "0%, 100%": %{transform: "scale(1)"},
-      "50%": %{transform: "scale(1.2)"}
+      "0%, 100%": [transform: "scale(1)"],
+      "50%": [transform: "scale(1.2)"]
     )
 
     # Multiple comma-separated percentages
     keyframes(:complex_animation,
-      "0%": %{opacity: "0"},
-      "25%, 75%": %{opacity: "0.5"},
-      "50%": %{opacity: "1"},
-      "100%": %{opacity: "0"}
+      "0%": [opacity: "0"],
+      "25%, 75%": [opacity: "0.5"],
+      "50%": [opacity: "1"],
+      "100%": [opacity: "0"]
     )
   end
 
@@ -192,7 +193,7 @@ defmodule LiveStyle.KeyframesTest do
       css = LiveStyle.Compiler.generate_css()
 
       # Should have keyframes with both opacity and transform
-      # Actual output: transform comes before opacity based on map key order
+      # Preserves insertion order like StyleX (JavaScript Object.entries)
       assert css =~
                ~r/@keyframes x[a-z0-9]+-B\{from\{transform:translateX\(-100%\);opacity:0;\}to\{transform:translateX\(0\);opacity:1;\}\}/
     end

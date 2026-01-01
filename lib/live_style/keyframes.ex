@@ -34,7 +34,7 @@ defmodule LiveStyle.Keyframes do
         animation: "\#{keyframes({MyApp.Animations, :spin})} 1s linear infinite"
   """
 
-  alias LiveStyle.{CSSValue, Hash, Manifest, Utils}
+  alias LiveStyle.{CSSValue, Hash, Manifest}
 
   use LiveStyle.Registry,
     entity_name: "Keyframes",
@@ -43,13 +43,15 @@ defmodule LiveStyle.Keyframes do
 
   # Content-based CSS name generation (private)
   # Identical keyframes produce the same name for deduplication
-  defp ident(frames) when is_map(frames) do
+  defp ident(frames) when is_list(frames) do
     keyframes_string = serialize_frames(frames)
     # StyleX prefixes with '<>' for hash stability
     Hash.class_prefix() <> Hash.create_hash("<>" <> keyframes_string) <> "-B"
   end
 
   # Serialize frames in StyleX format: from{color:red;}to{color:blue;}
+  # Frames are sorted by key for consistent hashing, but declarations within
+  # frames are also sorted for hash consistency.
   defp serialize_frames(frames) do
     frames
     |> Enum.sort_by(fn {k, _} -> to_string(k) end)
@@ -69,9 +71,9 @@ defmodule LiveStyle.Keyframes do
   end
 
   defp validate_frame_declarations!(frame_key, declarations) do
-    unless is_list(declarations) or is_map(declarations) do
+    unless is_list(declarations) do
       raise ArgumentError,
-            "Keyframe value must be a keyword list or map, got: #{inspect(declarations)} for frame: #{frame_key}"
+            "Keyframe value must be a keyword list, got: #{inspect(declarations)} for frame: #{frame_key}"
     end
   end
 
@@ -88,27 +90,26 @@ defmodule LiveStyle.Keyframes do
 
   The generated CSS animation name.
   """
-  @spec define(module(), atom(), map() | keyword()) :: String.t()
-  def define(module, name, frames) do
+  @spec define(module(), atom(), keyword()) :: String.t()
+  def define(module, name, frames) when is_list(frames) do
     key = Manifest.simple_key(module, name)
     manifest = LiveStyle.Storage.read()
 
-    normalized_frames = Utils.normalize_to_map(frames)
-    ident = ident(normalized_frames)
+    ident = ident(frames)
 
     # If already defined, keep it unless the frames changed.
     # In dev/code-reload, keyframes need to update so the compiled CSS matches source.
     case Manifest.get_keyframes(manifest, key) do
-      %{ident: ^ident, frames: ^normalized_frames} ->
+      %{ident: ^ident, frames: ^frames} ->
         ident
 
       _existing ->
         # Generate the StyleX-compatible metadata
-        ltr = generate_css(ident, normalized_frames)
+        ltr = generate_css(ident, frames)
 
         entry = %{
           ident: ident,
-          frames: normalized_frames,
+          frames: frames,
           ltr: ltr,
           rtl: nil,
           priority: 0
@@ -127,7 +128,7 @@ defmodule LiveStyle.Keyframes do
 
   Format: `@keyframes name{from{prop:value;}to{prop:value;}}`
   """
-  @spec generate_css(String.t(), map()) :: String.t()
+  @spec generate_css(String.t(), keyword()) :: String.t()
   def generate_css(ident, frames) do
     sorted_frames =
       frames
@@ -183,9 +184,9 @@ defmodule LiveStyle.Keyframes do
   defp normalize_frame_key(key) when is_atom(key), do: Atom.to_string(key)
 
   # Generate CSS for a single frame's properties
+  # Preserves insertion order like StyleX (JavaScript Object.entries)
   defp generate_frame_props_css(props) when is_map(props) or is_list(props) do
     props
-    |> Enum.sort_by(fn {k, _} -> to_string(k) end)
     |> Enum.map_join("", fn {prop, value} ->
       css_prop = CSSValue.to_css_property(prop)
       css_value = CSSValue.to_css(value, css_prop)

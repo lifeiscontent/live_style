@@ -64,7 +64,7 @@ defmodule LiveStyle.PositionTry do
   Defines a named position-try rule and stores it in the manifest.
   Called from the position_try/2 macro.
   """
-  @spec define(module(), atom(), map(), String.t()) :: :ok
+  @spec define(module(), atom(), keyword(), String.t()) :: :ok
   def define(module, name, declarations, ident) do
     key = Manifest.simple_key(module, name)
 
@@ -81,7 +81,7 @@ defmodule LiveStyle.PositionTry do
   Defines an anonymous position-try rule and stores it in the manifest.
   Called from the position_try/1 macro with inline declarations.
   """
-  @spec define_anonymous(module(), map(), String.t()) :: :ok
+  @spec define_anonymous(module(), keyword(), String.t()) :: :ok
   def define_anonymous(module, declarations, ident) do
     key = "#{module}:__anon_position_try__:#{ident}"
 
@@ -95,7 +95,7 @@ defmodule LiveStyle.PositionTry do
   end
 
   @doc false
-  @spec generate_ident(map()) :: String.t()
+  @spec generate_ident(keyword()) :: String.t()
   def generate_ident(declarations) do
     ident(declarations)
   end
@@ -123,18 +123,18 @@ defmodule LiveStyle.PositionTry do
   def normalize_value(value) when is_atom(value), do: Atom.to_string(value)
 
   @doc false
-  @spec validate_declarations(map()) :: {:ok, map()} | {:error, list(String.t())}
-  def validate_declarations(declarations) do
+  @spec validate_declarations(keyword()) :: {:ok, keyword()} | {:error, list(String.t())}
+  def validate_declarations(declarations) when is_list(declarations) do
     allowed = allowed_properties()
 
     invalid_props =
       declarations
-      |> Map.keys()
+      |> Keyword.keys()
       |> Enum.map(&CSSValue.to_css_property/1)
       |> Enum.reject(&MapSet.member?(allowed, &1))
 
     if Enum.empty?(invalid_props) do
-      normalized = Map.new(declarations, fn {k, v} -> {k, normalize_value(v)} end)
+      normalized = Enum.map(declarations, fn {k, v} -> {k, normalize_value(v)} end)
       {:ok, normalized}
     else
       {:error, invalid_props}

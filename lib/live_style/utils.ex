@@ -6,43 +6,74 @@ defmodule LiveStyle.Utils do
   alias LiveStyle.CSSValue
 
   @doc """
-  Normalizes a keyword list or map to a map.
+  Validates that the input is a keyword list (not a map).
 
-  Accepts both maps (returned as-is) and keyword lists (converted to maps).
-  This is commonly used to accept flexible input in macro APIs.
+  Maps are not supported because they don't preserve insertion order,
+  which is required for StyleX-compatible CSS output.
+
+  Raises ArgumentError if a map is passed.
   """
-  @spec normalize_to_map(map() | keyword()) :: map()
-  def normalize_to_map(value) when is_map(value), do: value
+  @spec validate_keyword_list!(keyword()) :: keyword()
+  def validate_keyword_list!(value) when is_list(value), do: value
 
-  def normalize_to_map(value) when is_list(value) do
-    {includes, declarations} =
-      Enum.split_with(value, fn
-        {:__include__, _ref} -> true
-        _ -> false
-      end)
+  def validate_keyword_list!(value) when is_map(value) do
+    raise ArgumentError, """
+    Maps are not supported for style declarations. Use keyword lists instead.
 
-    base = Map.new(declarations)
+    Maps don't preserve insertion order, which can cause non-deterministic CSS output.
 
-    case includes do
-      [] ->
-        base
+    Instead of:
+      %{color: "red", background: "blue"}
 
-      includes_list ->
-        refs = Enum.map(includes_list, fn {:__include__, ref} -> ref end)
-        Map.put(base, :__include__, refs)
-    end
+    Use:
+      [color: "red", background: "blue"]
+
+    Got: #{inspect(value)}
+    """
+  end
+
+  @doc """
+  Merges two declaration lists with last-wins semantics.
+
+  Keys from the second list override keys from the first list.
+  Order is preserved: base keys first (excluding overridden), then override keys.
+
+  Supports both keyword lists (atom keys) and general tuple lists (string keys
+  for CSS custom properties).
+
+  ## Examples
+
+      iex> LiveStyle.Utils.merge_declarations([a: 1, b: 2], [b: 3, c: 4])
+      [a: 1, b: 3, c: 4]
+  """
+  @spec merge_declarations(list(), list()) :: list()
+  def merge_declarations(base, overrides) when is_list(base) and is_list(overrides) do
+    override_keys = Enum.map(overrides, fn {k, _v} -> k end) |> MapSet.new()
+
+    # Keep base keys that aren't overridden, then append all overrides
+    filtered_base = Enum.filter(base, fn {k, _v} -> not MapSet.member?(override_keys, k) end)
+    filtered_base ++ overrides
   end
 
   @doc """
   Formats CSS declarations as a minified string.
 
   Converts a map of property/value pairs to minified CSS format (prop:value;).
-  Properties are sorted alphabetically for consistent output.
+
+  ## Options
+
+  - `:sort` - Whether to sort properties alphabetically. Defaults to `true`.
+    Set to `false` to preserve insertion order (for StyleX parity with keyframes
+    and view-transitions which use JavaScript's Object.entries order).
   """
-  @spec format_declarations(map() | keyword()) :: String.t()
-  def format_declarations(declarations) do
+  @spec format_declarations(map() | keyword(), keyword()) :: String.t()
+  def format_declarations(declarations, opts \\ []) do
+    sort = Keyword.get(opts, :sort, true)
+
     declarations
-    |> Enum.sort_by(fn {k, _} -> to_string(k) end)
+    |> then(fn decls ->
+      if sort, do: Enum.sort_by(decls, fn {k, _} -> to_string(k) end), else: decls
+    end)
     |> Enum.map_join("", fn {k, v} ->
       css_prop = CSSValue.to_css_property(k)
       css_value = CSSValue.to_css(v, css_prop)

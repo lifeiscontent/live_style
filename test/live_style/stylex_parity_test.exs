@@ -170,8 +170,8 @@ defmodule LiveStyle.StyleXParityTest do
     use LiveStyle
 
     keyframes(:name,
-      from: %{color: "red"},
-      to: %{color: "blue"}
+      from: [color: "red"],
+      to: [color: "blue"]
     )
   end
 
@@ -456,13 +456,13 @@ defmodule LiveStyle.StyleXParityTest do
     use LiveStyle
 
     keyframes(:fade_in,
-      from: %{opacity: 0},
-      to: %{opacity: 1}
+      from: [opacity: 0],
+      to: [opacity: 1]
     )
 
     keyframes(:fade_out,
-      from: %{opacity: 1},
-      to: %{opacity: 0}
+      from: [opacity: 1],
+      to: [opacity: 0]
     )
 
     view_transition_class(:test,
@@ -483,12 +483,12 @@ defmodule LiveStyle.StyleXParityTest do
       assert css =~ "@keyframes x18re5ia-B{from{opacity:0;}to{opacity:1;}}"
       assert css =~ "@keyframes x1jn504y-B{from{opacity:1;}to{opacity:0;}}"
 
-      # View transition should reference keyframes
+      # View transition should reference keyframes (preserving insertion order like StyleX)
       assert css =~
-               "::view-transition-old(*.xfh0f9i){animation-duration:1s;animation-name:x1jn504y-B;}"
+               "::view-transition-old(*.xfh0f9i){animation-name:x1jn504y-B;animation-duration:1s;}"
 
       assert css =~
-               "::view-transition-new(*.xfh0f9i){animation-duration:1s;animation-name:x18re5ia-B;}"
+               "::view-transition-new(*.xfh0f9i){animation-name:x18re5ia-B;animation-duration:1s;}"
     end
   end
 

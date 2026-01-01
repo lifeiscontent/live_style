@@ -320,7 +320,7 @@ defmodule LiveStyle do
   defmacro position_try(name, declarations) when is_atom(name) do
     # Evaluate declarations at compile time for content-based hashing (StyleX behavior)
     {evaluated, _} = Code.eval_quoted(declarations, [], __CALLER__)
-    normalized = LiveStyle.Utils.normalize_to_map(evaluated)
+    normalized = LiveStyle.Utils.validate_keyword_list!(evaluated)
 
     # Normalize values (add px to numbers, etc.)
     normalized_values =
@@ -356,7 +356,7 @@ defmodule LiveStyle do
   defmacro position_try(declarations) when is_list(declarations) do
     module = __CALLER__.module
     {evaluated, _} = Code.eval_quoted(declarations, [], __CALLER__)
-    normalized = LiveStyle.Utils.normalize_to_map(evaluated)
+    normalized = LiveStyle.Utils.validate_keyword_list!(evaluated)
 
     # Validate and normalize declarations
     case LiveStyle.PositionTry.validate_declarations(normalized) do
@@ -391,7 +391,7 @@ defmodule LiveStyle do
     {evaluated_styles, _} = Code.eval_quoted(styles, [], __CALLER__)
 
     # Validate keys at compile time
-    style_map = LiveStyle.Utils.normalize_to_map(evaluated_styles)
+    style_map = LiveStyle.Utils.validate_keyword_list!(evaluated_styles)
 
     case LiveStyle.ViewTransition.validate_keys(style_map) do
       :ok ->
@@ -516,7 +516,7 @@ defmodule LiveStyle do
 
     quote do
       declarations_evaluated = unquote(declarations)
-      normalized = LiveStyle.Utils.normalize_to_map(declarations_evaluated)
+      normalized = LiveStyle.Utils.validate_keyword_list!(declarations_evaluated)
 
       unquote(class_module).define(
         unquote(module),
@@ -531,6 +531,7 @@ defmodule LiveStyle do
   end
 
   # Static class with map syntax - class(:name, %{...})
+  # This will fail with validate_keyword_list! - maps are not supported
   defmacro class(name, {:%{}, _, _} = declarations) when is_atom(name) do
     module = __CALLER__.module
     file = __CALLER__.file
@@ -539,7 +540,7 @@ defmodule LiveStyle do
 
     quote do
       declarations_evaluated = unquote(declarations)
-      normalized = LiveStyle.Utils.normalize_to_map(declarations_evaluated)
+      normalized = LiveStyle.Utils.validate_keyword_list!(declarations_evaluated)
 
       unquote(class_module).define(
         unquote(module),

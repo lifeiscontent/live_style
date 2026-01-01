@@ -97,8 +97,7 @@ defmodule LiveStyle.Compiler.CSS.Keyframes do
   end
 
   # Format keyframe declarations in minified format (prop:value;)
-  # StyleX preserves insertion order (JavaScript Object.keys), so we preserve
-  # the order declarations were defined in (keyword lists maintain order)
+  # Preserves insertion order like StyleX (JavaScript Object.entries)
   defp format_declarations(declarations) do
     declarations
     |> Enum.map_join("", fn {prop, val} ->

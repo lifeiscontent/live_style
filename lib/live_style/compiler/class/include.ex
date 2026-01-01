@@ -53,10 +53,10 @@ defmodule LiveStyle.Compiler.Class.Include do
   - Include resolution is recursive - included classes can themselves include other classes
   """
 
-  alias LiveStyle.Manifest
+  alias LiveStyle.{Manifest, Utils}
 
   @doc """
-  Resolves __include__ entries in a style declarations map.
+  Resolves __include__ entries in style declarations.
 
   Include entries can be:
   - `:rule_name` - include from the same module
@@ -65,23 +65,23 @@ defmodule LiveStyle.Compiler.Class.Include do
   The includes are processed in order, then remaining declarations are merged
   on top, giving later declarations precedence (last-wins semantics).
   """
-  @spec resolve(map(), atom()) :: map()
-  def resolve(declarations, caller_module) when is_map(declarations) do
-    {includes_list, regular} = Map.pop(declarations, :__include__, [])
+  @spec resolve(keyword(), atom()) :: keyword()
+  def resolve(declarations, caller_module) when is_list(declarations) do
+    {includes_list, regular} = Keyword.pop(declarations, :__include__, [])
 
     # Normalize includes_list to always be a list
     includes_list = List.wrap(includes_list)
 
     base =
       includes_list
-      |> Enum.reduce(%{}, fn include_ref, acc ->
+      |> Enum.reduce([], fn include_ref, acc ->
         included = fetch_included_style(include_ref, caller_module)
         # Recursively resolve includes in the included style
         resolved = resolve(included, caller_module)
-        Map.merge(acc, resolved)
+        Utils.merge_declarations(acc, resolved)
       end)
 
-    Map.merge(base, regular)
+    Utils.merge_declarations(base, regular)
   end
 
   defp fetch_included_style({module, rule_name}, _caller_module)

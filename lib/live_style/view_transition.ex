@@ -72,7 +72,7 @@ defmodule LiveStyle.ViewTransition do
       })
   """
 
-  alias LiveStyle.{CSSValue, Hash, Manifest, Utils}
+  alias LiveStyle.{CSSValue, Hash, Manifest}
 
   use LiveStyle.Registry,
     entity_name: "View transition",
@@ -92,11 +92,11 @@ defmodule LiveStyle.ViewTransition do
   def valid_string_keys, do: @valid_string_keys
 
   @doc false
-  @spec validate_keys(map()) :: :ok | {:error, list()}
-  def validate_keys(style_map) do
+  @spec validate_keys(keyword()) :: :ok | {:error, list()}
+  def validate_keys(styles) when is_list(styles) do
     invalid_keys =
-      style_map
-      |> Map.keys()
+      styles
+      |> Keyword.keys()
       |> Enum.reject(fn key ->
         key in @valid_atom_keys or key in @valid_string_keys
       end)
@@ -111,11 +111,12 @@ defmodule LiveStyle.ViewTransition do
   @doc """
   Defines a named view transition and stores it in the manifest.
   """
-  @spec define(module(), atom(), map() | keyword(), String.t()) :: :ok
+  @spec define(module(), atom(), keyword(), String.t()) :: :ok
   def define(module, name, styles, ident) do
     key = Manifest.simple_key(module, name)
-    styles = Utils.normalize_to_map(styles)
 
+    # Keep keyword lists as-is to preserve insertion order (StyleX parity)
+    # View transitions preserve the order of pseudo-elements and declarations
     entry = %{
       ident: ident,
       styles: styles

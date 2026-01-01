@@ -49,9 +49,9 @@ defmodule LiveStyle.Vars do
 
   Called internally by the `vars` macro.
   """
-  @spec define(module(), map() | keyword()) :: :ok
+  @spec define(module(), keyword()) :: :ok
   def define(module, vars) do
-    vars = Utils.normalize_to_map(vars)
+    vars = Utils.validate_keyword_list!(vars)
 
     Enum.each(vars, fn {name, value} ->
       key = Manifest.simple_key(module, name)

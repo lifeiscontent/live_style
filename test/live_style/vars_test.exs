@@ -147,9 +147,9 @@ defmodule LiveStyle.VarsTest do
 
       vars(primary_color: "blue")
 
-      class(:set_var, %{
-        var(:primary_color) => [default: "red", ":hover": "blue"]
-      })
+      class(:set_var, [
+        {var(:primary_color), [default: "red", ":hover": "blue"]}
+      ])
     end
 
     test "generates CSS that sets the custom property" do

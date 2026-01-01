@@ -39,9 +39,9 @@ defmodule LiveStyle.Consts do
 
   Called internally by the `consts` macro.
   """
-  @spec define(module(), map() | keyword()) :: :ok
+  @spec define(module(), keyword()) :: :ok
   def define(module, consts) do
-    consts = Utils.normalize_to_map(consts)
+    consts = Utils.validate_keyword_list!(consts)
 
     Enum.each(consts, fn {name, value} ->
       key = Manifest.simple_key(module, name)

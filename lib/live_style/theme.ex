@@ -78,10 +78,10 @@ defmodule LiveStyle.Theme do
 
   Called internally by the `theme` macro.
   """
-  @spec define(module(), atom(), map() | keyword(), String.t()) :: :ok
+  @spec define(module(), atom(), keyword(), String.t()) :: :ok
   def define(module, name, overrides, ident) do
     key = Manifest.simple_key(module, name)
-    overrides = Utils.normalize_to_map(overrides)
+    overrides = Utils.validate_keyword_list!(overrides)
 
     # Convert override keys to CSS var names
     css_overrides =

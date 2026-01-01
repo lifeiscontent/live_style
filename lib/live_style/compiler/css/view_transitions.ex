@@ -55,21 +55,16 @@ defmodule LiveStyle.Compiler.CSS.ViewTransitions do
 
   # Generate CSS for a single view transition entry
   # All pseudo-elements for one view transition on a single line
-  # Ordering for deterministic output: group, image_pair, new, old
-  @pseudo_sort_order %{group: 0, image_pair: 1, new: 2, old: 3}
-
+  # StyleX preserves insertion order for both pseudo-elements and declarations
   defp generate_entry(%{ident: ident, styles: styles}) do
     styles
-    |> Enum.sort_by(fn {pseudo_key, _} ->
-      normalized = Map.get(@string_to_atom_keys, pseudo_key, pseudo_key)
-      {Map.get(@pseudo_sort_order, normalized, 99), to_string(pseudo_key)}
-    end)
     |> Enum.map_join("", fn {pseudo_key, declarations} ->
       # Normalize string keys to atoms
       normalized_key = Map.get(@string_to_atom_keys, pseudo_key, pseudo_key)
       pseudo_element = Map.get(@pseudo_element_map, normalized_key, to_string(pseudo_key))
       selector = "::#{pseudo_element}(*.#{ident})"
-      decl_str = Utils.format_declarations(declarations)
+      # Preserve insertion order (StyleX uses JavaScript Object.entries order)
+      decl_str = Utils.format_declarations(declarations, sort: false)
       "#{selector}{#{decl_str}}"
     end)
   end
