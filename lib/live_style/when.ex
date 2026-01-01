@@ -24,12 +24,12 @@ defmodule LiveStyle.When do
         use LiveStyle
         alias LiveStyle.When
 
-        # Note: computed keys require map syntax with `=>`
+        # Computed keys require tuple syntax
         class :card,
-          transform: %{
-            :default => "translateX(0)",
-            When.ancestor(":hover") => "translateX(10px)"
-          }
+          transform: [
+            {:default, "translateX(0)"},
+            {When.ancestor(":hover"), "translateX(10px)"}
+          ]
 
         def render(assigns) do
           ~H\"\"\"
@@ -42,18 +42,11 @@ defmodule LiveStyle.When do
 
   ## Syntax Note
 
-  When using `LiveStyle.When` functions as map keys, you must use map syntax with `=>`
-  arrows instead of keyword list syntax. This is an Elixir language requirement -
+  When using `LiveStyle.When` functions as keys, you must use tuple syntax
+  instead of keyword list syntax. This is an Elixir language requirement -
   keyword lists can only have literal atoms as keys.
 
-      # Correct - map syntax with =>
-      class :card,
-        opacity: %{
-          :default => "1",
-          When.ancestor(":hover") => "0.5"
-        }
-
-      # Also correct - tuple list syntax
+      # Correct - tuple list syntax
       class :card,
         opacity: [
           {:default, "1"},
@@ -77,10 +70,10 @@ defmodule LiveStyle.When do
   ## Example
 
       class :item,
-        opacity: %{
-          :default => "1",
-          When.ancestor(":hover") => "0.5"
-        }
+        opacity: [
+          {:default, "1"},
+          {When.ancestor(":hover"), "0.5"}
+        ]
 
   Generates CSS like: `.class:where(.{prefix}-default-marker:hover *) { opacity: 0.5; }`
   """
@@ -106,10 +99,10 @@ defmodule LiveStyle.When do
   ## Example
 
       class :container,
-        border_color: %{
-          :default => "gray",
-          When.descendant(":focus") => "blue"
-        }
+        border_color: [
+          {:default, "gray"},
+          {When.descendant(":focus"), "blue"}
+        ]
 
   Generates CSS like: `.class:where(:has(.{prefix}-default-marker:focus)) { border-color: blue; }`
   """
@@ -135,10 +128,10 @@ defmodule LiveStyle.When do
   ## Example
 
       class :item,
-        background_color: %{
-          :default => "white",
-          When.sibling_before(":hover") => "lightblue"
-        }
+        background_color: [
+          {:default, "white"},
+          {When.sibling_before(":hover"), "lightblue"}
+        ]
 
   Generates CSS like: `.class:where(.{prefix}-default-marker:hover ~ *) { background-color: lightblue; }`
   """
@@ -164,10 +157,10 @@ defmodule LiveStyle.When do
   ## Example
 
       class :label,
-        color: %{
-          :default => "black",
-          When.sibling_after(":focus") => "blue"
-        }
+        color: [
+          {:default, "black"},
+          {When.sibling_after(":focus"), "blue"}
+        ]
 
   Generates CSS like: `.class:where(:has(~ .{prefix}-default-marker:focus)) { color: blue; }`
   """
@@ -193,10 +186,10 @@ defmodule LiveStyle.When do
   ## Example
 
       class :tab,
-        opacity: %{
-          :default => "1",
-          When.any_sibling(":hover") => "0.7"
-        }
+        opacity: [
+          {:default, "1"},
+          {When.any_sibling(":hover"), "0.7"}
+        ]
 
   Generates CSS like: `.class:where(.{prefix}-default-marker:hover ~ *, :has(~ .{prefix}-default-marker:hover)) { opacity: 0.7; }`
   """

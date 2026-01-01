@@ -15,6 +15,10 @@ defmodule LiveStyle.Manifest do
   for namespaced items or "MyApp.Tokens.spin" for non-namespaced items.
   """
 
+  # Increment this when the manifest format changes to trigger regeneration.
+  # This ensures stale manifests from previous versions are cleared.
+  @current_version 2
+
   @type var_entry :: %{
           ident: String.t(),
           value: String.t() | map(),
@@ -50,6 +54,7 @@ defmodule LiveStyle.Manifest do
         }
 
   @type t :: %{
+          version: pos_integer(),
           vars: %{String.t() => var_entry()},
           consts: %{String.t() => const_entry()},
           keyframes: %{String.t() => keyframes_entry()},
@@ -59,9 +64,16 @@ defmodule LiveStyle.Manifest do
           themes: %{String.t() => theme_entry()}
         }
 
+  @doc """
+  Returns the current manifest version.
+  """
+  @spec current_version() :: pos_integer()
+  def current_version, do: @current_version
+
   @spec empty() :: t()
   def empty do
     %{
+      version: @current_version,
       vars: %{},
       consts: %{},
       keyframes: %{},
@@ -72,8 +84,23 @@ defmodule LiveStyle.Manifest do
     }
   end
 
+  @doc """
+  Checks if the manifest version is current.
+  """
+  @spec current?(t()) :: boolean()
+  def current?(manifest), do: Map.get(manifest, :version) == @current_version
+
   @spec ensure_keys(term()) :: t()
-  def ensure_keys(manifest) when is_map(manifest), do: Map.merge(empty(), manifest)
+  def ensure_keys(manifest) when is_map(manifest) do
+    # If manifest version doesn't match current, discard old data and return fresh
+    # This handles format changes that would otherwise cause runtime errors
+    if current?(manifest) do
+      Map.merge(empty(), manifest)
+    else
+      empty()
+    end
+  end
+
   def ensure_keys(_manifest), do: empty()
 
   @spec namespaced_key(module(), atom(), atom()) :: String.t()

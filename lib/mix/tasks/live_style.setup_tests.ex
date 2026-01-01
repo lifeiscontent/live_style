@@ -63,6 +63,12 @@ defmodule Mix.Tasks.LiveStyle.SetupTests do
     # Ensure the app is compiled first
     Mix.Task.run("compile", [])
 
+    # Check if manifest version is outdated (format changed)
+    if manifest_outdated?() do
+      clear_manifest()
+      Mix.shell().info("LiveStyle: Manifest version outdated, regenerating...")
+    end
+
     # Find all test files
     test_files =
       Path.wildcard("test/**/*_test.exs")
@@ -81,6 +87,20 @@ defmodule Mix.Tasks.LiveStyle.SetupTests do
     end
 
     :ok
+  end
+
+  # Check if manifest version matches current code version
+  defp manifest_outdated? do
+    manifest = LiveStyle.Storage.read()
+    not LiveStyle.Manifest.current?(manifest)
+  end
+
+  defp clear_manifest do
+    manifest_path = LiveStyle.Storage.path()
+
+    if File.exists?(manifest_path) do
+      File.rm!(manifest_path)
+    end
   end
 
   defp compile_in_subprocess(test_files) do

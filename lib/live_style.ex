@@ -193,8 +193,8 @@ defmodule LiveStyle do
   ## Using in keyframes (animating typed variables)
 
       keyframes :rotate,
-        from: %{var({Tokens, :angle}) => "0deg"},
-        to: %{var({Tokens, :angle}) => "360deg"}
+        from: [{var({Tokens, :angle}), "0deg"}],
+        to: [{var({Tokens, :angle}), "360deg"}]
   """
   defmacro var(ref) when is_atom(ref) do
     # Local reference: :name
@@ -472,23 +472,23 @@ defmodule LiveStyle do
   ## Conditional styles (pseudo-classes, media queries)
 
       class :interactive,
-        color: %{
-          :default => "blue",
-          ":hover" => "darkblue",
-          "@media (prefers-color-scheme: dark)" => "lightblue"
-        }
+        color: [
+          default: "blue",
+          ":hover": "darkblue",
+          "@media (prefers-color-scheme: dark)": "lightblue"
+        ]
 
   ## Conditional syntax (StyleX-style)
 
   LiveStyle follows modern StyleX conditional syntax: conditions live inside each
-  property's value map (or keyword list), rather than using top-level at-rule keys.
+  property's value (keyword list), rather than using top-level at-rule keys.
 
       class :responsive_card,
-        padding: %{
-          :default => "1rem",
-          "@container (min-width: 400px)" => "2rem",
-          "@media (min-width: 768px)" => "3rem"
-        }
+        padding: [
+          default: "1rem",
+          "@container (min-width: 400px)": "2rem",
+          "@media (min-width: 768px)": "3rem"
+        ]
 
   ## Dynamic classes (StyleX-style with CSS variables)
 
@@ -660,9 +660,8 @@ defmodule LiveStyle do
       # Dynamic styles
       <div {css([{:dynamic_color, @color}])}>
 
-      # With additional inline styles (keyword list or map)
+      # With additional inline styles
       <div {css([:card], style: [view_transition_name: "card-1"])}>
-      <div {css([:card], style: %{"view-transition-name" => "card-1"})}>
 
       # With view transitions
       <div {css([:card], style: [
@@ -697,8 +696,8 @@ defmodule LiveStyle do
 
   ## Options
 
-    * `:style` - A keyword list or map of CSS properties to merge.
-      Property names can be atoms (snake_case) or strings (kebab-case).
+    * `:style` - A keyword list of CSS properties to merge.
+      Property names should be atoms (snake_case).
 
   ## Examples
 
@@ -710,9 +709,6 @@ defmodule LiveStyle do
 
       # With arbitrary inline styles
       <div {css([:base], style: [opacity: "0.5", transform: "scale(1.1)"])}>
-
-      # Using string keys (kebab-case)
-      <div {css([:base], style: %{"--custom-prop" => "value"})}>
   """
   defmacro css(refs, opts) when is_list(opts) do
     quote do

@@ -18,10 +18,10 @@ defmodule LiveStyle.Marker do
         alias LiveStyle.When
 
         class :card,
-          transform: %{
-            :default => "translateX(0)",
-            When.ancestor(":hover") => "translateX(10px)"
-          }
+          transform: [
+            {:default, "translateX(0)"},
+            {When.ancestor(":hover"), "translateX(10px)"}
+          ]
 
         def render(assigns) do
           ~H\"\"\"
@@ -37,10 +37,10 @@ defmodule LiveStyle.Marker do
   For multiple independent sets of contextual selectors, use custom markers:
 
       class :cell,
-        background: %{
-          :default => "transparent",
-          When.ancestor(":hover", marker(:row)) => "#eee"
-        }
+        background: [
+          {:default, "transparent"},
+          {When.ancestor(":hover", marker(:row)), "#eee"}
+        ]
 
       # In template:
       <tr {css(marker(:row))}>

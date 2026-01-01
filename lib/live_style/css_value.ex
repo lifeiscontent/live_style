@@ -87,7 +87,7 @@ defmodule LiveStyle.CSSValue do
   def to_css(v, _property) when is_tuple(v) do
     raise ArgumentError,
           "Invalid property value: tuple values are not supported. " <>
-            "Use a conditional map/keyword list for selectors (e.g. %{:default => ..., ':hover' => ...}) " <>
+            "Use a conditional keyword list for selectors (e.g. [default: ..., ':hover': ...]) " <>
             "or a string/number value for plain properties."
   end
 
@@ -135,7 +135,7 @@ defmodule LiveStyle.CSSValue do
   #
   # This allows:
   #
-  #   class :parent, %{var({Tokens, :childColor}) => "red"}
+  #   class :parent, [{var({Tokens, :childColor}), "red"}]
   #
   # to generate:
   #

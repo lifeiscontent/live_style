@@ -15,7 +15,7 @@ defmodule LiveStyle.PropertyType do
         import LiveStyle.PropertyType
 
         vars primary: color("black"),
-             accent: color(%{:default => "blue", "@media (prefers-color-scheme: dark)" => "lightblue"})
+             accent: color([default: "blue", "@media (prefers-color-scheme: dark)": "lightblue"])
       end
 
       defmodule MyApp.Animation do
@@ -59,8 +59,8 @@ defmodule LiveStyle.PropertyType do
 
       # In a component:
       keyframes :rotate,
-        from: %{var(:angle) => "0deg"},
-        to: %{var(:angle) => "360deg"}
+        from: [{var(:angle), "0deg"}],
+        to: [{var(:angle), "360deg"}]
 
       class :gradient,
         background_image: "conic-gradient(from \#{var({MyApp.Animation, :angle})}, red, blue)",
