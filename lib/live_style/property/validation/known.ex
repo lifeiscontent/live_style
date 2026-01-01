@@ -1,7 +1,7 @@
 defmodule LiveStyle.Property.Validation.Known do
   @moduledoc false
 
-  alias LiveStyle.Data.Parser
+  alias LiveStyle.PropertyMetadata.Parser
 
   @data_dir Parser.data_dir()
   @known_properties_path Path.join(@data_dir, "css_properties.txt")

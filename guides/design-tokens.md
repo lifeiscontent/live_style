@@ -4,16 +4,16 @@ Design tokens are the foundational values of your design system: colors, spacing
 
 ## Overview
 
-Use `LiveStyle.Tokens` to define:
+LiveStyle uses a module-as-namespace pattern for tokens:
 
-- **CSS Variables** (`css_vars/2`) - Values that become CSS custom properties (use for colors and themed values)
-- **Constants** (`css_consts/2`) - Compile-time values inlined directly into CSS (use for static values)
-- **Keyframes** (`css_keyframes/2`) - Animation definitions
+- **CSS Variables** (`vars`) - Values that become CSS custom properties (use for colors and themed values)
+- **Constants** (`consts`) - Compile-time values inlined directly into CSS (use for static values)
+- **Keyframes** (`keyframes`) - Animation definitions
 - **Typed Variables** - Variables with CSS type information for animation
 
 ## When to Use Variables vs Constants
 
-| Use `css_vars` | Use `css_consts` |
+| Use `vars` | Use `consts` |
 |----------------|------------------|
 | Colors (for theming) | Spacing scales (unless themeable) |
 | Semantic tokens (themed) | Font families |
@@ -23,30 +23,34 @@ Use `LiveStyle.Tokens` to define:
 | | Breakpoints |
 | | Z-index values |
 
-**Rule of thumb:** If the value might change with a theme (including things like a compact/cozy spacing scale) or needs to be a CSS variable for animation, use `css_vars`. Otherwise, use `css_consts` for better performance (no CSS variable overhead).
+**Rule of thumb:** If the value might change with a theme or needs to be animated, use `vars`. Otherwise, use `consts` for better performance.
 
 ## CSS Variables
 
-Define CSS custom properties with `css_vars/2`. Use for colors and values that need to change:
+Define CSS custom properties with `vars`. Each module defines its own tokens:
 
 ```elixir
-defmodule MyApp.Tokens do
-  use LiveStyle.Tokens
+defmodule MyApp.Colors do
+  use LiveStyle
 
-  # Colors - use css_vars (needed for theming)
-  css_vars :colors,
+  vars [
     white: "#ffffff",
     black: "#000000",
     gray_50: "#f9fafb",
     gray_900: "#111827",
     indigo_600: "#4f46e5",
     indigo_700: "#4338ca"
+  ]
+end
 
-  # Semantic tokens - use css_vars (themed)
-  css_vars :semantic,
-    text_primary: css_var({:colors, :gray_900}),
-    text_inverse: css_var({:colors, :white}),
-    fill_primary: css_var({:colors, :indigo_600})
+defmodule MyApp.Semantic do
+  use LiveStyle
+
+  vars [
+    text_primary: var({MyApp.Colors, :gray_900}),
+    text_inverse: var({MyApp.Colors, :white}),
+    fill_primary: var({MyApp.Colors, :indigo_600})
+  ]
 end
 ```
 
@@ -62,113 +66,100 @@ This generates CSS like:
 
 ### Referencing Variables
 
-Use `css_var/1` to reference variables in your styles:
+Use `var/1` to reference variables in your styles:
 
 ```elixir
 defmodule MyApp.Card do
-  use LiveStyle.Sheet
+  use LiveStyle
 
-  css_class :card,
-    background_color: css_var({MyApp.Tokens, :colors, :white}),
-    color: css_var({MyApp.Tokens, :semantic, :text_primary})
+  class :card,
+    background_color: var({MyApp.Colors, :white}),
+    color: var({MyApp.Semantic, :text_primary})
 end
 ```
-
-### Cross-Referencing Variables
-
-Variables can reference other variables (useful for semantic tokens):
-
-```elixir
-defmodule MyApp.Tokens do
-  use LiveStyle.Tokens
-
-  # Raw color palette
-  css_vars :colors,
-    indigo_600: "#4f46e5",
-    gray_900: "#111827"
-
-  # Semantic tokens that reference colors
-  css_vars :semantic,
-    text_primary: css_var({:colors, :gray_900}),
-    fill_primary: css_var({:colors, :indigo_600})
-end
-```
-
-Note: When referencing within the same module, use `{:namespace, :name}` instead of `{Module, :namespace, :name}`.
 
 ## Constants
 
-Constants are compile-time values inlined directly into CSS. Use for static values like spacing, typography, radii, and breakpoints:
+Constants are compile-time values inlined directly into CSS. Define each category in its own module:
 
 ```elixir
-defmodule MyApp.Tokens do
-  use LiveStyle.Tokens
+defmodule MyApp.Spacing do
+  use LiveStyle
 
-  # Spacing - static, use css_consts
-  css_consts :space,
+  consts [
     xs: "4px",
     sm: "8px",
     md: "16px",
     lg: "24px",
     xl: "32px"
+  ]
+end
 
-  # Typography - static, use css_consts
-  css_consts :font,
-    sans: "Inter, system-ui, sans-serif",
-    mono: "JetBrains Mono, monospace"
+defmodule MyApp.FontSize do
+  use LiveStyle
 
-  css_consts :font_size,
+  consts [
     sm: "0.875rem",
     base: "1rem",
     lg: "1.125rem",
     xl: "1.25rem"
+  ]
+end
 
-  css_consts :font_weight,
-    normal: "400",
-    medium: "500",
-    semibold: "600",
-    bold: "700"
+defmodule MyApp.Radius do
+  use LiveStyle
 
-  # Border radius - static, use css_consts
-  css_consts :radius,
+  consts [
     sm: "4px",
     md: "8px",
     lg: "12px",
     full: "9999px"
+  ]
+end
 
-  # Shadows - static, use css_consts
-  css_consts :shadow,
+defmodule MyApp.Shadow do
+  use LiveStyle
+
+  consts [
     sm: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
     md: "0 4px 6px -1px rgb(0 0 0 / 0.1)"
+  ]
+end
 
-  # Breakpoints - static, use css_consts
-  css_consts :breakpoint,
-    sm: "(min-width: 640px)",
-    md: "(min-width: 768px)",
-    lg: "(min-width: 1024px)",
-    xl: "(min-width: 1280px)"
+defmodule MyApp.Breakpoints do
+  use LiveStyle
 
-  # Z-index - static, use css_consts
-  css_consts :z,
+  consts [
+    sm: "@media (min-width: 640px)",
+    md: "@media (min-width: 768px)",
+    lg: "@media (min-width: 1024px)",
+    xl: "@media (min-width: 1280px)"
+  ]
+end
+
+defmodule MyApp.ZIndex do
+  use LiveStyle
+
+  consts [
     dropdown: "1000",
     modal: "2000",
     toast: "3000"
+  ]
 end
 ```
 
 ### Using Constants in Styles
 
-Reference constants with `css_const/1`:
+Reference constants with `const/1`:
 
 ```elixir
 defmodule MyApp.Button do
-  use LiveStyle.Sheet
+  use LiveStyle
 
-  css_class :button,
-    padding: css_const({MyApp.Tokens, :space, :md}),
-    font_size: css_const({MyApp.Tokens, :font_size, :base}),
-    font_weight: css_const({MyApp.Tokens, :font_weight, :medium}),
-    border_radius: css_const({MyApp.Tokens, :radius, :md})
+  class :button,
+    padding: const({MyApp.Spacing, :md}),
+    font_size: const({MyApp.FontSize, :base}),
+    border_radius: const({MyApp.Radius, :md})
 end
 ```
 
@@ -176,25 +167,15 @@ end
 
 ```elixir
 defmodule MyApp.Container do
-  use LiveStyle.Sheet
+  use LiveStyle
 
-  css_class :container,
+  class :container,
     padding: %{
-      :default => css_const({MyApp.Tokens, :space, :md}),
-      "@media #{css_const({MyApp.Tokens, :breakpoint, :md})}" => css_const({MyApp.Tokens, :space, :lg}),
-      "@media #{css_const({MyApp.Tokens, :breakpoint, :lg})}" => css_const({MyApp.Tokens, :space, :xl})
+      :default => const({MyApp.Spacing, :md}),
+      const({MyApp.Breakpoints, :md}) => const({MyApp.Spacing, :lg}),
+      const({MyApp.Breakpoints, :lg}) => const({MyApp.Spacing, :xl})
     }
 end
-```
-
-When using constants as map keys, use the map syntax with `=>`:
-
-```elixir
-css_class :responsive,
-  font_size: %{
-    :default => css_const({MyApp.Tokens, :font_size, :base}),
-    css_const({MyApp.Tokens, :breakpoint, :lg}) => css_const({MyApp.Tokens, :font_size, :lg})
-  }
 ```
 
 ## Keyframes
@@ -202,19 +183,21 @@ css_class :responsive,
 Define CSS `@keyframes` animations:
 
 ```elixir
-defmodule MyApp.Tokens do
-  use LiveStyle.Tokens
+defmodule MyApp.Animations do
+  use LiveStyle
 
-  css_keyframes :spin,
+  keyframes :spin, [
     from: [transform: "rotate(0deg)"],
     to: [transform: "rotate(360deg)"]
+  ]
 
-  css_keyframes :pulse,
+  keyframes :pulse, [
     "0%": [opacity: "1"],
     "50%": [opacity: "0.5"],
     "100%": [opacity: "1"]
+  ]
 
-  css_keyframes :bounce,
+  keyframes :bounce, [
     "0%, 100%": [
       transform: "translateY(-25%)",
       animation_timing_function: "cubic-bezier(0.8, 0, 1, 1)"
@@ -223,38 +206,39 @@ defmodule MyApp.Tokens do
       transform: "translateY(0)",
       animation_timing_function: "cubic-bezier(0, 0, 0.2, 1)"
     ]
+  ]
 end
 ```
 
 ### Using Keyframes
 
-Reference keyframes with `css_keyframes/1`:
+Reference keyframes with `keyframes/1`:
 
 ```elixir
 defmodule MyApp.Spinner do
-  use LiveStyle.Sheet
+  use LiveStyle
 
-  css_class :spinner,
-    animation: "#{css_keyframes({MyApp.Tokens, :spin})} 1s linear infinite"
+  class :spinner,
+    animation: "#{keyframes({MyApp.Animations, :spin})} 1s linear infinite"
 
-  css_class :pulsing,
-    animation: "#{css_keyframes({MyApp.Tokens, :pulse})} 2s ease-in-out infinite"
+  class :pulsing,
+    animation: "#{keyframes({MyApp.Animations, :pulse})} 2s ease-in-out infinite"
 end
 ```
 
 ## Typed Variables
 
-For advanced use cases like animating gradients, you can specify the CSS type. These must be `css_vars` since they need `@property` rules:
+For animating CSS properties like gradients, specify the CSS type using `LiveStyle.CSS.Property`:
 
 ```elixir
-defmodule MyApp.Tokens do
-  use LiveStyle.Tokens
-  import LiveStyle.Types
+defmodule MyApp.Animation do
+  use LiveStyle
+  alias LiveStyle.CSS.Property
 
-  # Typed variables for animation - must use css_vars
-  css_vars :anim,
-    rotation: angle("0deg"),
-    progress: percentage("0%")
+  vars [
+    rotation: Property.angle("0deg"),
+    progress: Property.percentage("0%")
+  ]
 end
 ```
 
@@ -272,117 +256,70 @@ This generates CSS `@property` rules that enable browsers to interpolate these v
 
 | Function | CSS Syntax |
 |----------|------------|
-| `color/1` | `<color>` |
-| `length/1` | `<length>` |
-| `angle/1` | `<angle>` |
-| `integer/1` | `<integer>` |
-| `number/1` | `<number>` |
-| `time/1` | `<time>` |
-| `percentage/1` | `<percentage>` |
+| `Property.color/1` | `<color>` |
+| `Property.length/1` | `<length>` |
+| `Property.angle/1` | `<angle>` |
+| `Property.integer/1` | `<integer>` |
+| `Property.number/1` | `<number>` |
+| `Property.time/1` | `<time>` |
+| `Property.percentage/1` | `<percentage>` |
 
 ## Recommended Token Structure
 
 A recommended structure for larger applications:
 
+```
+lib/my_app/tokens/
+├── colors.ex          # MyApp.Colors - raw color palette
+├── semantic.ex        # MyApp.Semantic - themed semantic tokens
+├── spacing.ex         # MyApp.Spacing - spacing scale
+├── font_size.ex       # MyApp.FontSize - typography sizes
+├── radius.ex          # MyApp.Radius - border radii
+├── shadow.ex          # MyApp.Shadow - box shadows
+├── breakpoints.ex     # MyApp.Breakpoints - media queries
+├── z_index.ex         # MyApp.ZIndex - z-index values
+└── animations.ex      # MyApp.Animations - keyframes
+```
+
+Example Colors module:
+
 ```elixir
-defmodule MyApp.Tokens do
-  use LiveStyle.Tokens
-  import LiveStyle.Types
+defmodule MyApp.Colors do
+  use LiveStyle
 
-  # =========================================
-  # CSS Variables (values that can change)
-  # =========================================
-
-  # Colors - raw palette
-  css_vars :colors,
+  vars [
     white: "#ffffff",
     black: "#000000",
     gray_50: "#f9fafb",
+    gray_100: "#f3f4f6",
     gray_900: "#111827",
     indigo_500: "#6366f1",
     indigo_600: "#4f46e5"
+  ]
+end
+```
 
-  # Semantic tokens - themed
-  css_vars :semantic,
-    text_primary: css_var({:colors, :gray_900}),
-    text_inverse: css_var({:colors, :white}),
-    fill_page: css_var({:colors, :white}),
-    fill_surface: css_var({:colors, :gray_50}),
-    fill_primary: css_var({:colors, :indigo_600})
+Example Semantic module with theme:
 
-  # Dark theme overrides
-  css_theme :semantic, :dark,
-    text_primary: css_var({:colors, :gray_50}),
-    text_inverse: css_var({:colors, :gray_900}),
-    fill_page: css_var({:colors, :gray_900}),
-    fill_surface: css_var({:colors, :gray_900}),
-    fill_primary: css_var({:colors, :indigo_500})
+```elixir
+defmodule MyApp.Semantic do
+  use LiveStyle
 
-  # Typed variables for animation
-  css_vars :anim,
-    rotation: angle("0deg")
+  vars [
+    text_primary: var({MyApp.Colors, :gray_900}),
+    text_inverse: var({MyApp.Colors, :white}),
+    fill_page: var({MyApp.Colors, :white}),
+    fill_surface: var({MyApp.Colors, :gray_50}),
+    fill_primary: var({MyApp.Colors, :indigo_600})
+  ]
 
-  # =========================================
-  # Constants (static values)
-  # =========================================
-
-  css_consts :space,
-    px: "1px",
-    xs: "4px",
-    sm: "8px",
-    md: "16px",
-    lg: "24px",
-    xl: "32px"
-
-  css_consts :font,
-    sans: "Inter, system-ui, sans-serif",
-    mono: "JetBrains Mono, monospace"
-
-  css_consts :font_size,
-    xs: "0.75rem",
-    sm: "0.875rem",
-    base: "1rem",
-    lg: "1.125rem",
-    xl: "1.25rem"
-
-  css_consts :font_weight,
-    normal: "400",
-    medium: "500",
-    semibold: "600",
-    bold: "700"
-
-  css_consts :radius,
-    sm: "4px",
-    md: "8px",
-    lg: "12px",
-    xl: "16px",
-    full: "9999px"
-
-  css_consts :shadow,
-    sm: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
-    md: "0 4px 6px -1px rgb(0 0 0 / 0.1)"
-
-  css_consts :breakpoint,
-    sm: "(min-width: 640px)",
-    md: "(min-width: 768px)",
-    lg: "(min-width: 1024px)"
-
-  css_consts :z,
-    dropdown: "1000",
-    modal: "2000",
-    toast: "3000"
-
-  # =========================================
-  # Keyframes
-  # =========================================
-
-  css_keyframes :fade_in,
-    from: [opacity: "0"],
-    to: [opacity: "1"]
-
-  css_keyframes :slide_up,
-    from: [transform: "translateY(10px)", opacity: "0"],
-    to: [transform: "translateY(0)", opacity: "1"]
+  theme :dark, [
+    text_primary: var({MyApp.Colors, :gray_50}),
+    text_inverse: var({MyApp.Colors, :gray_900}),
+    fill_page: var({MyApp.Colors, :gray_900}),
+    fill_surface: var({MyApp.Colors, :gray_900}),
+    fill_primary: var({MyApp.Colors, :indigo_500})
+  ]
 end
 ```
 

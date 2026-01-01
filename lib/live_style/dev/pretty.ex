@@ -30,7 +30,7 @@ defmodule LiveStyle.Dev.Pretty do
       IO.puts("  #{IO.ANSI.faint()}Static classes:#{IO.ANSI.reset()}")
 
       Enum.each(static, fn name ->
-        class_string = LiveStyle.get_css_class(module, name)
+        class_string = LiveStyle.Compiler.get_css_class(module, name)
         IO.puts("    :#{name} #{IO.ANSI.faint()}→ #{class_string}#{IO.ANSI.reset()}")
       end)
 

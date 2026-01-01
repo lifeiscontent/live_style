@@ -14,20 +14,20 @@ defmodule LiveStyle.PositionTry do
 
   Define position-try rules in a tokens module or inline:
 
-      defmodule MyApp.Tokens do
-        use LiveStyle.Tokens
+      defmodule MyApp.Positioning do
+        use LiveStyle
 
-        css_position_try :bottom_fallback,
+        position_try :bottom_fallback,
           top: "anchor(bottom)",
           left: "anchor(center)"
       end
 
   Or use inline in a style class:
 
-      css_class :tooltip,
+      class :tooltip,
         position: "absolute",
         position_anchor: "--trigger",
-        position_try_fallbacks: css_position_try(
+        position_try_fallbacks: position_try(
           bottom: "anchor(top)",
           left: "anchor(center)"
         )
@@ -49,10 +49,12 @@ defmodule LiveStyle.PositionTry do
   - Logical (inset-inline-start, margin-block) - browser handles RTL automatically
   """
 
-  alias LiveStyle.Hash
-  alias LiveStyle.Manifest
-  alias LiveStyle.Property
-  alias LiveStyle.Value
+  alias LiveStyle.{CSSValue, Hash, Manifest, Property}
+
+  use LiveStyle.Registry,
+    entity_name: "Position-try",
+    manifest_type: :position_try,
+    ref_field: :ident
 
   @doc false
   @spec allowed_properties() :: MapSet.t()
@@ -60,69 +62,50 @@ defmodule LiveStyle.PositionTry do
 
   @doc """
   Defines a named position-try rule and stores it in the manifest.
-  Called from the css_position_try/2 macro.
+  Called from the position_try/2 macro.
   """
   @spec define(module(), atom(), map(), String.t()) :: :ok
-  def define(module, name, declarations, css_name) do
+  def define(module, name, declarations, ident) do
     key = Manifest.simple_key(module, name)
 
     entry = %{
-      css_name: css_name,
+      ident: ident,
       declarations: declarations
     }
 
-    # Only update if the entry has changed (or doesn't exist)
-    LiveStyle.Storage.update(fn manifest ->
-      case Manifest.get_position_try(manifest, key) do
-        ^entry -> manifest
-        _ -> Manifest.put_position_try(manifest, key, entry)
-      end
-    end)
-
+    store_entry(key, entry)
     :ok
   end
 
   @doc """
   Defines an anonymous position-try rule and stores it in the manifest.
-  Called from the css_position_try/1 macro with inline declarations.
+  Called from the position_try/1 macro with inline declarations.
   """
   @spec define_anonymous(module(), map(), String.t()) :: :ok
-  def define_anonymous(module, declarations, css_name) do
-    key = "#{module}:__anon_position_try__:#{css_name}"
+  def define_anonymous(module, declarations, ident) do
+    key = "#{module}:__anon_position_try__:#{ident}"
 
     entry = %{
-      css_name: css_name,
+      ident: ident,
       declarations: declarations
     }
 
-    # Only update if the entry has changed (or doesn't exist)
-    LiveStyle.Storage.update(fn manifest ->
-      case Manifest.get_position_try(manifest, key) do
-        ^entry -> manifest
-        _ -> Manifest.put_position_try(manifest, key, entry)
-      end
-    end)
-
+    store_entry(key, entry)
     :ok
   end
 
-  @doc """
-  Looks up a position-try by module and name.
-  Returns the css_name or raises if not found.
-  """
-  @spec lookup!(module(), atom()) :: String.t()
-  def lookup!(module, name) do
-    %{css_name: css_name} = LiveStyle.Manifest.Access.position_try!(module, name)
-    css_name
+  @doc false
+  @spec generate_ident(map()) :: String.t()
+  def generate_ident(declarations) do
+    ident(declarations)
   end
 
-  @doc false
-  @spec generate_css_name(map()) :: String.t()
-  def generate_css_name(declarations) do
+  # Content-based CSS name generation (private)
+  defp ident(declarations) do
     css_string =
       declarations
       |> Enum.map(fn {k, v} ->
-        css_prop = Value.to_css_property(k)
+        css_prop = CSSValue.to_css_property(k)
         {css_prop, v}
       end)
       |> Enum.sort_by(fn {k, _} -> k end)
@@ -147,7 +130,7 @@ defmodule LiveStyle.PositionTry do
     invalid_props =
       declarations
       |> Map.keys()
-      |> Enum.map(&Value.to_css_property/1)
+      |> Enum.map(&CSSValue.to_css_property/1)
       |> Enum.reject(&MapSet.member?(allowed, &1))
 
     if Enum.empty?(invalid_props) do

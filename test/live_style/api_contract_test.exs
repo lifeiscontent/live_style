@@ -20,60 +20,54 @@ end
 
 # Top-level test modules for cleaner manifest keys
 defmodule LiveStyle.APIContractTest.TokensModule do
-  @moduledoc "Test module for css_vars, css_consts, css_keyframes"
+  @moduledoc "Test module for vars, consts, keyframes"
   use LiveStyle
 
-  # css_vars/2 - Define CSS custom properties
-  css_vars(:color,
+  # vars - Define CSS custom properties
+  vars(
     white: "#ffffff",
     primary: "#3b82f6",
-    danger: "#ef4444"
+    danger: "#ef4444",
+    # typed values
+    angle: LiveStyle.PropertyType.angle("0deg"),
+    duration: LiveStyle.PropertyType.time("200ms")
   )
 
-  # css_vars/2 with typed values
-  css_vars(:anim,
-    angle: LiveStyle.Types.angle("0deg"),
-    duration: LiveStyle.Types.time("200ms")
-  )
-
-  # css_consts/2 - Define compile-time constants
-  css_consts(:breakpoint,
+  # consts - Define compile-time constants
+  consts(
     sm: "@media (max-width: 640px)",
     md: "@media (min-width: 641px) and (max-width: 1024px)",
-    lg: "@media (min-width: 1025px)"
-  )
-
-  css_consts(:z,
+    lg: "@media (min-width: 1025px)",
     modal: "50",
     tooltip: "100"
   )
 
-  # css_keyframes/2 - Define keyframe animations
-  css_keyframes(:spin,
+  # keyframes/2 - Define keyframe animations
+  keyframes(:spin,
     from: %{transform: "rotate(0deg)"},
     to: %{transform: "rotate(360deg)"}
   )
 
-  css_keyframes(:fade_in,
+  keyframes(:fade_in,
     "0%": %{opacity: "0"},
     "100%": %{opacity: "1"}
   )
 
-  # css_theme/3 - Define theme overrides
-  css_theme(:color, :dark,
+  # theme/2 - Define theme overrides (in same module as vars)
+  theme(:dark,
     white: "#000000",
     primary: "#8ab4f8"
   )
 end
 
 defmodule LiveStyle.APIContractTest.StylesModule do
-  @moduledoc "Test module for css_class and style definitions"
+  @moduledoc "Test module for class and style definitions"
   use LiveStyle
 
   alias LiveStyle.APIContractTest.TokensModule
 
   # Basic static rule
-  css_class(:button,
+  class(:button,
     display: "flex",
     padding: "8px 16px",
     background_color: "blue",
@@ -81,7 +75,7 @@ defmodule LiveStyle.APIContractTest.StylesModule do
   )
 
   # Rule with pseudo-classes
-  css_class(:link,
+  class(:link,
     color: [
       default: "blue",
       ":hover": "darkblue",
@@ -91,7 +85,7 @@ defmodule LiveStyle.APIContractTest.StylesModule do
   )
 
   # Rule with media queries
-  css_class(:container,
+  class(:container,
     padding: [
       default: "16px",
       "@media (min-width: 768px)": "32px",
@@ -100,7 +94,7 @@ defmodule LiveStyle.APIContractTest.StylesModule do
   )
 
   # Rule with pseudo-elements
-  css_class(:with_before,
+  class(:with_before,
     position: "relative",
     "::before": [
       content: "'*'",
@@ -109,37 +103,37 @@ defmodule LiveStyle.APIContractTest.StylesModule do
   )
 
   # Rule with array fallbacks
-  css_class(:sticky,
+  class(:sticky,
     position: ["sticky", "fixed"]
   )
 
   # Rule referencing tokens from another module
-  css_class(:themed,
-    color: css_var({TokensModule, :color, :primary}),
-    animation_name: css_keyframes({TokensModule, :spin})
+  class(:themed,
+    color: var({TokensModule, :primary}),
+    animation_name: keyframes({TokensModule, :spin})
   )
 
   # Dynamic rule with single parameter
-  css_class(:dynamic_opacity, fn opacity -> [opacity: opacity] end)
+  class(:dynamic_opacity, fn opacity -> [opacity: opacity] end)
 
   # Dynamic rule with multiple parameters
-  css_class(:dynamic_size, fn width, height -> [width: width, height: height] end)
+  class(:dynamic_size, fn width, height -> [width: width, height: height] end)
 
   # Rule with custom properties
-  css_class(:custom_props,
+  class(:custom_props,
     "--my-color": "red",
     "--my-size": 10
   )
 
   # Rule with nested pseudo-classes
-  css_class(:nested_pseudo,
+  class(:nested_pseudo,
     color: [
       ":hover": [":active": "red"]
     ]
   )
 
   # Rule with @supports
-  css_class(:supports_test,
+  class(:supports_test,
     display: [
       default: "block",
       "@supports (display: grid)": "grid"
@@ -148,53 +142,53 @@ defmodule LiveStyle.APIContractTest.StylesModule do
 end
 
 defmodule LiveStyle.APIContractTest.PositionTryModule do
-  @moduledoc "Test module for css_position_try"
+  @moduledoc "Test module for position_try"
   use LiveStyle
 
-  css_position_try(:bottom_fallback,
+  position_try(:bottom_fallback,
     top: "anchor(bottom)",
     left: "anchor(left)"
   )
 
-  css_position_try(:top_fallback,
+  position_try(:top_fallback,
     bottom: "anchor(top)",
     left: "anchor(left)"
   )
 end
 
 defmodule LiveStyle.APIContractTest.ViewTransitionModule do
-  @moduledoc "Test module for css_view_transition"
+  @moduledoc "Test module for view_transition_class"
   use LiveStyle
 
-  css_keyframes(:vt_fade_out,
+  keyframes(:vt_fade_out,
     from: %{opacity: "1"},
     to: %{opacity: "0"}
   )
 
-  css_keyframes(:vt_fade_in,
+  keyframes(:vt_fade_in,
     from: %{opacity: "0"},
     to: %{opacity: "1"}
   )
 
-  css_view_transition(:card_transition,
-    old: [animation_name: css_keyframes(:vt_fade_out), animation_duration: "250ms"],
-    new: [animation_name: css_keyframes(:vt_fade_in), animation_duration: "250ms"]
+  view_transition_class(:card_transition,
+    old: [animation_name: keyframes(:vt_fade_out), animation_duration: "250ms"],
+    new: [animation_name: keyframes(:vt_fade_in), animation_duration: "250ms"]
   )
 end
 
 defmodule LiveStyle.APIContractTest.IncludeModule do
-  @moduledoc "Test module for __include__ feature"
+  @moduledoc "Test module for include() feature"
   use LiveStyle
 
-  css_class(:base,
+  class(:base,
     display: "flex",
     align_items: "center"
   )
 
-  css_class(:extended,
-    __include__: [:base],
+  class(:extended, [
+    include(:base),
     justify_content: "space-between"
-  )
+  ])
 end
 
 defmodule LiveStyle.APIContractTest.WhenModule do
@@ -203,14 +197,14 @@ defmodule LiveStyle.APIContractTest.WhenModule do
   alias LiveStyle.When
 
   # ancestor takes a pseudo selector like :hover, not a class
-  css_class(:with_ancestor,
+  class(:with_ancestor,
     color: %{
       :default => "black",
       When.ancestor(":hover") => "blue"
     }
   )
 
-  css_class(:with_descendant,
+  class(:with_descendant,
     color: %{
       :default => "gray",
       When.descendant(":focus") => "blue"
@@ -223,7 +217,7 @@ end
 # ============================================================================
 
 defmodule LiveStyle.APIContractTest.Tests do
-  use LiveStyle.TestCase, async: true
+  use LiveStyle.TestCase
 
   alias LiveStyle.APIContractTest.{
     IncludeModule,
@@ -234,15 +228,18 @@ defmodule LiveStyle.APIContractTest.Tests do
     WhenModule
   }
 
-  describe "css_vars/2 API" do
-    test "defines CSS variables accessible via css_var/1" do
-      # css_var should return var(--hash) format
-      var_ref = LiveStyle.Hash.var_name(TokensModule, :color, :white)
-      assert var_ref =~ ~r/^--[a-z0-9]+$/
+  alias LiveStyle.Compiler
+  alias LiveStyle.Compiler.Class
+
+  describe "vars API" do
+    test "defines CSS variables accessible via var/1" do
+      # var should return var(--hash) format
+      var_entry = LiveStyle.Vars.lookup!({TokensModule, :white})
+      assert var_entry.ident =~ ~r/^--[a-z0-9]+$/
     end
 
     test "typed variables include type information" do
-      var_entry = LiveStyle.get_metadata(TokensModule, {:var, :anim, :angle})
+      var_entry = LiveStyle.Vars.lookup!({TokensModule, :angle})
 
       assert var_entry != nil
       assert var_entry.type != nil
@@ -250,29 +247,35 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
   end
 
-  describe "css_consts/2 API" do
+  describe "consts API" do
     test "defines constants accessible at compile time" do
-      const_value = LiveStyle.get_metadata(TokensModule, {:const, :breakpoint, :lg})
+      const_entry = LiveStyle.Consts.lookup!({TokensModule, :lg})
 
-      assert const_value == "@media (min-width: 1025px)"
+      assert const_entry == %{value: "@media (min-width: 1025px)"}
+    end
+
+    test "ref returns just the value" do
+      value = LiveStyle.Consts.ref({TokensModule, :lg})
+
+      assert value == "@media (min-width: 1025px)"
     end
   end
 
-  describe "css_keyframes/2 API" do
+  describe "keyframes/2 API" do
     test "defines keyframes with content-hashed name" do
-      keyframes = LiveStyle.get_metadata(TokensModule, {:keyframes, :spin})
+      keyframes = LiveStyle.Keyframes.lookup!({TokensModule, :spin})
 
       assert keyframes != nil
       # StyleX keyframes naming pattern: x<hash>-B
-      assert keyframes.css_name =~ ~r/^x[a-z0-9]+-B$/
+      assert keyframes.ident =~ ~r/^x[a-z0-9]+-B$/
       assert keyframes.ltr =~ "@keyframes"
       assert keyframes.priority == 0
     end
   end
 
-  describe "css_class/2 API" do
+  describe "class/2 API" do
     test "static rules generate atomic classes" do
-      rule = LiveStyle.get_metadata(StylesModule, {:class, :button})
+      rule = Class.lookup!({StylesModule, :button})
 
       assert rule != nil
       assert rule.class_string != ""
@@ -282,7 +285,7 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
 
     test "conditional rules generate multiple classes per property" do
-      rule = LiveStyle.get_metadata(StylesModule, {:class, :link})
+      rule = Class.lookup!({StylesModule, :link})
 
       # color should have classes map with :default, :hover, etc.
       color_classes = rule.atomic_classes["color"].classes
@@ -292,13 +295,13 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
 
     test "dynamic rules are marked as dynamic" do
-      rule = LiveStyle.get_metadata(StylesModule, {:class, :dynamic_opacity})
+      rule = Class.lookup!({StylesModule, :dynamic_opacity})
 
       assert rule.dynamic == true
     end
 
     test "array fallbacks generate multiple declarations" do
-      rule = LiveStyle.get_metadata(StylesModule, {:class, :sticky})
+      rule = Class.lookup!({StylesModule, :sticky})
 
       position = rule.atomic_classes["position"]
       # Should have multiple values in LTR
@@ -307,39 +310,39 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
   end
 
-  describe "css_theme/3 API" do
+  describe "theme/2 API" do
     test "defines theme with overrides" do
-      theme = LiveStyle.get_metadata(TokensModule, {:theme, :color, :dark})
+      theme = LiveStyle.Theme.lookup!({TokensModule, :dark})
 
       assert theme != nil
       # Theme names follow a pattern (may or may not start with x)
-      assert is_binary(theme.css_name)
-      assert String.length(theme.css_name) > 0
+      assert is_binary(theme.ident)
+      assert String.length(theme.ident) > 0
       assert is_map(theme.overrides)
     end
   end
 
-  describe "css_position_try/2 API" do
+  describe "position_try/2 API" do
     test "defines position-try rules" do
-      position_try = LiveStyle.get_metadata(PositionTryModule, {:position_try, :bottom_fallback})
+      position_try = LiveStyle.PositionTry.lookup!({PositionTryModule, :bottom_fallback})
 
       assert position_try != nil
-      assert position_try.css_name =~ ~r/^--x[a-z0-9]+$/
+      assert position_try.ident =~ ~r/^--x[a-z0-9]+$/
     end
   end
 
-  describe "css_view_transition/2 API" do
+  describe "view_transition_class/2 API" do
     test "defines view transition with content-hashed name" do
-      vt = LiveStyle.get_metadata(ViewTransitionModule, {:view_transition, :card_transition})
+      vt = LiveStyle.ViewTransition.lookup!({ViewTransitionModule, :card_transition})
 
       assert vt != nil
-      assert vt.css_name =~ ~r/^x[a-z0-9]+$/
+      assert vt.ident =~ ~r/^x[a-z0-9]+$/
     end
   end
 
   describe "__include__ feature" do
     test "extended rule includes base rule declarations" do
-      rule = LiveStyle.get_metadata(IncludeModule, {:class, :extended})
+      rule = Class.lookup!({IncludeModule, :extended})
 
       # Should have display from base
       assert Map.has_key?(rule.atomic_classes, "display")
@@ -350,7 +353,7 @@ defmodule LiveStyle.APIContractTest.Tests do
 
   describe "css/1 generated function API" do
     test "returns Attrs struct for single rule" do
-      attrs = LiveStyle.get_css(StylesModule, :button)
+      attrs = Compiler.get_css(StylesModule, :button)
 
       assert %LiveStyle.Attrs{} = attrs
       assert is_binary(attrs.class)
@@ -358,21 +361,21 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
 
     test "returns Attrs struct for list of rules" do
-      attrs = LiveStyle.get_css(StylesModule, [:button, :link])
+      attrs = Compiler.get_css(StylesModule, [:button, :link])
 
       assert %LiveStyle.Attrs{} = attrs
       assert is_binary(attrs.class)
     end
 
     test "handles nil and false in list (conditionals)" do
-      attrs = LiveStyle.get_css(StylesModule, [:button, nil, false, :link])
+      attrs = Compiler.get_css(StylesModule, [:button, nil, false, :link])
 
       assert %LiveStyle.Attrs{} = attrs
       assert is_binary(attrs.class)
     end
 
     test "handles dynamic rules with values" do
-      attrs = LiveStyle.get_css(StylesModule, [:button, {:dynamic_opacity, ["0.5"]}])
+      attrs = Compiler.get_css(StylesModule, [:button, {:dynamic_opacity, ["0.5"]}])
 
       assert %LiveStyle.Attrs{} = attrs
       assert is_binary(attrs.class)
@@ -381,7 +384,7 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
 
     test "dynamic rules return CSS variables in style" do
-      attrs = LiveStyle.get_css(StylesModule, [{:dynamic_opacity, ["0.5"]}])
+      attrs = Compiler.get_css(StylesModule, [{:dynamic_opacity, ["0.5"]}])
 
       assert %LiveStyle.Attrs{} = attrs
       assert is_binary(attrs.class)
@@ -391,7 +394,7 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
 
     test "dynamic rules with multiple params return all CSS variables" do
-      attrs = LiveStyle.get_css(StylesModule, [{:dynamic_size, ["100px", "200px"]}])
+      attrs = Compiler.get_css(StylesModule, [{:dynamic_size, ["100px", "200px"]}])
 
       assert %LiveStyle.Attrs{} = attrs
       assert is_binary(attrs.class)
@@ -404,16 +407,16 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
   end
 
-  describe "css_class/1 generated function API" do
+  describe "class/1 generated function API" do
     test "returns string for single rule" do
-      class = LiveStyle.get_css_class(StylesModule, :button)
+      class = Compiler.get_css_class(StylesModule, :button)
 
       assert is_binary(class)
       assert class != ""
     end
 
     test "returns string for list of rules" do
-      class = LiveStyle.get_css_class(StylesModule, [:button, :link])
+      class = Compiler.get_css_class(StylesModule, [:button, :link])
 
       assert is_binary(class)
     end
@@ -437,7 +440,7 @@ defmodule LiveStyle.APIContractTest.Tests do
 
   describe "LiveStyle.When contextual selectors API" do
     test "ancestor/2 is available and generates correct selector" do
-      rule = LiveStyle.get_metadata(WhenModule, {:class, :with_ancestor})
+      rule = Class.lookup!({WhenModule, :with_ancestor})
 
       assert rule != nil
       # The rule should have a color class
@@ -445,53 +448,56 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
 
     test "descendant/2 is available and generates correct selector" do
-      rule = LiveStyle.get_metadata(WhenModule, {:class, :with_descendant})
+      rule = Class.lookup!({WhenModule, :with_descendant})
 
       assert rule != nil
     end
 
     test "ancestor returns correct selector format" do
       prefix = LiveStyle.Config.class_name_prefix()
-      default_marker = LiveStyle.Marker.default()
+      marker_class = LiveStyle.Marker.to_class(LiveStyle.Marker.default())
       selector = LiveStyle.When.ancestor(":hover")
       # Uses the configured default marker
-      assert selector == ":where(.#{default_marker}:hover *)"
+      assert selector == ":where(.#{marker_class}:hover *)"
       assert String.contains?(selector, "#{prefix}-default-marker")
     end
 
     test "descendant returns correct selector format" do
-      default_marker = LiveStyle.Marker.default()
+      marker_class = LiveStyle.Marker.to_class(LiveStyle.Marker.default())
       selector = LiveStyle.When.descendant(":focus")
-      assert selector == ":where(:has(.#{default_marker}:focus))"
+      assert selector == ":where(:has(.#{marker_class}:focus))"
     end
 
     test "sibling_before returns correct selector format" do
-      default_marker = LiveStyle.Marker.default()
+      marker_class = LiveStyle.Marker.to_class(LiveStyle.Marker.default())
       selector = LiveStyle.When.sibling_before(":checked")
-      assert selector == ":where(.#{default_marker}:checked ~ *)"
+      assert selector == ":where(.#{marker_class}:checked ~ *)"
     end
 
-    test "marker returns default marker class" do
+    test "marker returns default marker struct" do
       prefix = LiveStyle.Config.class_name_prefix()
       marker = LiveStyle.Marker.default()
-      # Default marker is derived from configured prefix
-      assert marker == "#{prefix}-default-marker"
+      # Default marker is a struct with the class derived from configured prefix
+      assert %LiveStyle.Marker{class: class} = marker
+      assert class == "#{prefix}-default-marker"
     end
 
-    test "marker with custom name generates unique marker" do
+    test "marker with custom name generates unique marker struct" do
       prefix = LiveStyle.Config.class_name_prefix()
-      marker = LiveStyle.Marker.define(:my_marker)
-      # Custom markers generate a unique hash-based class name (StyleX format: {prefix}{hash})
-      assert is_binary(marker)
-      assert String.starts_with?(marker, prefix)
+      marker = LiveStyle.Marker.ref(:my_marker)
+
+      # Custom markers are structs with unique hash-based class name (StyleX format: {prefix}{hash})
+      assert %LiveStyle.Marker{class: class} = marker
+      assert is_binary(class)
+      assert String.starts_with?(class, prefix)
       # Should NOT have the "-marker-" or "-default-marker" in it
-      refute String.contains?(marker, "-marker-")
+      refute String.contains?(class, "-marker-")
     end
   end
 
-  describe "LiveStyle.Types API" do
+  describe "LiveStyle.PropertyType API" do
     test "color/1 returns typed value" do
-      typed = LiveStyle.Types.color("#ff0000")
+      typed = LiveStyle.PropertyType.color("#ff0000")
 
       assert typed.__type__ == :typed_var
       assert typed.syntax == "<color>"
@@ -499,7 +505,7 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
 
     test "length/1 returns typed value" do
-      typed = LiveStyle.Types.length("10px")
+      typed = LiveStyle.PropertyType.length("10px")
 
       assert typed.__type__ == :typed_var
       assert typed.syntax == "<length>"
@@ -507,7 +513,7 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
 
     test "angle/1 returns typed value" do
-      typed = LiveStyle.Types.angle("45deg")
+      typed = LiveStyle.PropertyType.angle("45deg")
 
       assert typed.__type__ == :typed_var
       assert typed.syntax == "<angle>"
@@ -515,7 +521,7 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
 
     test "time/1 returns typed value" do
-      typed = LiveStyle.Types.time("200ms")
+      typed = LiveStyle.PropertyType.time("200ms")
 
       assert typed.__type__ == :typed_var
       assert typed.syntax == "<time>"
@@ -523,7 +529,7 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
 
     test "number/1 returns typed value" do
-      typed = LiveStyle.Types.number("1.5")
+      typed = LiveStyle.PropertyType.number("1.5")
 
       assert typed.__type__ == :typed_var
       assert typed.syntax == "<number>"
@@ -531,7 +537,7 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
 
     test "integer/1 returns typed value" do
-      typed = LiveStyle.Types.integer(5)
+      typed = LiveStyle.PropertyType.integer(5)
 
       assert typed.__type__ == :typed_var
       assert typed.syntax == "<integer>"
@@ -540,7 +546,7 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
 
     test "percentage/1 returns typed value" do
-      typed = LiveStyle.Types.percentage("50%")
+      typed = LiveStyle.PropertyType.percentage("50%")
 
       assert typed.__type__ == :typed_var
       assert typed.syntax == "<percentage>"
@@ -550,7 +556,7 @@ defmodule LiveStyle.APIContractTest.Tests do
 
   describe "LiveStyle.CSS public API" do
     test "generate/1 returns CSS string" do
-      css = generate_css()
+      css = Compiler.generate_css()
 
       assert is_binary(css)
       # Should contain actual CSS
@@ -560,17 +566,17 @@ defmodule LiveStyle.APIContractTest.Tests do
   end
 
   describe "Cross-module references" do
-    test "css_var can reference variables from other modules" do
+    test "var can reference variables from other modules" do
       # This is tested by StylesModule.themed which references TokensModule
-      rule = LiveStyle.get_metadata(StylesModule, {:class, :themed})
+      rule = Class.lookup!({StylesModule, :themed})
 
       # color should reference the var from TokensModule
       color = rule.atomic_classes["color"]
       assert color.ltr =~ "var(--"
     end
 
-    test "css_keyframes can reference keyframes from other modules" do
-      rule = LiveStyle.get_metadata(StylesModule, {:class, :themed})
+    test "keyframes can reference keyframes from other modules" do
+      rule = Class.lookup!({StylesModule, :themed})
 
       # animation-name should reference keyframes from TokensModule
       animation = rule.atomic_classes["animation-name"]
@@ -580,7 +586,7 @@ defmodule LiveStyle.APIContractTest.Tests do
 
   describe "Atomic class output format" do
     test "class names follow StyleX pattern (x prefix)" do
-      rule = LiveStyle.get_metadata(StylesModule, {:class, :button})
+      rule = Class.lookup!({StylesModule, :button})
 
       # All class names should start with 'x'
       Enum.each(rule.atomic_classes, fn {_prop, meta} ->
@@ -593,36 +599,36 @@ defmodule LiveStyle.APIContractTest.Tests do
     end
 
     test "LTR output follows .classname{property:value} format" do
-      rule = LiveStyle.get_metadata(StylesModule, {:class, :button})
+      rule = Class.lookup!({StylesModule, :button})
 
       display = rule.atomic_classes["display"]
       assert display.ltr =~ ~r/^\.[a-z0-9]+\{display:[^}]+\}$/
     end
 
     test "priorities follow StyleX convention" do
-      rule = LiveStyle.get_metadata(StylesModule, {:class, :button})
+      rule = Class.lookup!({StylesModule, :button})
 
       # Regular properties should have priority 3000
       display = rule.atomic_classes["display"]
       assert display.priority == 3000
 
       # Custom properties should have priority 1
-      custom_rule = LiveStyle.get_metadata(StylesModule, {:class, :custom_props})
+      custom_rule = Class.lookup!({StylesModule, :custom_props})
       custom_prop = custom_rule.atomic_classes["--my-color"]
       assert custom_prop.priority == 1
     end
   end
 
   describe "Public helper functions" do
-    test "LiveStyle.css_class/2 returns class string" do
-      class = LiveStyle.get_css_class(StylesModule, [:button])
+    test "LiveStyle.class/2 returns class string" do
+      class = Compiler.get_css_class(StylesModule, [:button])
 
       assert is_binary(class)
       assert class != ""
     end
 
-    test "LiveStyle.css_class/2 merges multiple rules" do
-      class = LiveStyle.get_css_class(StylesModule, [:button, :link])
+    test "LiveStyle.class/2 merges multiple rules" do
+      class = Compiler.get_css_class(StylesModule, [:button, :link])
 
       assert is_binary(class)
       # Should contain classes from both rules

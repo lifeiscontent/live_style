@@ -2,13 +2,13 @@ defmodule LiveStyle.RTL do
   @moduledoc false
   # Internal module for RTL/LTR bidirectional CSS support.
 
-  alias LiveStyle.Data
+  alias LiveStyle.PropertyMetadata
 
   # Load mappings at compile time
-  @ltr_mappings Data.logical_to_ltr()
-  @rtl_mappings Data.logical_to_rtl()
-  @ltr_values Data.logical_value_to_ltr()
-  @rtl_values Data.logical_value_to_rtl()
+  @ltr_mappings PropertyMetadata.logical_to_ltr()
+  @rtl_mappings PropertyMetadata.logical_to_rtl()
+  @ltr_values PropertyMetadata.logical_value_to_ltr()
+  @rtl_values PropertyMetadata.logical_value_to_rtl()
 
   # Properties with logical values that need physical transformation
   # NOTE: text-align is NOT included because browsers handle start/end natively
@@ -106,17 +106,25 @@ defmodule LiveStyle.RTL do
 
   defp transform_value_ltr(_property, value), do: value
 
-  # Transform background-position logical values to physical for LTR
-  defp flip_background_position_ltr(value) do
+  # Shared helper for flipping background-position logical values
+  @logical_position_values ["start", "end", "inline-start", "inline-end"]
+
+  defp flip_background_position(value, mapping) do
     value
     |> String.split(" ")
-    |> Enum.map_join(" ", fn
-      "start" -> "left"
-      "inline-start" -> "left"
-      "end" -> "right"
-      "inline-end" -> "right"
-      other -> other
-    end)
+    |> Enum.map_join(" ", fn word -> Map.get(mapping, word, word) end)
+  end
+
+  # Transform background-position logical values to physical for LTR
+  @ltr_position_mapping %{
+    "start" => "left",
+    "inline-start" => "left",
+    "end" => "right",
+    "inline-end" => "right"
+  }
+
+  defp flip_background_position_ltr(value) do
+    flip_background_position(value, @ltr_position_mapping)
   end
 
   # Check if value needs RTL transformation
@@ -133,20 +141,19 @@ defmodule LiveStyle.RTL do
 
   defp transform_value_rtl(_property, value), do: value
 
-  # Flip background-position logical values
+  # Flip background-position logical values for RTL
+  @rtl_position_mapping %{
+    "start" => "right",
+    "inline-start" => "right",
+    "end" => "left",
+    "inline-end" => "left"
+  }
+
   defp flip_background_position_rtl(value) do
     words = String.split(value, " ")
 
-    if Enum.any?(words, &(&1 in ["start", "end", "inline-start", "inline-end"])) do
-      flipped =
-        Enum.map_join(words, " ", fn
-          "start" -> "right"
-          "inline-start" -> "right"
-          "end" -> "left"
-          "inline-end" -> "left"
-          other -> other
-        end)
-
+    if Enum.any?(words, &(&1 in @logical_position_values)) do
+      flipped = flip_background_position(value, @rtl_position_mapping)
       {"background-position", flipped}
     else
       nil

@@ -1,7 +1,7 @@
 defmodule LiveStyle.Storage.Path do
   @moduledoc false
 
-  @default_path "_build/live_style_manifest.etf"
+  @default_path "priv/live_style_manifest.etf"
   @path_key :live_style_manifest_path
 
   @spec set_path(String.t()) :: :ok

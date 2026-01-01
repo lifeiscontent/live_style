@@ -3,7 +3,7 @@ defmodule LiveStyle.Theme do
   CSS theme support for variable overrides.
 
   Similar to StyleX's `createTheme`, this module handles creating themes
-  that override CSS variables defined with `css_vars`.
+  that override CSS variables defined with `vars`.
 
   ## How Themes Work
 
@@ -12,125 +12,97 @@ defmodule LiveStyle.Theme do
 
   ```css
   /* Generated theme class */
-  .xabc123 {
-    --text-primary: var(--colors-gray-50);
-    --fill-page: var(--colors-gray-900);
+  .t1abc23 {
+    --v2def45: #000000;
+    --v3ghi67: #ffffff;
   }
   ```
 
-  ## Recommended Pattern
-
-  Use a two-layer architecture for theming:
-
-  1. **`:colors`** - Raw color palette (not themed)
-  2. **`:semantic`** - Semantic tokens referencing colors (themed)
+  ## Examples
 
       defmodule MyApp.Tokens do
-        use LiveStyle.Tokens
+        use LiveStyle
 
-        # Raw colors - the palette
-        css_vars :colors,
-          white: "#ffffff",
-          gray_900: "#111827",
-          gray_50: "#f9fafb",
-          indigo_500: "#6366f1"
+        # Define variables
+        vars text_primary: "#111827",
+             fill_page: "#ffffff"
 
-        # Semantic tokens - what components use
-        css_vars :semantic,
-          text_primary: css_var({:colors, :gray_900}),
-          fill_page: css_var({:colors, :white})
-
-        # Dark theme swaps which colors semantics point to
-        css_theme :semantic, :dark,
-          text_primary: css_var({:colors, :gray_50}),
-          fill_page: css_var({:colors, :gray_900})
+        # Create a dark theme that overrides those variables
+        theme :dark,
+          text_primary: "#f9fafb",
+          fill_page: "#111827"
       end
 
   ## Applying Themes
 
-  Use `css_theme/1` to get the theme class name:
+  Use `theme/1` to get the theme class name:
 
       # Apply to a container
-      <div class={css_theme({MyApp.Tokens, :semantic, :dark})}>
+      <div class={theme({MyApp.Tokens, :dark})}>
         <!-- Children use dark theme -->
       </div>
 
       # Conditional theming
-      <div class={@dark_mode && css_theme({MyApp.Tokens, :semantic, :dark})}>
+      <div class={@dark_mode && theme({MyApp.Tokens, :dark})}>
         ...
       </div>
 
   ## Theme Scope
 
-  Themes are scoped to their container and all descendants. This enables:
-
-  - **Page-level themes**: Apply to `<html>` element
-  - **Section themes**: Different themes for different page sections
-  - **Component themes**: Override theme for specific components
-
-      # Page-level theme on <html>
-      <html class={@dark_mode && css_theme({MyApp.Tokens, :semantic, :dark})}>
-        ...
-      </html>
-
-      # Section-level theme override
-      <div class={css_theme({MyApp.Tokens, :semantic, :dark})}>
-        <p>I'm dark themed</p>
-      </div>
+  Themes are scoped to their container and all descendants.
   """
 
   alias LiveStyle.Hash
   alias LiveStyle.Manifest
   alias LiveStyle.Utils
 
+  use LiveStyle.Registry,
+    entity_name: "Theme",
+    manifest_type: :theme,
+    ref_field: :ident
+
+  # Identity-based CSS class name generation (private)
+  defp ident(module, name) do
+    input = "theme:#{inspect(module)}.#{name}"
+    "t" <> Hash.create_hash(input)
+  end
+
+  # Generate CSS var name for override keys (matches Vars.ident/2)
+  defp var_ident(module, name) do
+    input = "var:#{inspect(module)}.#{name}"
+    "--v" <> Hash.create_hash(input)
+  end
+
   @doc """
   Defines a theme with variable overrides and stores it in the manifest.
+
+  Called internally by the `theme` macro.
   """
-  @spec define(module(), atom(), atom(), map() | keyword(), String.t(), module() | nil) :: :ok
-  def define(var_group_module, namespace, theme_name, overrides, css_name, theme_module \\ nil) do
-    theme_module = theme_module || var_group_module
-    key = Manifest.namespaced_key(theme_module, namespace, theme_name)
+  @spec define(module(), atom(), map() | keyword(), String.t()) :: :ok
+  def define(module, name, overrides, ident) do
+    key = Manifest.simple_key(module, name)
     overrides = Utils.normalize_to_map(overrides)
 
-    # Convert override keys to CSS var names using the var group's module and namespace
+    # Convert override keys to CSS var names
     css_overrides =
       Map.new(overrides, fn {var_name, value} ->
-        {Hash.var_name(var_group_module, namespace, var_name), value}
+        {var_ident(module, var_name), value}
       end)
 
     entry = %{
-      css_name: css_name,
-      var_group_module: var_group_module,
-      var_group_namespace: namespace,
+      ident: ident,
       overrides: css_overrides
     }
 
-    # Only update if the entry has changed (or doesn't exist)
-    LiveStyle.Storage.update(fn manifest ->
-      case Manifest.get_theme(manifest, key) do
-        ^entry -> manifest
-        _ -> Manifest.put_theme(manifest, key, entry)
-      end
-    end)
-
+    store_entry(key, entry)
     :ok
   end
 
   @doc """
   Generates the CSS class name for a theme.
   """
-  @spec generate_css_name(module(), atom(), atom()) :: String.t()
-  def generate_css_name(module, namespace, theme_name) do
-    Hash.theme_name(module, namespace, theme_name)
-  end
-
-  @doc """
-  Looks up a theme by module, namespace, and theme name.
-  Returns the css_name or raises if not found.
-  """
-  @spec lookup!(module(), atom(), atom()) :: String.t()
-  def lookup!(module, namespace, theme_name) do
-    %{css_name: css_name} = LiveStyle.Manifest.Access.theme!(module, namespace, theme_name)
-    css_name
+  @spec generate_ident(module(), atom()) :: String.t()
+  def generate_ident(module, name) do
+    ident(module, name)
   end
 end

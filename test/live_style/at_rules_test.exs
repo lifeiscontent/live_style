@@ -5,7 +5,11 @@ defmodule LiveStyle.AtRulesTest do
   These tests mirror StyleX's transform-stylex-create-test.js at-rule
   sections to ensure LiveStyle handles them the same way.
   """
-  use LiveStyle.TestCase, async: true
+  use LiveStyle.TestCase
+  use Snapshy
+
+  alias LiveStyle.Compiler
+  alias LiveStyle.Compiler.CSS.Priority
 
   # ============================================================================
   # Media Queries
@@ -14,7 +18,7 @@ defmodule LiveStyle.AtRulesTest do
   defmodule MediaQueries do
     use LiveStyle
 
-    css_class(:responsive,
+    class(:responsive,
       background_color: [
         default: "red",
         "@media (min-width: 1000px)": "blue",
@@ -22,7 +26,7 @@ defmodule LiveStyle.AtRulesTest do
       ]
     )
 
-    css_class(:font_responsive,
+    class(:font_responsive,
       font_size: [
         default: "1rem",
         "@media (min-width: 800px)": "2rem"
@@ -35,7 +39,7 @@ defmodule LiveStyle.AtRulesTest do
 
     # StyleX supports conditional objects without a default branch:
     # maxWidth: { '@media (min-width: 800px)': '800px' }
-    css_class(:root,
+    class(:root,
       max_width: ["@media (min-width: 800px)": "800px"]
     )
   end
@@ -43,7 +47,7 @@ defmodule LiveStyle.AtRulesTest do
   defmodule MediaQueryWithPseudo do
     use LiveStyle
 
-    css_class(:hover_in_media,
+    class(:hover_in_media,
       font_size: [
         default: "1rem",
         "@media (min-width: 800px)": [
@@ -57,15 +61,15 @@ defmodule LiveStyle.AtRulesTest do
   defmodule ReducedMotionKeyframes do
     use LiveStyle
 
-    css_keyframes(:shift,
+    keyframes(:shift,
       from: %{opacity: "0"},
       to: %{opacity: "1"}
     )
 
-    css_class(:animated,
+    class(:animated,
       animation_name: [
-        default: css_keyframes(:shift),
-        ":hover": css_keyframes(:shift),
+        default: keyframes(:shift),
+        ":hover": keyframes(:shift),
         "@media (prefers-reduced-motion: reduce)": [
           default: "none",
           ":hover": "none"
@@ -81,7 +85,7 @@ defmodule LiveStyle.AtRulesTest do
   defmodule SupportsQueries do
     use LiveStyle
 
-    css_class(:hover_support,
+    class(:hover_support,
       background_color: [
         default: "red",
         "@supports (hover: hover)": "blue",
@@ -90,7 +94,7 @@ defmodule LiveStyle.AtRulesTest do
     )
 
     # @supports selector() syntax for feature detection
-    css_class(:has_support,
+    class(:has_support,
       display: [
         default: "block",
         "@supports selector(:has(*))": "grid"
@@ -105,7 +109,7 @@ defmodule LiveStyle.AtRulesTest do
   defmodule ContainerQueries do
     use LiveStyle
 
-    css_class(:container,
+    class(:container,
       font_size: [
         default: "1rem",
         "@container (min-width: 400px)": "2rem"
@@ -121,7 +125,7 @@ defmodule LiveStyle.AtRulesTest do
     use LiveStyle
 
     # Basic @starting-style for entry animations
-    css_class(:fade_in,
+    class(:fade_in,
       opacity: %{
         :default => "1",
         "@starting-style" => "0"
@@ -129,7 +133,7 @@ defmodule LiveStyle.AtRulesTest do
     )
 
     # @starting-style with transform
-    css_class(:scale_in,
+    class(:scale_in,
       transform: %{
         :default => "scale(1)",
         "@starting-style" => "scale(0.9)"
@@ -137,7 +141,7 @@ defmodule LiveStyle.AtRulesTest do
     )
 
     # Multiple properties with @starting-style
-    css_class(:slide_in,
+    class(:slide_in,
       opacity: %{
         :default => "1",
         "@starting-style" => "0"
@@ -149,7 +153,7 @@ defmodule LiveStyle.AtRulesTest do
     )
 
     # @starting-style with nested pseudo-class (StyleX pattern)
-    css_class(:hover_fade,
+    class(:hover_fade,
       opacity: %{
         :default => "1",
         "@starting-style" => %{
@@ -168,7 +172,7 @@ defmodule LiveStyle.AtRulesTest do
     use LiveStyle
 
     # Triple nested: @media -> @supports -> :hover
-    css_class(:triple_nested,
+    class(:triple_nested,
       color: [
         default: "black",
         "@media (min-width: 800px)": [
@@ -182,236 +186,6 @@ defmodule LiveStyle.AtRulesTest do
     )
   end
 
-  describe "media queries" do
-    test "supports media query values without default" do
-      # StyleX supports conditional objects without a default branch:
-      # https://github.com/stylexjs/stylex/blob/main/packages/%40stylexjs/stylex/README.md
-      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.MediaQueryNoDefault, {:class, :root})
-      classes = rule.atomic_classes["max-width"].classes
-
-      assert Map.has_key?(classes, "@media (min-width: 800px)")
-      refute Map.has_key?(classes, :default)
-    end
-
-    test "generates CSS with @media rules - exact StyleX output" do
-      # StyleX test: 'media queries'
-      # Input: backgroundColor: { default: 'red', '@media ...': 'blue', '@media ...': 'purple' }
-      # Expected output (exact from StyleX):
-      # ["xrkmrrc", {ltr: ".xrkmrrc{background-color:red}", rtl: null}, 3000]
-      # ["xw6up8c", {ltr: "@media ...{.xw6up8c.xw6up8c{background-color:blue}}", rtl: null}, 3200]
-      # ["x1ssfqz5", {ltr: "@media ...{.x1ssfqz5.x1ssfqz5{background-color:purple}}", rtl: null}, 3200]
-      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.MediaQueries, {:class, :responsive})
-
-      assert rule != nil
-      classes = rule.atomic_classes["background-color"].classes
-
-      # Default value - exact StyleX match
-      default = classes[:default]
-      assert default.class == "xrkmrrc"
-      assert default.ltr == ".xrkmrrc{background-color:red}"
-      assert default.priority == 3000
-
-      # @media (min-width: 1000px) - transformed to add upper bound - exact StyleX match
-      media_1000 = classes["@media (min-width: 1000px) and (max-width: 1999.99px)"]
-      assert media_1000.class == "xw6up8c"
-
-      assert media_1000.ltr ==
-               "@media (min-width: 1000px) and (max-width: 1999.99px){.xw6up8c.xw6up8c{background-color:blue}}"
-
-      assert media_1000.priority == 3200
-
-      # @media (min-width: 2000px) - exact StyleX match
-      media_2000 = classes["@media (min-width: 2000px)"]
-      assert media_2000.class == "x1ssfqz5"
-
-      assert media_2000.ltr ==
-               "@media (min-width: 2000px){.x1ssfqz5.x1ssfqz5{background-color:purple}}"
-
-      assert media_2000.priority == 3200
-    end
-  end
-
-  describe "media query with pseudo-class" do
-    test "generates CSS with pseudo-class inside media query - exact StyleX output" do
-      # StyleX test: 'media query with pseudo-classes'
-      # Input: fontSize: { default: '1rem', '@media (min-width: 800px)': { default: '2rem', ':hover': '2.2rem' } }
-      # Expected output (exact from StyleX):
-      # ["x1jchvi3", {ltr: ".x1jchvi3{font-size:1rem}", rtl: null}, 3000]
-      # ["x1w3nbkt", {ltr: "@media (min-width: 800px){.x1w3nbkt.x1w3nbkt{font-size:2rem}}", rtl: null}, 3200]
-      # ["xicay7j", {ltr: "@media (min-width: 800px){.xicay7j.xicay7j:hover{font-size:2.2rem}}", rtl: null}, 3330]
-      rule =
-        LiveStyle.get_metadata(
-          LiveStyle.AtRulesTest.MediaQueryWithPseudo,
-          {:class, :hover_in_media}
-        )
-
-      classes = rule.atomic_classes["font-size"].classes
-
-      # Default: 1rem - exact StyleX match
-      default = classes[:default]
-      assert default.class == "x1jchvi3"
-      assert default.ltr == ".x1jchvi3{font-size:1rem}"
-      assert default.priority == 3000
-
-      # @media (min-width: 800px) default: 2rem - exact StyleX match
-      media_default = classes["@media (min-width: 800px)"]
-      assert media_default.class == "x1w3nbkt"
-      assert media_default.ltr == "@media (min-width: 800px){.x1w3nbkt.x1w3nbkt{font-size:2rem}}"
-      assert media_default.priority == 3200
-
-      # @media (min-width: 800px):hover: 2.2rem - exact StyleX match
-      media_hover = classes["@media (min-width: 800px):hover"]
-      assert media_hover.class == "xicay7j"
-
-      assert media_hover.ltr ==
-               "@media (min-width: 800px){.xicay7j.xicay7j:hover{font-size:2.2rem}}"
-
-      assert media_hover.priority == 3330
-    end
-
-    test "supports reduced-motion overrides inside nested media query objects" do
-      rule =
-        LiveStyle.get_metadata(LiveStyle.AtRulesTest.ReducedMotionKeyframes, {:class, :animated})
-
-      keyframes =
-        LiveStyle.get_metadata(LiveStyle.AtRulesTest.ReducedMotionKeyframes, {:keyframes, :shift})
-
-      classes = rule.atomic_classes["animation-name"].classes
-
-      # Default: keyframes reference
-      default = classes[:default]
-      assert default.ltr =~ ~r/^\.x[a-z0-9]+\{animation-name:#{keyframes.css_name}\}$/
-      assert default.priority == 3000
-
-      # :hover: keyframes reference
-      hover = classes[":hover"]
-      assert hover.ltr =~ ~r/^\.x[a-z0-9]+:hover\{animation-name:#{keyframes.css_name}\}$/
-      assert hover.priority == 3130
-
-      # Reduced motion: override both default and hover with "none"
-      media_default = classes["@media (prefers-reduced-motion: reduce)"]
-      assert media_default.ltr =~ "@media (prefers-reduced-motion: reduce)"
-      assert media_default.ltr =~ "{animation-name:none}"
-      assert media_default.priority == 3200
-
-      media_hover = classes["@media (prefers-reduced-motion: reduce):hover"]
-      assert media_hover.ltr =~ "@media (prefers-reduced-motion: reduce)"
-      assert media_hover.ltr =~ ":hover{animation-name:none}"
-      assert media_hover.priority == 3330
-    end
-  end
-
-  describe "supports queries" do
-    test "generates CSS with @supports rules - exact StyleX output" do
-      # StyleX test: 'supports queries'
-      # Input: backgroundColor: { default:'red', '@supports ...': 'blue', '@supports not ...': 'purple' }
-      # Expected output (exact from StyleX):
-      # ["xrkmrrc", {ltr: ".xrkmrrc{background-color:red}", rtl: null}, 3000]
-      # ["x6m3b6q", {ltr: "@supports ...{.x6m3b6q.x6m3b6q{background-color:blue}}", rtl: null}, 3030]
-      # ["x6um648", {ltr: "@supports not ...{.x6um648.x6um648{background-color:purple}}", rtl: null}, 3030]
-      rule =
-        LiveStyle.get_metadata(LiveStyle.AtRulesTest.SupportsQueries, {:class, :hover_support})
-
-      classes = rule.atomic_classes["background-color"].classes
-
-      # Default value - exact StyleX match
-      default = classes[:default]
-      assert default.class == "xrkmrrc"
-      assert default.ltr == ".xrkmrrc{background-color:red}"
-      assert default.priority == 3000
-
-      # @supports (hover: hover) - exact StyleX match
-      supports_hover = classes["@supports (hover: hover)"]
-      assert supports_hover.class == "x6m3b6q"
-
-      assert supports_hover.ltr ==
-               "@supports (hover: hover){.x6m3b6q.x6m3b6q{background-color:blue}}"
-
-      assert supports_hover.priority == 3030
-
-      # @supports not (hover: hover) - exact StyleX match
-      supports_not_hover = classes["@supports not (hover: hover)"]
-      assert supports_not_hover.class == "x6um648"
-
-      assert supports_not_hover.ltr ==
-               "@supports not (hover: hover){.x6um648.x6um648{background-color:purple}}"
-
-      assert supports_not_hover.priority == 3030
-    end
-
-    test "generates CSS with @supports selector() syntax" do
-      # @supports selector(:has(*)) - feature detection for :has() selector support
-      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.SupportsQueries, {:class, :has_support})
-
-      classes = rule.atomic_classes["display"].classes
-
-      # Default value
-      default = classes[:default]
-      assert default.ltr == ".#{default.class}{display:block}"
-      assert default.priority == 3000
-
-      # @supports selector(:has(*))
-      supports_selector = classes["@supports selector(:has(*))"]
-      assert supports_selector.ltr =~ "@supports selector(:has(*))"
-      assert supports_selector.ltr =~ "display:grid"
-      assert supports_selector.priority == 3030
-    end
-  end
-
-  describe "container queries" do
-    test "generates CSS with @container rules and correct priorities" do
-      # @container priority should be 3000 + 300 = 3300
-      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.ContainerQueries, {:class, :container})
-
-      classes = rule.atomic_classes["font-size"].classes
-
-      # Default
-      default = classes[:default]
-      assert default.priority == 3000
-
-      # @container (min-width: 400px)
-      container = classes["@container (min-width: 400px)"]
-      assert container.ltr =~ "@container (min-width: 400px)"
-      assert container.ltr =~ "font-size:2rem"
-      assert container.priority == 3300
-    end
-
-    test "@container rules have doubled class selector" do
-      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.ContainerQueries, {:class, :container})
-
-      container = rule.atomic_classes["font-size"].classes["@container (min-width: 400px)"]
-
-      # Look for pattern like .x123.x123 inside @container
-      assert container.ltr =~ ~r/@container[^{]+\{\.[a-z0-9]+\.[a-z0-9]+\{/
-    end
-  end
-
-  describe "at-rule priority ordering" do
-    # StyleX priority order:
-    # @supports: +30 (3030)
-    # @media: +200 (3200)
-    # @container: +300 (3300)
-    # Higher numbers win (applied later)
-
-    test "at-rules have correct relative priority" do
-      # @supports < @media < @container
-      assert LiveStyle.Priority.get_at_rule_priority("@supports (x)") == 30
-      assert LiveStyle.Priority.get_at_rule_priority("@media (x)") == 200
-      assert LiveStyle.Priority.get_at_rule_priority("@container (x)") == 300
-
-      supports_priority = LiveStyle.Priority.calculate("color", nil, "@supports (x)")
-      media_priority = LiveStyle.Priority.calculate("color", nil, "@media (x)")
-      container_priority = LiveStyle.Priority.calculate("color", nil, "@container (x)")
-
-      assert supports_priority == 3030
-      assert media_priority == 3200
-      assert container_priority == 3300
-
-      assert supports_priority < media_priority
-      assert media_priority < container_priority
-    end
-  end
-
   # ============================================================================
   # Additional At-Rule Scenarios
   # ============================================================================
@@ -421,7 +195,7 @@ defmodule LiveStyle.AtRulesTest do
 
     # Nested at-rules: @supports wrapping @media
     # StyleX test: "tokens object with nested @-rules"
-    css_vars(:colors,
+    vars(
       color: %{
         default: "blue",
         "@media (prefers-color-scheme: dark)": %{
@@ -436,7 +210,7 @@ defmodule LiveStyle.AtRulesTest do
     use LiveStyle
 
     # Multiple different media queries on same property
-    css_class(:responsive,
+    class(:responsive,
       padding: [
         default: "8px",
         "@media (min-width: 640px)": "16px",
@@ -451,28 +225,28 @@ defmodule LiveStyle.AtRulesTest do
     use LiveStyle
 
     # Different types of media queries
-    css_class(:print,
+    class(:print,
       display: [
         default: "block",
         "@media print": "none"
       ]
     )
 
-    css_class(:dark_mode,
+    class(:dark_mode,
       background_color: [
         default: "white",
         "@media (prefers-color-scheme: dark)": "black"
       ]
     )
 
-    css_class(:reduced_motion,
+    class(:reduced_motion,
       transition: [
         default: "all 0.3s ease",
         "@media (prefers-reduced-motion: reduce)": "none"
       ]
     )
 
-    css_class(:max_width,
+    class(:max_width,
       font_size: [
         default: "16px",
         "@media (max-width: 640px)": "14px"
@@ -484,21 +258,21 @@ defmodule LiveStyle.AtRulesTest do
     use LiveStyle
 
     # Different types of @supports queries
-    css_class(:grid_support,
+    class(:grid_support,
       display: [
         default: "flex",
         "@supports (display: grid)": "grid"
       ]
     )
 
-    css_class(:gap_support,
+    class(:gap_support,
       margin: [
         default: "10px",
         "@supports (gap: 10px)": "0"
       ]
     )
 
-    css_class(:aspect_ratio_support,
+    class(:aspect_ratio_support,
       padding_bottom: [
         default: "56.25%",
         "@supports (aspect-ratio: 16 / 9)": "0"
@@ -510,14 +284,14 @@ defmodule LiveStyle.AtRulesTest do
     use LiveStyle
 
     # Different container query conditions
-    css_class(:inline_size,
+    class(:inline_size,
       font_size: [
         default: "1rem",
         "@container (inline-size > 300px)": "1.25rem"
       ]
     )
 
-    css_class(:named_container,
+    class(:named_container,
       padding: [
         default: "8px",
         "@container sidebar (min-width: 200px)": "16px"
@@ -525,274 +299,325 @@ defmodule LiveStyle.AtRulesTest do
     )
   end
 
-  describe "nested at-rules" do
-    test "nested @supports inside @media generates correct CSS" do
-      # StyleX output for nested @-rules:
-      # @supports wraps @media (innermost at-rule becomes outermost wrapper)
-      css = generate_css()
+  # ============================================================================
+  # Snapshot Tests - Media Queries
+  # ============================================================================
 
-      color_var =
-        LiveStyle.get_metadata(LiveStyle.AtRulesTest.NestedAtRules, {:var, :colors, :color})
+  describe "media queries" do
+    test_snapshot "responsive background-color with media queries CSS output" do
+      class_string = Compiler.get_css_class(MediaQueries, [:responsive])
 
-      var_name = color_var.css_name
+      class_string
+      |> extract_all_rules()
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
 
-      # Should have default value in :root
-      assert css =~ ~r/:root\{[^}]*#{Regex.escape(var_name)}:blue;/
+    test_snapshot "font responsive with media query CSS output" do
+      class_string = Compiler.get_css_class(MediaQueries, [:font_responsive])
 
-      # Should have @media wrapped value for dark mode default
-      assert css =~
-               ~r/@media \(prefers-color-scheme: dark\)\{:root\{[^}]*#{Regex.escape(var_name)}:lightblue;/
+      class_string
+      |> extract_all_rules()
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
 
-      # Should have @supports wrapping @media for the nested value
-      # StyleX nests as: @supports{@media{:root{...}}}
-      assert css =~
-               ~r/@supports \(color: oklab\(0 0 0\)\)\{@media \(prefers-color-scheme: dark\)\{:root\{[^}]*#{Regex.escape(var_name)}:oklab/
+    test_snapshot "media query without default CSS output" do
+      class_string = Compiler.get_css_class(MediaQueryNoDefault, [:root])
+
+      class_string
+      |> extract_all_rules()
+      |> Enum.sort()
+      |> Enum.join("\n")
     end
   end
 
-  describe "triple-nested conditions" do
-    test "triple nesting generates properly wrapped at-rules with pseudo-class" do
-      # Triple nested: @media -> @supports -> :hover
-      # StyleX nests at-rules: @media{@supports{.selector:hover{...}}}
-      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.TripleNested, {:class, :triple_nested})
+  describe "media query with pseudo-class" do
+    test_snapshot "pseudo-class inside media query CSS output" do
+      class_string = Compiler.get_css_class(MediaQueryWithPseudo, [:hover_in_media])
 
-      classes = rule.atomic_classes["color"].classes
-
-      # Default value
-      default = classes[:default]
-      assert default.ltr == ".#{default.class}{color:black}"
-      assert default.priority == 3000
-
-      # @media (min-width: 800px)
-      media_only = classes["@media (min-width: 800px)"]
-
-      assert media_only.ltr ==
-               "@media (min-width: 800px){.#{media_only.class}.#{media_only.class}{color:gray}}"
-
-      # @media (min-width: 800px)@supports (color: oklch(0 0 0))
-      # StyleX sorts at-rules alphabetically, then wraps left-to-right
-      # @media < @supports alphabetically, so @supports ends up as outer wrapper
-      # Should be nested: @supports{@media{...}}
-      media_supports =
-        classes["@media (min-width: 800px)@supports (color: oklch(0 0 0))"]
-
-      assert media_supports.ltr =~
-               "@supports (color: oklch(0 0 0)){@media (min-width: 800px){"
-
-      assert media_supports.ltr =~ "color:oklch("
-      assert media_supports.at_rule == "@media (min-width: 800px)@supports (color: oklch(0 0 0))"
-
-      # @media (min-width: 800px)@supports (color: oklch(0 0 0)):hover
-      # Same alphabetical sorting: @supports{@media{.selector:hover{...}}}
-      media_supports_hover =
-        classes["@media (min-width: 800px)@supports (color: oklch(0 0 0)):hover"]
-
-      assert media_supports_hover.ltr =~
-               "@supports (color: oklch(0 0 0)){@media (min-width: 800px){"
-
-      assert media_supports_hover.ltr =~ ":hover{color:oklch("
-      assert media_supports_hover.selector_suffix == ":hover"
-
-      assert media_supports_hover.at_rule ==
-               "@media (min-width: 800px)@supports (color: oklch(0 0 0))"
-    end
-  end
-
-  describe "multiple media queries" do
-    test "generates bounded media queries for consecutive min-width values" do
-      rule =
-        LiveStyle.get_metadata(LiveStyle.AtRulesTest.MultipleMediaQueries, {:class, :responsive})
-
-      classes = rule.atomic_classes["padding"].classes
-
-      # Default: 8px
-      assert classes[:default].ltr =~ "padding:8px"
-
-      # First media query should be bounded (640px - 767.99px)
-      media_640 = classes["@media (min-width: 640px) and (max-width: 767.99px)"]
-      assert media_640 != nil
-      assert media_640.ltr =~ "padding:16px"
-
-      # Second media query should be bounded (768px - 1023.99px)
-      media_768 = classes["@media (min-width: 768px) and (max-width: 1023.99px)"]
-      assert media_768 != nil
-      assert media_768.ltr =~ "padding:24px"
-
-      # Third media query should be bounded (1024px - 1279.99px)
-      media_1024 = classes["@media (min-width: 1024px) and (max-width: 1279.99px)"]
-      assert media_1024 != nil
-      assert media_1024.ltr =~ "padding:32px"
-
-      # Last media query should NOT be bounded (1280px+)
-      media_1280 = classes["@media (min-width: 1280px)"]
-      assert media_1280 != nil
-      assert media_1280.ltr =~ "padding:48px"
-      refute media_1280.ltr =~ "max-width"
-    end
-  end
-
-  describe "media query types" do
-    test "@media print generates correct CSS" do
-      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.MediaQueryTypes, {:class, :print})
-      classes = rule.atomic_classes["display"].classes
-
-      print_class = classes["@media print"]
-      assert print_class != nil
-      assert print_class.ltr =~ "@media print"
-      assert print_class.ltr =~ "display:none"
+      class_string
+      |> extract_all_rules()
+      |> Enum.sort()
+      |> Enum.join("\n")
     end
 
-    test "@media (prefers-color-scheme: dark) generates correct CSS" do
-      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.MediaQueryTypes, {:class, :dark_mode})
-      classes = rule.atomic_classes["background-color"].classes
+    test_snapshot "reduced-motion keyframes override CSS output" do
+      class_string = Compiler.get_css_class(ReducedMotionKeyframes, [:animated])
 
-      dark_class = classes["@media (prefers-color-scheme: dark)"]
-      assert dark_class != nil
-      assert dark_class.ltr =~ "@media (prefers-color-scheme: dark)"
-      assert dark_class.ltr =~ "background-color:black"
-    end
-
-    test "@media (prefers-reduced-motion: reduce) generates correct CSS" do
-      rule =
-        LiveStyle.get_metadata(LiveStyle.AtRulesTest.MediaQueryTypes, {:class, :reduced_motion})
-
-      classes = rule.atomic_classes["transition"].classes
-
-      motion_class = classes["@media (prefers-reduced-motion: reduce)"]
-      assert motion_class != nil
-      assert motion_class.ltr =~ "@media (prefers-reduced-motion: reduce)"
-      assert motion_class.ltr =~ "transition:none"
-    end
-
-    test "@media (max-width: ...) generates correct CSS" do
-      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.MediaQueryTypes, {:class, :max_width})
-      classes = rule.atomic_classes["font-size"].classes
-
-      max_width_class = classes["@media (max-width: 640px)"]
-      assert max_width_class != nil
-      assert max_width_class.ltr =~ "@media (max-width: 640px)"
-      assert max_width_class.ltr =~ "font-size:14px"
-    end
-  end
-
-  describe "supports query types" do
-    test "@supports (display: grid) generates correct CSS" do
-      rule =
-        LiveStyle.get_metadata(LiveStyle.AtRulesTest.SupportsQueryTypes, {:class, :grid_support})
-
-      classes = rule.atomic_classes["display"].classes
-
-      grid_class = classes["@supports (display: grid)"]
-      assert grid_class != nil
-      assert grid_class.ltr =~ "@supports (display: grid)"
-      assert grid_class.ltr =~ "display:grid"
-    end
-
-    test "@supports (gap: ...) generates correct CSS" do
-      rule =
-        LiveStyle.get_metadata(LiveStyle.AtRulesTest.SupportsQueryTypes, {:class, :gap_support})
-
-      classes = rule.atomic_classes["margin"].classes
-
-      gap_class = classes["@supports (gap: 10px)"]
-      assert gap_class != nil
-      assert gap_class.ltr =~ "@supports (gap: 10px)"
-      assert gap_class.ltr =~ "margin:0"
-    end
-
-    test "@supports (aspect-ratio: ...) generates correct CSS" do
-      rule =
-        LiveStyle.get_metadata(
-          LiveStyle.AtRulesTest.SupportsQueryTypes,
-          {:class, :aspect_ratio_support}
-        )
-
-      classes = rule.atomic_classes["padding-bottom"].classes
-
-      aspect_class = classes["@supports (aspect-ratio: 16 / 9)"]
-      assert aspect_class != nil
-      assert aspect_class.ltr =~ "@supports (aspect-ratio: 16 / 9)"
-      assert aspect_class.ltr =~ "padding-bottom:0"
-    end
-  end
-
-  describe "container query types" do
-    test "@container (inline-size > ...) generates correct CSS" do
-      rule =
-        LiveStyle.get_metadata(LiveStyle.AtRulesTest.ContainerQueryTypes, {:class, :inline_size})
-
-      classes = rule.atomic_classes["font-size"].classes
-
-      inline_class = classes["@container (inline-size > 300px)"]
-      assert inline_class != nil
-      assert inline_class.ltr =~ "@container (inline-size > 300px)"
-      assert inline_class.ltr =~ "font-size:1.25rem"
-    end
-
-    test "@container with named container generates correct CSS" do
-      rule =
-        LiveStyle.get_metadata(
-          LiveStyle.AtRulesTest.ContainerQueryTypes,
-          {:class, :named_container}
-        )
-
-      classes = rule.atomic_classes["padding"].classes
-
-      named_class = classes["@container sidebar (min-width: 200px)"]
-      assert named_class != nil
-      assert named_class.ltr =~ "@container sidebar (min-width: 200px)"
-      assert named_class.ltr =~ "padding:16px"
+      class_string
+      |> extract_all_rules()
+      |> Enum.sort()
+      |> Enum.join("\n")
     end
   end
 
   # ============================================================================
-  # @starting-style Tests
+  # Snapshot Tests - Supports Queries
+  # ============================================================================
+
+  describe "supports queries" do
+    test_snapshot "@supports hover CSS output" do
+      class_string = Compiler.get_css_class(SupportsQueries, [:hover_support])
+
+      class_string
+      |> extract_all_rules()
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+
+    test_snapshot "@supports selector() CSS output" do
+      class_string = Compiler.get_css_class(SupportsQueries, [:has_support])
+
+      class_string
+      |> extract_all_rules()
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+  end
+
+  # ============================================================================
+  # Snapshot Tests - Container Queries
+  # ============================================================================
+
+  describe "container queries" do
+    test_snapshot "@container CSS output" do
+      class_string = Compiler.get_css_class(ContainerQueries, [:container])
+
+      class_string
+      |> extract_all_rules()
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+
+    test "@container rules use specificity boost selector" do
+      css = Compiler.generate_css()
+
+      # Look for pattern like .class:not(#\#) inside @container
+      assert css =~ ~r/@container[^{]+\{\.[a-z0-9]+:not\(#\\#\)\{/
+    end
+  end
+
+  # ============================================================================
+  # Snapshot Tests - @starting-style
   # ============================================================================
 
   describe "@starting-style" do
-    test "basic @starting-style generates correct CSS" do
-      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.StartingStyle, {:class, :fade_in})
-      classes = rule.atomic_classes["opacity"].classes
+    test_snapshot "basic @starting-style CSS output" do
+      class_string = Compiler.get_css_class(StartingStyle, [:fade_in])
 
-      # Default value
-      default = classes[:default]
-      assert default.ltr == ".#{default.class}{opacity:1}"
-      # opacity is a longhand-logical property (priority 3000)
-      assert default.priority == 3000
-
-      # @starting-style value
-      starting = classes["@starting-style"]
-      assert starting != nil
-      assert starting.ltr =~ "@starting-style"
-      assert starting.ltr =~ "opacity:0"
-      # Priority should be property_priority (3000) + at_rule_priority (20) = 3020
-      assert starting.priority == 3020
+      class_string
+      |> extract_all_rules()
+      |> Enum.sort()
+      |> Enum.join("\n")
     end
 
-    test "@starting-style with transform generates correct CSS" do
-      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.StartingStyle, {:class, :scale_in})
-      classes = rule.atomic_classes["transform"].classes
+    test_snapshot "@starting-style with transform CSS output" do
+      class_string = Compiler.get_css_class(StartingStyle, [:scale_in])
 
-      starting = classes["@starting-style"]
-      assert starting != nil
-      assert starting.ltr =~ "@starting-style"
-      assert starting.ltr =~ "transform:scale(.9)"
+      class_string
+      |> extract_all_rules()
+      |> Enum.sort()
+      |> Enum.join("\n")
     end
 
-    test "multiple properties with @starting-style" do
-      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.StartingStyle, {:class, :slide_in})
+    test_snapshot "multiple properties with @starting-style CSS output" do
+      class_string = Compiler.get_css_class(StartingStyle, [:slide_in])
 
-      # Opacity
-      opacity_classes = rule.atomic_classes["opacity"].classes
-      opacity_starting = opacity_classes["@starting-style"]
-      assert opacity_starting.ltr =~ "@starting-style"
-      assert opacity_starting.ltr =~ "opacity:0"
+      class_string
+      |> extract_all_rules()
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
 
-      # Transform
-      transform_classes = rule.atomic_classes["transform"].classes
-      transform_starting = transform_classes["@starting-style"]
-      assert transform_starting.ltr =~ "@starting-style"
-      assert transform_starting.ltr =~ "transform:translateY(-20px)"
+    test_snapshot "@starting-style with nested pseudo-class CSS output" do
+      class_string = Compiler.get_css_class(StartingStyle, [:hover_fade])
+
+      class_string
+      |> extract_all_rules()
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+
+    test "@starting-style rules use specificity boost selector" do
+      css = Compiler.generate_css()
+
+      # Should have specificity boost selector like .class:not(#\#) inside @starting-style
+      assert css =~ ~r/@starting-style\{\.[a-z0-9]+:not\(#\\#\)\{/
+    end
+  end
+
+  # ============================================================================
+  # Snapshot Tests - Triple Nested
+  # ============================================================================
+
+  describe "triple-nested conditions" do
+    test_snapshot "triple nested @media @supports :hover CSS output" do
+      class_string = Compiler.get_css_class(TripleNested, [:triple_nested])
+
+      class_string
+      |> extract_all_rules()
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+  end
+
+  # ============================================================================
+  # Snapshot Tests - Nested At-Rules in Vars
+  # ============================================================================
+
+  describe "nested at-rules" do
+    test_snapshot "nested @supports inside @media for vars CSS output" do
+      css = Compiler.generate_css()
+
+      color_var = LiveStyle.Vars.lookup!({NestedAtRules, :color})
+      var_name = color_var.ident
+
+      # Extract all :root rules containing this variable
+      css
+      |> extract_var_rules(var_name)
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+  end
+
+  # ============================================================================
+  # Snapshot Tests - Multiple Media Queries
+  # ============================================================================
+
+  describe "multiple media queries" do
+    test_snapshot "bounded media queries for consecutive min-width values CSS output" do
+      class_string = Compiler.get_css_class(MultipleMediaQueries, [:responsive])
+
+      class_string
+      |> extract_all_rules()
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+  end
+
+  # ============================================================================
+  # Snapshot Tests - Media Query Types
+  # ============================================================================
+
+  describe "media query types" do
+    test_snapshot "@media print CSS output" do
+      class_string = Compiler.get_css_class(MediaQueryTypes, [:print])
+
+      class_string
+      |> extract_all_rules()
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+
+    test_snapshot "@media (prefers-color-scheme: dark) CSS output" do
+      class_string = Compiler.get_css_class(MediaQueryTypes, [:dark_mode])
+
+      class_string
+      |> extract_all_rules()
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+
+    test_snapshot "@media (prefers-reduced-motion: reduce) CSS output" do
+      class_string = Compiler.get_css_class(MediaQueryTypes, [:reduced_motion])
+
+      class_string
+      |> extract_all_rules()
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+
+    test_snapshot "@media (max-width) CSS output" do
+      class_string = Compiler.get_css_class(MediaQueryTypes, [:max_width])
+
+      class_string
+      |> extract_all_rules()
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+  end
+
+  # ============================================================================
+  # Snapshot Tests - Supports Query Types
+  # ============================================================================
+
+  describe "supports query types" do
+    test_snapshot "@supports (display: grid) CSS output" do
+      class_string = Compiler.get_css_class(SupportsQueryTypes, [:grid_support])
+
+      class_string
+      |> extract_all_rules()
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+
+    test_snapshot "@supports (gap) CSS output" do
+      class_string = Compiler.get_css_class(SupportsQueryTypes, [:gap_support])
+
+      class_string
+      |> extract_all_rules()
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+
+    test_snapshot "@supports (aspect-ratio) CSS output" do
+      class_string = Compiler.get_css_class(SupportsQueryTypes, [:aspect_ratio_support])
+
+      class_string
+      |> extract_all_rules()
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+  end
+
+  # ============================================================================
+  # Snapshot Tests - Container Query Types
+  # ============================================================================
+
+  describe "container query types" do
+    test_snapshot "@container (inline-size) CSS output" do
+      class_string = Compiler.get_css_class(ContainerQueryTypes, [:inline_size])
+
+      class_string
+      |> extract_all_rules()
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+
+    test_snapshot "@container with named container CSS output" do
+      class_string = Compiler.get_css_class(ContainerQueryTypes, [:named_container])
+
+      class_string
+      |> extract_all_rules()
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+  end
+
+  # ============================================================================
+  # Priority Tests (keeping these as assertions since they test internal priority logic)
+  # ============================================================================
+
+  describe "at-rule priority ordering" do
+    test "at-rules have correct relative priority" do
+      # @supports < @media < @container
+      assert Priority.get_at_rule_priority("@supports (x)") == 30
+      assert Priority.get_at_rule_priority("@media (x)") == 200
+      assert Priority.get_at_rule_priority("@container (x)") == 300
+
+      supports_priority = Priority.calculate("color", nil, "@supports (x)")
+      media_priority = Priority.calculate("color", nil, "@media (x)")
+
+      container_priority =
+        Priority.calculate("color", nil, "@container (x)")
+
+      assert supports_priority == 3030
+      assert media_priority == 3200
+      assert container_priority == 3300
+
+      assert supports_priority < media_priority
+      assert media_priority < container_priority
     end
 
     test "@starting-style has correct priority relative to other at-rules" do
@@ -800,41 +625,80 @@ defmodule LiveStyle.AtRulesTest do
       # @supports: 30
       # @media: 200
       # @container: 300
-      assert LiveStyle.Priority.get_at_rule_priority("@starting-style") == 20
-      assert LiveStyle.Priority.get_at_rule_priority("@supports (x)") == 30
-      assert LiveStyle.Priority.get_at_rule_priority("@media (x)") == 200
-      assert LiveStyle.Priority.get_at_rule_priority("@container (x)") == 300
+      assert Priority.get_at_rule_priority("@starting-style") == 20
+      assert Priority.get_at_rule_priority("@supports (x)") == 30
+      assert Priority.get_at_rule_priority("@media (x)") == 200
+      assert Priority.get_at_rule_priority("@container (x)") == 300
 
       # @starting-style should have lowest at-rule priority
-      starting_priority = LiveStyle.Priority.get_at_rule_priority("@starting-style")
-      supports_priority = LiveStyle.Priority.get_at_rule_priority("@supports (x)")
+      starting_priority = Priority.get_at_rule_priority("@starting-style")
+      supports_priority = Priority.get_at_rule_priority("@supports (x)")
       assert starting_priority < supports_priority
     end
+  end
 
-    test "@starting-style rules have doubled class selector" do
-      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.StartingStyle, {:class, :fade_in})
-      starting = rule.atomic_classes["opacity"].classes["@starting-style"]
+  # ============================================================================
+  # Helpers
+  # ============================================================================
 
-      # Should have doubled selector like .x123.x123 inside @starting-style
-      assert starting.ltr =~ ~r/@starting-style\{\.[a-z0-9]+\.[a-z0-9]+\{/
-    end
+  defp extract_all_rules(class_string) do
+    css = Compiler.generate_css()
 
-    test "@starting-style with nested pseudo-class generates correct CSS" do
-      rule = LiveStyle.get_metadata(LiveStyle.AtRulesTest.StartingStyle, {:class, :hover_fade})
-      classes = rule.atomic_classes["opacity"].classes
+    class_string
+    |> String.split(" ")
+    |> Enum.flat_map(fn class_name ->
+      extract_rules_for_class(css, class_name)
+    end)
+    |> Enum.uniq()
+  end
 
-      # @starting-style default
-      starting_default = classes["@starting-style"]
-      assert starting_default != nil
-      assert starting_default.ltr =~ "@starting-style"
-      assert starting_default.ltr =~ "opacity:0"
+  defp extract_rules_for_class(css, class_name) do
+    escaped_class = Regex.escape(class_name)
 
-      # @starting-style:hover - nested pseudo inside at-rule
-      starting_hover = classes["@starting-style:hover"]
-      assert starting_hover != nil
-      assert starting_hover.ltr =~ "@starting-style"
-      assert starting_hover.ltr =~ ":hover"
-      assert starting_hover.ltr =~ "opacity:.5"
-    end
+    # Pattern for various rule formats:
+    # 1. Simple: .class{...}
+    # 2. Pseudo-class: .class:not(#\#):hover{...}
+    # 3. At-rule wrapped: @media{.class:not(#\#){...}} or @media{.class.class{...}}
+    # 4. Nested at-rules: @supports{@media{.class{...}}}
+    patterns = [
+      # Simple and pseudo-class rules (with optional :not(#\#) specificity boost)
+      ~r/\.#{escaped_class}(?::not\(#\\#\))?(?::[^{]+)?\{[^}]+\}/,
+      # @media wrapped rules (with specificity boost :not(#\#) or doubled selector)
+      ~r/@media[^{]+\{\.#{escaped_class}(?::not\(#\\#\)|\.#{escaped_class})(?::[^{]+)?\{[^}]+\}\}/,
+      # @supports wrapped rules
+      ~r/@supports[^{]+\{\.#{escaped_class}(?::not\(#\\#\)|\.#{escaped_class})(?::[^{]+)?\{[^}]+\}\}/,
+      # @container wrapped rules
+      ~r/@container[^{]+\{\.#{escaped_class}(?::not\(#\\#\)|\.#{escaped_class})(?::[^{]+)?\{[^}]+\}\}/,
+      # @starting-style wrapped rules
+      ~r/@starting-style(?::[^{]+)?\{\.#{escaped_class}(?::not\(#\\#\)|\.#{escaped_class})(?::[^{]+)?\{[^}]+\}\}/,
+      # Nested at-rules: @supports{@media{...}}
+      ~r/@supports[^{]+\{@media[^{]+\{\.#{escaped_class}(?::not\(#\\#\)|\.#{escaped_class})(?::[^{]+)?\{[^}]+\}\}\}/
+    ]
+
+    patterns
+    |> Enum.flat_map(fn pattern ->
+      Regex.scan(pattern, css) |> List.flatten()
+    end)
+  end
+
+  defp extract_var_rules(css, var_name) do
+    escaped_var = Regex.escape(var_name)
+
+    # Patterns for :root rules containing the variable
+    patterns = [
+      # Simple :root rule
+      ~r/:root\{[^}]*#{escaped_var}:[^;]+;[^}]*\}/,
+      # @media wrapped :root rule
+      ~r/@media[^{]+\{:root\{[^}]*#{escaped_var}:[^;]+;[^}]*\}\}/,
+      # @supports wrapped :root rule
+      ~r/@supports[^{]+\{:root\{[^}]*#{escaped_var}:[^;]+;[^}]*\}\}/,
+      # Nested: @supports{@media{:root{...}}}
+      ~r/@supports[^{]+\{@media[^{]+\{:root\{[^}]*#{escaped_var}:[^;]+;[^}]*\}\}\}/
+    ]
+
+    patterns
+    |> Enum.flat_map(fn pattern ->
+      Regex.scan(pattern, css) |> List.flatten()
+    end)
   end
 end

@@ -15,7 +15,7 @@ defmodule LiveStyle.ShorthandBehavior.FlattenShorthandsTest do
   The tests call `LiveStyle.ShorthandBehavior.FlattenShorthands.expand_declaration/3` directly.
   """
 
-  use ExUnit.Case, async: true
+  use LiveStyle.TestCase
 
   # Test via the FlattenShorthands behavior directly
   alias LiveStyle.ShorthandBehavior.FlattenShorthands

@@ -11,7 +11,7 @@ Add `live_style` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:live_style, "~> 0.10.0"},
+    {:live_style, "~> 0.11.0"},
     # Optional: for automatic vendor prefixing
     {:autoprefixer_ex, "~> 0.1.0"},
     # Optional: for deprecation warnings
@@ -141,7 +141,7 @@ Create a base CSS reset in `assets/css/app.css`:
 
 ### 8. Test Setup (If Needed)
 
-If your tests define LiveStyle modules (e.g., test fixtures with `use LiveStyle.Sheet`),
+If your tests define LiveStyle modules (e.g., test fixtures with `use LiveStyle`),
 add the test setup task to your aliases:
 
 ```elixir
@@ -160,10 +160,10 @@ Here's a complete example of a styled button component:
 ```elixir
 defmodule MyAppWeb.Components.Button do
   use Phoenix.Component
-  use LiveStyle.Sheet
+  use LiveStyle
 
   # Define styles using keyword list syntax
-  css_class :base,
+  class :base,
     display: "flex",
     align_items: "center",
     padding: "8px 16px",
@@ -171,11 +171,11 @@ defmodule MyAppWeb.Components.Button do
     border: "none",
     cursor: "pointer"
 
-  css_class :primary,
+  class :primary,
     background_color: "#4f46e5",
     color: "white"
 
-  css_class :secondary,
+  class :secondary,
     background_color: "#e5e7eb",
     color: "#1f2937"
 
@@ -183,7 +183,7 @@ defmodule MyAppWeb.Components.Button do
     assigns = assign_new(assigns, :variant, fn -> :primary end)
 
     ~H"""
-    <button class={css_class([:base, @variant])}>
+    <button {css([:base, @variant])}>
       <%= render_slot(@inner_block) %>
     </button>
     """
@@ -200,61 +200,74 @@ Use it in your templates:
 
 ## Module Organization
 
-LiveStyle provides two specialized modules for clearer intent:
+LiveStyle uses a module-as-namespace pattern. Each module defines its own tokens or styles.
 
-### `LiveStyle.Tokens` - Design Tokens
+### Design Tokens
 
-For centralized design tokens. Use `css_vars` for values that change (colors, themed tokens) and `css_consts` for static values:
+For centralized design tokens, create separate modules for each token type. Use `vars` for values that might be themed (colors) and `consts` for static values:
 
 ```elixir
-defmodule MyApp.Tokens do
-  use LiveStyle.Tokens
+defmodule MyApp.Colors do
+  use LiveStyle
 
-  # Colors use css_vars (needed for theming)
-  css_vars :colors,
+  vars [
     white: "#ffffff",
     black: "#000000",
     gray_900: "#111827",
     indigo_600: "#4f46e5"
+  ]
+end
 
-  # Static values use css_consts (no CSS variable overhead)
-  css_consts :space,
+defmodule MyApp.Spacing do
+  use LiveStyle
+
+  consts [
     sm: "8px",
     md: "16px",
     lg: "24px"
+  ]
+end
 
-  css_consts :radius,
+defmodule MyApp.Radius do
+  use LiveStyle
+
+  consts [
     sm: "4px",
     md: "8px",
     lg: "12px"
+  ]
+end
 
-  css_keyframes :spin,
+defmodule MyApp.Animations do
+  use LiveStyle
+
+  keyframes :spin,
     from: [transform: "rotate(0deg)"],
     to: [transform: "rotate(360deg)"]
 end
 ```
 
-### `LiveStyle.Sheet` - Component Styles
+### Component Styles
 
-For component-specific styles. Use `css_var` for colors/themed values, `css_const` for static values:
+For component-specific styles, use `var` for colors/themed values and `const` for static values:
 
 ```elixir
 defmodule MyApp.Button do
   use Phoenix.Component
-  use LiveStyle.Sheet
+  use LiveStyle
 
-  css_class :base,
+  class :base,
     display: "inline-flex",
-    padding: css_const({MyApp.Tokens, :space, :md}),
-    border_radius: css_const({MyApp.Tokens, :radius, :md})
+    padding: const({MyApp.Spacing, :md}),
+    border_radius: const({MyApp.Radius, :md})
 
-  css_class :primary,
-    background_color: css_var({MyApp.Tokens, :colors, :indigo_600}),
-    color: css_var({MyApp.Tokens, :colors, :white})
+  class :primary,
+    background_color: var({MyApp.Colors, :indigo_600}),
+    color: var({MyApp.Colors, :white})
 
   def button(assigns) do
     ~H"""
-    <button class={css_class([:base, :primary])}>
+    <button {css([:base, :primary])}>
       <%= render_slot(@inner_block) %>
     </button>
     """
@@ -265,6 +278,6 @@ end
 ## Next Steps
 
 - [Design Tokens](design-tokens.md) - Learn about CSS variables, constants, and keyframes
-- [Styling Components](styling-components.md) - Deep dive into `css_class` and composition
+- [Styling Components](styling-components.md) - Deep dive into `class` and composition
 - [Theming](theming.md) - Create and apply themes
 - [Configuration](configuration.md) - Configure shorthand behaviors and other options

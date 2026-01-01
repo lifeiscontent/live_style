@@ -14,18 +14,18 @@ defmodule LiveStyle.When do
   ## Using Markers
 
   To use these selectors, you must mark the element being observed with a marker class.
-  Use `LiveStyle.default_marker/0` for the default marker, or `LiveStyle.define_marker/1`
+  Use `LiveStyle.default_marker/0` for the default marker, or `LiveStyle.marker/1`
   for custom markers.
 
   ## Example
 
       defmodule MyComponent do
         use Phoenix.Component
-        use LiveStyle.Sheet
+        use LiveStyle
         alias LiveStyle.When
 
         # Note: computed keys require map syntax with `=>`
-        css_class :card,
+        class :card,
           transform: %{
             :default => "translateX(0)",
             When.ancestor(":hover") => "translateX(10px)"
@@ -34,7 +34,7 @@ defmodule LiveStyle.When do
         def render(assigns) do
           ~H\"\"\"
           <div class={LiveStyle.default_marker()}>
-            <div class={css_class(:card)}>Hover parent to move me</div>
+            <div {css(:card)}>Hover parent to move me</div>
           </div>
           \"\"\"
         end
@@ -47,14 +47,14 @@ defmodule LiveStyle.When do
   keyword lists can only have literal atoms as keys.
 
       # Correct - map syntax with =>
-      css_class :card,
+      class :card,
         opacity: %{
           :default => "1",
           When.ancestor(":hover") => "0.5"
         }
 
       # Also correct - tuple list syntax
-      css_class :card,
+      class :card,
         opacity: [
           {:default, "1"},
           {When.ancestor(":hover"), "0.5"}
@@ -76,7 +76,7 @@ defmodule LiveStyle.When do
 
   ## Example
 
-      css_class :item,
+      class :item,
         opacity: %{
           :default => "1",
           When.ancestor(":hover") => "0.5"
@@ -88,7 +88,8 @@ defmodule LiveStyle.When do
 
   def ancestor(pseudo, marker) do
     validate_pseudo!(pseudo)
-    ":where(.#{marker}#{pseudo} *)"
+    class = Marker.to_class(marker)
+    ":where(.#{class}#{pseudo} *)"
   end
 
   @doc """
@@ -104,7 +105,7 @@ defmodule LiveStyle.When do
 
   ## Example
 
-      css_class :container,
+      class :container,
         border_color: %{
           :default => "gray",
           When.descendant(":focus") => "blue"
@@ -116,7 +117,8 @@ defmodule LiveStyle.When do
 
   def descendant(pseudo, marker) do
     validate_pseudo!(pseudo)
-    ":where(:has(.#{marker}#{pseudo}))"
+    class = Marker.to_class(marker)
+    ":where(:has(.#{class}#{pseudo}))"
   end
 
   @doc """
@@ -132,7 +134,7 @@ defmodule LiveStyle.When do
 
   ## Example
 
-      css_class :item,
+      class :item,
         background_color: %{
           :default => "white",
           When.sibling_before(":hover") => "lightblue"
@@ -144,7 +146,8 @@ defmodule LiveStyle.When do
 
   def sibling_before(pseudo, marker) do
     validate_pseudo!(pseudo)
-    ":where(.#{marker}#{pseudo} ~ *)"
+    class = Marker.to_class(marker)
+    ":where(.#{class}#{pseudo} ~ *)"
   end
 
   @doc """
@@ -160,7 +163,7 @@ defmodule LiveStyle.When do
 
   ## Example
 
-      css_class :label,
+      class :label,
         color: %{
           :default => "black",
           When.sibling_after(":focus") => "blue"
@@ -172,7 +175,8 @@ defmodule LiveStyle.When do
 
   def sibling_after(pseudo, marker) do
     validate_pseudo!(pseudo)
-    ":where(:has(~ .#{marker}#{pseudo}))"
+    class = Marker.to_class(marker)
+    ":where(:has(~ .#{class}#{pseudo}))"
   end
 
   @doc """
@@ -188,7 +192,7 @@ defmodule LiveStyle.When do
 
   ## Example
 
-      css_class :tab,
+      class :tab,
         opacity: %{
           :default => "1",
           When.any_sibling(":hover") => "0.7"
@@ -200,7 +204,8 @@ defmodule LiveStyle.When do
 
   def any_sibling(pseudo, marker) do
     validate_pseudo!(pseudo)
-    ":where(.#{marker}#{pseudo} ~ *, :has(~ .#{marker}#{pseudo}))"
+    class = Marker.to_class(marker)
+    ":where(.#{class}#{pseudo} ~ *, :has(~ .#{class}#{pseudo}))"
   end
 
   defp validate_pseudo!(<<"::", _rest::binary>>) do

@@ -6,7 +6,7 @@ defmodule LiveStyle.Property do
   property lookups, following the pattern used by the unicode library.
 
   All property data is loaded from external files at compile time via
-  `LiveStyle.Data`, enabling:
+  `LiveStyle.PropertyMetadata`, enabling:
   - O(1) pattern-matched lookups instead of Map.get
   - Automatic recompilation when data files change
   - Single source of truth for property metadata
@@ -34,14 +34,14 @@ defmodule LiveStyle.Property do
       true
   """
 
-  alias LiveStyle.Data
+  alias LiveStyle.PropertyMetadata
 
-  @property_priorities Data.property_priorities()
-  @unitless_properties Data.unitless_properties()
-  @time_properties Data.time_properties()
-  @position_try_properties Data.position_try_properties()
-  @rtl_value_properties Data.rtl_value_properties()
-  @disallowed_shorthands Data.disallowed_shorthands()
+  @property_priorities PropertyMetadata.property_priorities()
+  @unitless_properties PropertyMetadata.unitless_properties()
+  @time_properties PropertyMetadata.time_properties()
+  @position_try_properties PropertyMetadata.position_try_properties()
+  @rtl_value_properties PropertyMetadata.rtl_value_properties()
+  @disallowed_shorthands PropertyMetadata.disallowed_shorthands()
 
   @doc """
   Returns the category of a CSS property.

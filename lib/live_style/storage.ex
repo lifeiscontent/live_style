@@ -1,133 +1,106 @@
 defmodule LiveStyle.Storage do
   @moduledoc """
-  File-based storage for the LiveStyle manifest.
+  Storage facade for the LiveStyle manifest.
 
-  The manifest stores all CSS rules, variables, keyframes, and other definitions
-  that are collected at compile time and used to generate CSS.
+  This module delegates to the configured storage adapter, defaulting to
+  `LiveStyle.Storage.FileAdapter` for file-based persistence.
 
   ## Configuration
 
-  Configure the manifest path in your config:
+  Configure a custom storage adapter:
 
       config :live_style,
-        manifest_path: "_build/live_style_manifest.etf"
+        storage_adapter: MyApp.CustomStorageAdapter
 
-  The default path is `"_build/live_style_manifest.etf"`.
+  The adapter must implement the `LiveStyle.Storage.Adapter` behaviour.
 
-  ## Per-Process Path Override
+  ## Default Adapter
 
-  For test isolation, you can override the manifest path on a per-process basis:
+  The default `LiveStyle.Storage.FileAdapter` supports:
 
-      LiveStyle.Storage.set_path("/tmp/test_manifest.etf")
-      # ... run tests ...
-      LiveStyle.Storage.clear_path()
+  - File-based persistence using Erlang Term Format (ETF)
+  - File locking for safe concurrent access
+  - Per-process path overrides for test isolation
 
-  This allows tests to run in parallel with `async: true` without conflicts.
+  See `LiveStyle.Storage.FileAdapter` for configuration options.
   """
 
-  alias LiveStyle.Storage.{IO, Lock}
-  alias LiveStyle.Storage.Path, as: StoragePath
+  alias LiveStyle.Storage.FileAdapter
 
-  @default_lock_timeout 30_000
+  @doc """
+  Returns the configured storage adapter module.
+
+  Defaults to `LiveStyle.Storage.FileAdapter`.
+  """
+  @spec adapter() :: module()
+  def adapter do
+    Application.get_env(:live_style, :storage_adapter, FileAdapter)
+  end
+
+  # Delegate path management to FileAdapter (file-specific operations)
+
+  @doc """
+  Sets the manifest path for the current process.
+
+  Only applicable when using `LiveStyle.Storage.FileAdapter`.
+  """
+  defdelegate set_path(path), to: FileAdapter
+
+  @doc """
+  Clears the per-process path override.
+
+  Only applicable when using `LiveStyle.Storage.FileAdapter`.
+  """
+  defdelegate clear_path(), to: FileAdapter
+
+  @doc """
+  Returns the current manifest path.
+
+  Only applicable when using `LiveStyle.Storage.FileAdapter`.
+  """
+  defdelegate path(), to: FileAdapter
 
   @doc """
   Returns the lock timeout in milliseconds.
 
-  Configurable via:
-
-      config :live_style, lock_timeout: 60_000
-
-  Defaults to 30 seconds.
+  Only applicable when using `LiveStyle.Storage.FileAdapter`.
   """
-  def lock_timeout do
-    Application.get_env(:live_style, :lock_timeout, @default_lock_timeout)
+  defdelegate lock_timeout(), to: FileAdapter
+
+  @doc """
+  Reads the manifest from storage.
+
+  Returns an empty manifest if storage is empty or uninitialized.
+  """
+  @spec read() :: LiveStyle.Manifest.t()
+  def read do
+    adapter().read()
   end
 
   @doc """
-  Sets the manifest path for the current process.
+  Writes the manifest to storage.
   """
-  defdelegate set_path(path), to: StoragePath
-
-  @doc """
-  Clears the per-process path override.
-  """
-  defdelegate clear_path(), to: StoragePath
-
-  @doc """
-  Returns the current manifest path.
-  """
-  defdelegate path(), to: StoragePath
-
-  @doc """
-  Reads the manifest from file.
-
-  Returns an empty manifest if the file doesn't exist or can't be parsed.
-  Uses file locking to prevent reading partially-written files.
-  """
-  def read(opts \\ []) do
-    file_path = Keyword.get(opts, :path, path())
-
-    if File.exists?(file_path) do
-      with_lock(file_path, fn ->
-        IO.read(file_path)
-      end)
-    else
-      LiveStyle.Manifest.empty()
-    end
+  @spec write(LiveStyle.Manifest.t()) :: :ok
+  def write(manifest) do
+    adapter().write(manifest)
   end
 
   @doc """
-  Writes the manifest to file.
+  Atomically updates the manifest.
 
-  Uses file locking to prevent concurrent writes from corrupting the file.
+  The update function receives the current manifest and returns the new manifest.
+  If the returned manifest is identical (same reference), the write may be skipped.
   """
-  def write(manifest, opts \\ []) do
-    file_path = Keyword.get(opts, :path, path())
-    file_path |> Elixir.Path.dirname() |> File.mkdir_p!()
-
-    with_lock(file_path, fn ->
-      IO.write(manifest, file_path)
-    end)
-
-    :ok
+  @spec update((LiveStyle.Manifest.t() -> LiveStyle.Manifest.t())) :: :ok
+  def update(fun) do
+    adapter().update(fun)
   end
 
   @doc """
-  Updates the manifest atomically using file locking.
-
-  The update function receives the current manifest and should return the
-  new manifest. If the returned manifest is identical to the input (same
-  reference), the write is skipped to avoid unnecessary I/O.
+  Clears the manifest, resetting to empty state.
   """
-  def update(fun, opts \\ []) do
-    file_path = Keyword.get(opts, :path, path())
-    file_path |> Elixir.Path.dirname() |> File.mkdir_p!()
-
-    with_lock(file_path, fn ->
-      manifest = IO.read(file_path)
-      new_manifest = fun.(manifest)
-      unless new_manifest === manifest, do: IO.write(new_manifest, file_path)
-    end)
-
-    :ok
-  end
-
-  @doc """
-  Clears the manifest.
-  """
-  def clear(opts \\ []) do
-    file_path = Keyword.get(opts, :path, path())
-
-    if File.exists?(file_path) do
-      File.rm!(file_path)
-    end
-
-    write(LiveStyle.Manifest.empty(), path: file_path)
-    :ok
-  end
-
-  defp with_lock(file_path, fun) do
-    lock_path = file_path <> ".lock"
-    Lock.with_lock(lock_path, lock_timeout(), fun)
+  @spec clear() :: :ok
+  def clear do
+    adapter().clear()
   end
 end

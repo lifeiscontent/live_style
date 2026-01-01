@@ -2,7 +2,7 @@ defmodule Mix.Tasks.LiveStyle.Audit do
   @moduledoc """
   Audits LiveStyle class definitions to find potentially unused classes.
 
-  This task scans your codebase for `css_class/2` definitions and checks if
+  This task scans your codebase for `class/2` definitions and checks if
   they are referenced anywhere in templates or code.
 
   ## Usage
@@ -18,13 +18,13 @@ defmodule Mix.Tasks.LiveStyle.Audit do
   ## How It Works
 
   1. Finds all modules that `use LiveStyle`
-  2. Extracts class names defined via `css_class/2`
+  2. Extracts class names defined via `class/2`
   3. Searches for references to those classes in `.ex`, `.exs`, and `.heex` files
   4. Reports classes that have no apparent references
 
   ## Limitations
 
-  - Dynamic class references (e.g., `css_class(assigns.variant)`) cannot be detected
+  - Dynamic class references (e.g., `css(assigns.variant)`) cannot be detected
   - Classes referenced via variables may show as unused
   - This is a heuristic tool - manual review is recommended before removing classes
 
@@ -66,7 +66,7 @@ defmodule Mix.Tasks.LiveStyle.Audit do
 
     Mix.shell().info("Scanning #{path}/ for LiveStyle classes...\n")
 
-    # Step 1: Find all css_class definitions
+    # Step 1: Find all class definitions
     definitions = find_class_definitions(path)
 
     if definitions == [] do
@@ -97,10 +97,10 @@ defmodule Mix.Tasks.LiveStyle.Audit do
   defp extract_definitions(file) do
     content = File.read!(file)
 
-    # Match css_class(:name, ...) definitions
+    # Match class(:name, ...) definitions
     # The pattern must be at the start of a line (after whitespace) to avoid matching
     # inside other expressions
-    ~r/^\s*css_class\(\s*:([a-z_][a-z0-9_]*)\s*,/m
+    ~r/^\s*class\(\s*:([a-z_][a-z0-9_]*)\s*,/m
     |> Regex.scan(content)
     |> Enum.map(fn [full_match, class_name] ->
       # Find line number by locating the match in content
@@ -151,31 +151,19 @@ defmodule Mix.Tasks.LiveStyle.Audit do
     |> Enum.flat_map(fn file ->
       content = File.read!(file)
 
-      # Find css_class(:name) calls that are NOT definitions
-      # Definitions have a second argument (the style map), so they look like:
-      # css_class(:name, key: value)
-      # References look like:
-      # css_class(:name) or css_class([:name, ...])
-      #
-      # Match css_class(:name) NOT followed by a comma (which would indicate definition)
-      css_class_refs =
-        ~r/css_class\(\s*:([a-z_][a-z0-9_]*)\s*\)/
-        |> Regex.scan(content)
-        |> Enum.map(fn [_, name] -> String.to_atom(name) end)
-
       # Find css(:name) calls
       css_refs =
         ~r/(?<![_a-z])css\(\s*:([a-z_][a-z0-9_]*)/
         |> Regex.scan(content)
         |> Enum.map(fn [_, name] -> String.to_atom(name) end)
 
-      # Find class references in lists like css_class([:button, :primary])
+      # Find class references in lists like css([:button, :primary])
       list_refs =
-        ~r/css_class\(\s*\[([^\]]+)\]\s*\)/
+        ~r/(?<![_a-z])css\(\s*\[([^\]]+)\]\s*\)/
         |> Regex.scan(content)
         |> Enum.flat_map(&extract_atoms_from_list/1)
 
-      css_class_refs ++ css_refs ++ list_refs
+      css_refs ++ list_refs
     end)
     |> MapSet.new()
   end
@@ -187,19 +175,13 @@ defmodule Mix.Tasks.LiveStyle.Audit do
     |> Enum.flat_map(fn file ->
       content = File.read!(file)
 
-      # Find css_class(@name) in templates
-      css_class_refs =
-        ~r/css_class\(\s*@?:?(\w+)/
-        |> Regex.scan(content)
-        |> Enum.map(fn [_, name] -> String.to_atom(name) end)
-
       # Find css(@name) in templates
       css_refs =
         ~r/[^_]css\(\s*@?:?(\w+)/
         |> Regex.scan(content)
         |> Enum.map(fn [_, name] -> String.to_atom(name) end)
 
-      css_class_refs ++ css_refs
+      css_refs
     end)
     |> MapSet.new()
   end

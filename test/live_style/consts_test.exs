@@ -1,279 +1,85 @@
 defmodule LiveStyle.ConstsTest do
   @moduledoc """
-  Tests for LiveStyle's css_consts macro.
+  Tests for LiveStyle's consts macro.
 
   These tests verify that LiveStyle's constants implementation matches StyleX's
   defineConsts API behavior.
 
   Reference: stylex/packages/@stylexjs/babel-plugin/__tests__/transform-stylex-defineConsts-test.js
   """
-  use LiveStyle.TestCase, async: true
+  use LiveStyle.TestCase
 
   # ===========================================================================
-  # Basic constants definition
+  # Using constants in class definitions
   # ===========================================================================
 
-  describe "basic constants definition" do
-    defmodule BasicBreakpoints do
+  describe "constants in class definitions" do
+    defmodule ZIndexConstants do
       use LiveStyle
 
-      css_consts(:breakpoint,
-        sm: "(min-width: 768px)",
-        md: "(min-width: 1024px)",
-        lg: "(min-width: 1280px)"
-      )
-    end
-
-    test "defines string constants" do
-      assert LiveStyle.get_metadata(BasicBreakpoints, {:const, :breakpoint, :sm}) ==
-               "(min-width: 768px)"
-
-      assert LiveStyle.get_metadata(BasicBreakpoints, {:const, :breakpoint, :md}) ==
-               "(min-width: 1024px)"
-
-      assert LiveStyle.get_metadata(BasicBreakpoints, {:const, :breakpoint, :lg}) ==
-               "(min-width: 1280px)"
-    end
-
-    defmodule NumericConstants do
-      use LiveStyle
-
-      css_consts(:size,
-        small: 8,
-        medium: 16,
-        large: 24
-      )
-    end
-
-    test "defines numeric constants" do
-      assert LiveStyle.get_metadata(NumericConstants, {:const, :size, :small}) == 8
-      assert LiveStyle.get_metadata(NumericConstants, {:const, :size, :medium}) == 16
-      assert LiveStyle.get_metadata(NumericConstants, {:const, :size, :large}) == 24
-    end
-
-    defmodule MixedConstants do
-      use LiveStyle
-
-      css_consts(:theme,
-        spacing: 16,
-        color: "blue",
-        breakpoint: "(min-width: 768px)"
-      )
-    end
-
-    test "defines mixed string and numeric constants" do
-      assert LiveStyle.get_metadata(MixedConstants, {:const, :theme, :spacing}) == 16
-      assert LiveStyle.get_metadata(MixedConstants, {:const, :theme, :color}) == "blue"
-
-      assert LiveStyle.get_metadata(MixedConstants, {:const, :theme, :breakpoint}) ==
-               "(min-width: 768px)"
-    end
-  end
-
-  # ===========================================================================
-  # Constants uniqueness and consistency
-  # ===========================================================================
-
-  describe "constants uniqueness and consistency" do
-    defmodule ConstsUnique1 do
-      use LiveStyle
-
-      css_consts(:test, padding: "10px")
-    end
-
-    defmodule ConstsUnique2 do
-      use LiveStyle
-
-      css_consts(:test, padding: "10px")
-    end
-
-    defmodule ConstsUnique3 do
-      use LiveStyle
-
-      css_consts(:test, margin: "10px")
-    end
-
-    test "same inputs produce same values" do
-      val1 = LiveStyle.get_metadata(ConstsUnique1, {:const, :test, :padding})
-      val2 = LiveStyle.get_metadata(ConstsUnique2, {:const, :test, :padding})
-
-      assert val1 == val2
-    end
-
-    test "different inputs produce different entries" do
-      val1 = LiveStyle.get_metadata(ConstsUnique1, {:const, :test, :padding})
-      val3 = LiveStyle.get_metadata(ConstsUnique3, {:const, :test, :margin})
-
-      # Values are different (padding vs margin)
-      assert val1 == "10px"
-      assert val3 == "10px"
-      # But they're stored under different keys (different modules/names)
-    end
-  end
-
-  # ===========================================================================
-  # Using constants in css_class
-  # ===========================================================================
-
-  describe "using constants in css_class" do
-    defmodule ConstsWithRule do
-      use LiveStyle
-
-      css_consts(:breakpoint,
-        small: "@media (min-width: 768px)",
-        large: "@media (min-width: 1024px)"
-      )
-
-      css_class(:responsive,
-        color: %{
-          :default => "red",
-          css_const({__MODULE__, :breakpoint, :small}) => "blue"
-        }
-      )
-    end
-
-    test "constants can be used in conditional styles" do
-      rule = LiveStyle.get_metadata(ConstsWithRule, {:class, :responsive})
-
-      assert rule != nil
-      assert rule.class_string != ""
-    end
-
-    defmodule ConstsWithMultipleRules do
-      use LiveStyle
-
-      css_consts(:z,
+      consts(
         dropdown: 1000,
         modal: 2000,
         tooltip: 3000
       )
 
-      css_class(:dropdown, z_index: css_const({__MODULE__, :z, :dropdown}))
-      css_class(:modal, z_index: css_const({__MODULE__, :z, :modal}))
-      css_class(:tooltip, z_index: css_const({__MODULE__, :z, :tooltip}))
+      class(:dropdown, z_index: const(:dropdown))
+      class(:modal, z_index: const(:modal))
+      class(:tooltip, z_index: const(:tooltip))
     end
 
-    test "numeric constants can be used as property values" do
-      dropdown_rule = LiveStyle.get_metadata(ConstsWithMultipleRules, {:class, :dropdown})
-      modal_rule = LiveStyle.get_metadata(ConstsWithMultipleRules, {:class, :modal})
-      tooltip_rule = LiveStyle.get_metadata(ConstsWithMultipleRules, {:class, :tooltip})
+    test "numeric constants are inlined in generated CSS" do
+      css = LiveStyle.Compiler.generate_css()
 
-      assert dropdown_rule != nil
-      assert modal_rule != nil
-      assert tooltip_rule != nil
+      assert css =~ "z-index:1000"
+      assert css =~ "z-index:2000"
+      assert css =~ "z-index:3000"
     end
-  end
 
-  # ===========================================================================
-  # Multiple constants namespaces
-  # ===========================================================================
-
-  describe "multiple constants namespaces" do
-    defmodule MultipleNamespaces do
+    defmodule BreakpointConstants do
       use LiveStyle
 
-      css_consts(:breakpoint,
-        sm: "(min-width: 768px)",
-        md: "(min-width: 1024px)"
+      consts(
+        breakpoint_sm: "@media (min-width: 768px)",
+        breakpoint_lg: "@media (min-width: 1024px)"
       )
 
-      css_consts(:color,
-        primary: "blue",
-        secondary: "green"
-      )
-
-      css_consts(:size,
-        small: 8,
-        large: 24
+      class(:responsive,
+        color: %{
+          :default => "red",
+          const(:breakpoint_sm) => "blue",
+          const(:breakpoint_lg) => "green"
+        }
       )
     end
 
-    test "different namespaces have independent values" do
-      # Breakpoints
-      assert LiveStyle.get_metadata(MultipleNamespaces, {:const, :breakpoint, :sm}) ==
-               "(min-width: 768px)"
+    test "string constants work as media query conditions" do
+      css = LiveStyle.Compiler.generate_css()
 
-      # Colors
-      assert LiveStyle.get_metadata(MultipleNamespaces, {:const, :color, :primary}) == "blue"
-
-      # Sizes
-      assert LiveStyle.get_metadata(MultipleNamespaces, {:const, :size, :small}) == 8
+      assert css =~ "@media (min-width: 768px)"
+      assert css =~ "@media (min-width: 1024px)"
+      assert css =~ "color:red"
+      assert css =~ "color:blue"
+      assert css =~ "color:green"
     end
-  end
 
-  # ===========================================================================
-  # Edge cases
-  # ===========================================================================
-
-  describe "edge cases" do
-    defmodule ConstsWithSpecialChars do
+    defmodule StringConstants do
       use LiveStyle
 
-      css_consts(:special,
-        with_url: "url(\"bg.png\")",
-        with_quotes: "\"hello world\""
+      consts(
+        font_mono: "monospace",
+        shadow_sm: "0 1px 2px black"
       )
+
+      class(:code, font_family: const(:font_mono))
+      class(:card, box_shadow: const(:shadow_sm))
     end
 
-    test "handles special characters in values" do
-      assert LiveStyle.get_metadata(ConstsWithSpecialChars, {:const, :special, :with_url}) ==
-               "url(\"bg.png\")"
+    test "string constants are inlined in generated CSS" do
+      css = LiveStyle.Compiler.generate_css()
 
-      assert LiveStyle.get_metadata(ConstsWithSpecialChars, {:const, :special, :with_quotes}) ==
-               "\"hello world\""
-    end
-
-    defmodule ConstsWithZero do
-      use LiveStyle
-
-      css_consts(:z,
-        base: 0,
-        negative: -1
-      )
-    end
-
-    test "handles zero and negative values" do
-      assert LiveStyle.get_metadata(ConstsWithZero, {:const, :z, :base}) == 0
-      assert LiveStyle.get_metadata(ConstsWithZero, {:const, :z, :negative}) == -1
-    end
-
-    defmodule ConstsWithFloat do
-      use LiveStyle
-
-      css_consts(:ratio,
-        half: 0.5,
-        third: 0.333
-      )
-    end
-
-    test "handles float values" do
-      assert LiveStyle.get_metadata(ConstsWithFloat, {:const, :ratio, :half}) == 0.5
-      assert LiveStyle.get_metadata(ConstsWithFloat, {:const, :ratio, :third}) == 0.333
-    end
-  end
-
-  # ===========================================================================
-  # Constants accessor functions
-  # ===========================================================================
-
-  describe "constants accessor functions" do
-    defmodule ConstsAccessor do
-      use LiveStyle
-
-      css_consts(:bp,
-        sm: "(min-width: 768px)",
-        lg: "(min-width: 1280px)"
-      )
-    end
-
-    test "css_const/1 retrieves constant value" do
-      # The css_const function is used at compile time in css_class
-      # Here we verify the metadata contains the expected values
-      sm = LiveStyle.get_metadata(ConstsAccessor, {:const, :bp, :sm})
-      lg = LiveStyle.get_metadata(ConstsAccessor, {:const, :bp, :lg})
-
-      assert sm == "(min-width: 768px)"
-      assert lg == "(min-width: 1280px)"
+      assert css =~ "font-family:monospace"
+      assert css =~ "box-shadow:0 1px 2px black"
     end
   end
 
@@ -285,9 +91,9 @@ defmodule LiveStyle.ConstsTest do
     defmodule SharedConsts do
       use LiveStyle
 
-      css_consts(:shared,
-        primary: "rebeccapurple",
-        spacing: 16
+      consts(
+        primary_color: "rebeccapurple",
+        base_spacing: "16px"
       )
     end
 
@@ -295,41 +101,80 @@ defmodule LiveStyle.ConstsTest do
       use LiveStyle
       alias LiveStyle.ConstsTest.SharedConsts
 
-      css_class(:box,
-        padding: css_const({SharedConsts, :shared, :spacing})
+      class(:themed_box,
+        color: const({SharedConsts, :primary_color}),
+        padding: const({SharedConsts, :base_spacing})
       )
     end
 
-    test "constants can be referenced from other modules" do
-      # The rule should exist and use the shared constant
-      rule = LiveStyle.get_metadata(ConstsConsumer, {:class, :box})
-      assert rule != nil
-      assert rule.class_string != ""
+    test "constants can be referenced from other modules in CSS output" do
+      css = LiveStyle.Compiler.generate_css()
+
+      assert css =~ "color:rebeccapurple"
+      assert css =~ "padding:16px"
     end
   end
 
   # ===========================================================================
-  # Constants don't generate CSS
+  # Constants don't generate CSS on their own
   # ===========================================================================
 
-  describe "constants don't generate CSS" do
-    defmodule ConstsNoCss do
+  describe "constants don't generate standalone CSS" do
+    defmodule UnusedConstants do
       use LiveStyle
 
-      css_consts(:no_css,
-        value1: "test1",
-        value2: "test2"
+      consts(
+        unused_value: "should-not-appear",
+        another_unused: "also-not-in-css"
       )
     end
 
-    test "constants don't appear in CSS output" do
-      css = generate_css()
+    test "unused constants don't appear in CSS output" do
+      css = LiveStyle.Compiler.generate_css()
 
-      # Constants should not generate any CSS rules
-      # They are compile-time values only
-      refute css =~ "no_css"
-      refute css =~ "test1"
-      refute css =~ "test2"
+      refute css =~ "should-not-appear"
+      refute css =~ "also-not-in-css"
+    end
+  end
+
+  # ===========================================================================
+  # Edge cases
+  # ===========================================================================
+
+  describe "edge case values" do
+    defmodule EdgeCaseConstants do
+      use LiveStyle
+
+      consts(
+        zero_value: 0,
+        negative_value: -1,
+        float_value: 0.5,
+        url_value: "url(image.png)"
+      )
+
+      class(:zero_index, z_index: const(:zero_value))
+      class(:negative_index, z_index: const(:negative_value))
+      class(:half_opacity, opacity: const(:float_value))
+      class(:bg_image, background_image: const(:url_value))
+    end
+
+    test "zero and negative constants work in CSS" do
+      css = LiveStyle.Compiler.generate_css()
+
+      assert css =~ "z-index:0"
+      assert css =~ "z-index:-1"
+    end
+
+    test "float constants work in CSS" do
+      css = LiveStyle.Compiler.generate_css()
+
+      assert css =~ "opacity:0.5"
+    end
+
+    test "constants with special characters work in CSS" do
+      css = LiveStyle.Compiler.generate_css()
+
+      assert css =~ "background-image:url(image.png)"
     end
   end
 end

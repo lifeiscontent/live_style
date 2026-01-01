@@ -1,13 +1,14 @@
 defmodule LiveStyle.ViewTransitionTest do
   @moduledoc """
-  Tests for LiveStyle's css_view_transition macro.
+  Tests for LiveStyle's view_transition_class macro.
 
   These tests verify that LiveStyle's view transition implementation matches StyleX's
   viewTransitionClass API behavior.
 
   Reference: stylex/packages/@stylexjs/babel-plugin/__tests__/transform-stylex-viewTransitionClass-test.js
   """
-  use LiveStyle.TestCase, async: true
+  use LiveStyle.TestCase
+  use Snapshy
 
   # ===========================================================================
   # Basic view transition tests
@@ -17,7 +18,7 @@ defmodule LiveStyle.ViewTransitionTest do
     defmodule BasicViewTransition do
       use LiveStyle
 
-      css_view_transition(:card,
+      view_transition_class(:card,
         group: [transition_property: "none"],
         image_pair: [border_radius: 16],
         old: [animation_duration: "0.5s"],
@@ -25,16 +26,24 @@ defmodule LiveStyle.ViewTransitionTest do
       )
     end
 
+    test_snapshot "view transition with all pseudo-element types CSS output" do
+      css = LiveStyle.Compiler.generate_css()
+
+      view_transition = LiveStyle.ViewTransition.lookup!({BasicViewTransition, :card})
+      ident = view_transition.ident
+
+      css
+      |> extract_view_transition_rules(ident)
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+
     test "generates view transition with all pseudo-element types" do
-      view_transition =
-        LiveStyle.get_metadata(
-          LiveStyle.ViewTransitionTest.BasicViewTransition,
-          {:view_transition, :card}
-        )
+      view_transition = LiveStyle.ViewTransition.lookup!({BasicViewTransition, :card})
 
       assert view_transition != nil
-      assert view_transition.css_name != nil
-      assert is_binary(view_transition.css_name)
+      assert view_transition.ident != nil
+      assert is_binary(view_transition.ident)
 
       # Should have styles for all four pseudo-element types
       assert Map.has_key?(view_transition.styles, :group)
@@ -46,20 +55,28 @@ defmodule LiveStyle.ViewTransitionTest do
     defmodule GroupOnlyViewTransition do
       use LiveStyle
 
-      css_view_transition(:slide,
+      view_transition_class(:slide,
         group: [animation_duration: "1s"]
       )
     end
 
+    test_snapshot "view transition with only group pseudo-element CSS output" do
+      css = LiveStyle.Compiler.generate_css()
+
+      view_transition = LiveStyle.ViewTransition.lookup!({GroupOnlyViewTransition, :slide})
+      ident = view_transition.ident
+
+      css
+      |> extract_view_transition_rules(ident)
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+
     test "handles view transition with only group pseudo-element" do
-      view_transition =
-        LiveStyle.get_metadata(
-          LiveStyle.ViewTransitionTest.GroupOnlyViewTransition,
-          {:view_transition, :slide}
-        )
+      view_transition = LiveStyle.ViewTransition.lookup!({GroupOnlyViewTransition, :slide})
 
       assert view_transition != nil
-      assert view_transition.css_name != nil
+      assert view_transition.ident != nil
       assert Map.has_key?(view_transition.styles, :group)
       refute Map.has_key?(view_transition.styles, :image_pair)
       refute Map.has_key?(view_transition.styles, :old)
@@ -69,17 +86,13 @@ defmodule LiveStyle.ViewTransitionTest do
     defmodule ImagePairOnlyViewTransition do
       use LiveStyle
 
-      css_view_transition(:image,
+      view_transition_class(:image,
         image_pair: [isolation: "isolate"]
       )
     end
 
     test "handles view transition with only image_pair pseudo-element" do
-      view_transition =
-        LiveStyle.get_metadata(
-          LiveStyle.ViewTransitionTest.ImagePairOnlyViewTransition,
-          {:view_transition, :image}
-        )
+      view_transition = LiveStyle.ViewTransition.lookup!({ImagePairOnlyViewTransition, :image})
 
       assert view_transition != nil
       assert Map.has_key?(view_transition.styles, :image_pair)
@@ -88,17 +101,13 @@ defmodule LiveStyle.ViewTransitionTest do
     defmodule OldOnlyViewTransition do
       use LiveStyle
 
-      css_view_transition(:fade_out,
+      view_transition_class(:fade_out,
         old: [animation_name: "fadeOut", animation_duration: "0.3s"]
       )
     end
 
     test "handles view transition with only old pseudo-element" do
-      view_transition =
-        LiveStyle.get_metadata(
-          LiveStyle.ViewTransitionTest.OldOnlyViewTransition,
-          {:view_transition, :fade_out}
-        )
+      view_transition = LiveStyle.ViewTransition.lookup!({OldOnlyViewTransition, :fade_out})
 
       assert view_transition != nil
       assert Map.has_key?(view_transition.styles, :old)
@@ -107,17 +116,13 @@ defmodule LiveStyle.ViewTransitionTest do
     defmodule NewOnlyViewTransition do
       use LiveStyle
 
-      css_view_transition(:fade_in,
+      view_transition_class(:fade_in,
         new: [animation_name: "fadeIn", animation_duration: "0.3s"]
       )
     end
 
     test "handles view transition with only new pseudo-element" do
-      view_transition =
-        LiveStyle.get_metadata(
-          LiveStyle.ViewTransitionTest.NewOnlyViewTransition,
-          {:view_transition, :fade_in}
-        )
+      view_transition = LiveStyle.ViewTransition.lookup!({NewOnlyViewTransition, :fade_in})
 
       assert view_transition != nil
       assert Map.has_key?(view_transition.styles, :new)
@@ -132,43 +137,55 @@ defmodule LiveStyle.ViewTransitionTest do
     defmodule ViewTransitionWithKeyframes do
       use LiveStyle
 
-      css_keyframes(:fade_in,
+      keyframes(:fade_in,
         from: %{opacity: 0},
         to: %{opacity: 1}
       )
 
-      css_keyframes(:fade_out,
+      keyframes(:fade_out,
         from: %{opacity: 1},
         to: %{opacity: 0}
       )
 
-      css_view_transition(:crossfade,
-        old: [animation_name: css_keyframes(:fade_out), animation_duration: "1s"],
-        new: [animation_name: css_keyframes(:fade_in), animation_duration: "1s"]
+      view_transition_class(:crossfade,
+        old: [animation_name: keyframes(:fade_out), animation_duration: "1s"],
+        new: [animation_name: keyframes(:fade_in), animation_duration: "1s"]
       )
+    end
+
+    test_snapshot "view transition with keyframes CSS output" do
+      css = LiveStyle.Compiler.generate_css()
+
+      view_transition =
+        LiveStyle.ViewTransition.lookup!({ViewTransitionWithKeyframes, :crossfade})
+
+      ident = view_transition.ident
+
+      # Include keyframes and view transition rules
+      keyframes_fade_in =
+        LiveStyle.Keyframes.lookup!({ViewTransitionWithKeyframes, :fade_in})
+
+      keyframes_fade_out =
+        LiveStyle.Keyframes.lookup!({ViewTransitionWithKeyframes, :fade_out})
+
+      vt_rules = extract_view_transition_rules(css, ident)
+      kf_rules_in = extract_keyframes_rules(css, keyframes_fade_in.ident)
+      kf_rules_out = extract_keyframes_rules(css, keyframes_fade_out.ident)
+
+      (vt_rules ++ kf_rules_in ++ kf_rules_out)
+      |> Enum.sort()
+      |> Enum.join("\n")
     end
 
     test "uses keyframe references in view transition" do
       view_transition =
-        LiveStyle.get_metadata(
-          LiveStyle.ViewTransitionTest.ViewTransitionWithKeyframes,
-          {:view_transition, :crossfade}
-        )
+        LiveStyle.ViewTransition.lookup!({ViewTransitionWithKeyframes, :crossfade})
 
       assert view_transition != nil
 
       # Verify keyframes are also registered
-      fade_in =
-        LiveStyle.get_metadata(
-          LiveStyle.ViewTransitionTest.ViewTransitionWithKeyframes,
-          {:keyframes, :fade_in}
-        )
-
-      fade_out =
-        LiveStyle.get_metadata(
-          LiveStyle.ViewTransitionTest.ViewTransitionWithKeyframes,
-          {:keyframes, :fade_out}
-        )
+      fade_in = LiveStyle.Keyframes.lookup!({ViewTransitionWithKeyframes, :fade_in})
+      fade_out = LiveStyle.Keyframes.lookup!({ViewTransitionWithKeyframes, :fade_out})
 
       assert fade_in != nil
       assert fade_out != nil
@@ -177,28 +194,25 @@ defmodule LiveStyle.ViewTransitionTest do
     defmodule ViewTransitionWithSlideKeyframes do
       use LiveStyle
 
-      css_keyframes(:slide_in,
+      keyframes(:slide_in,
         from: %{transform: "translateX(100%)"},
         to: %{transform: "translateX(0)"}
       )
 
-      css_keyframes(:slide_out,
+      keyframes(:slide_out,
         from: %{transform: "translateX(0)"},
         to: %{transform: "translateX(-100%)"}
       )
 
-      css_view_transition(:slide,
-        old: [animation_name: css_keyframes(:slide_out), animation_duration: "0.5s"],
-        new: [animation_name: css_keyframes(:slide_in), animation_duration: "0.5s"]
+      view_transition_class(:slide,
+        old: [animation_name: keyframes(:slide_out), animation_duration: "0.5s"],
+        new: [animation_name: keyframes(:slide_in), animation_duration: "0.5s"]
       )
     end
 
     test "view transition with transform keyframes" do
       view_transition =
-        LiveStyle.get_metadata(
-          LiveStyle.ViewTransitionTest.ViewTransitionWithSlideKeyframes,
-          {:view_transition, :slide}
-        )
+        LiveStyle.ViewTransition.lookup!({ViewTransitionWithSlideKeyframes, :slide})
 
       assert view_transition != nil
       assert Map.has_key?(view_transition.styles, :old)
@@ -214,7 +228,7 @@ defmodule LiveStyle.ViewTransitionTest do
     defmodule ViewTransitionMultipleProps do
       use LiveStyle
 
-      css_view_transition(:complex,
+      view_transition_class(:complex,
         group: [
           animation_duration: "0.3s",
           animation_timing_function: "ease-in-out"
@@ -234,12 +248,23 @@ defmodule LiveStyle.ViewTransitionTest do
       )
     end
 
+    test_snapshot "complex view transition with multiple properties CSS output" do
+      css = LiveStyle.Compiler.generate_css()
+
+      view_transition =
+        LiveStyle.ViewTransition.lookup!({ViewTransitionMultipleProps, :complex})
+
+      ident = view_transition.ident
+
+      css
+      |> extract_view_transition_rules(ident)
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+
     test "handles multiple properties per pseudo-element" do
       view_transition =
-        LiveStyle.get_metadata(
-          LiveStyle.ViewTransitionTest.ViewTransitionMultipleProps,
-          {:view_transition, :complex}
-        )
+        LiveStyle.ViewTransition.lookup!({ViewTransitionMultipleProps, :complex})
 
       assert view_transition != nil
 
@@ -265,7 +290,7 @@ defmodule LiveStyle.ViewTransitionTest do
     defmodule ViewTransitionValueNormalization do
       use LiveStyle
 
-      css_view_transition(:normalized,
+      view_transition_class(:normalized,
         group: [
           animation_duration: 500
         ],
@@ -277,10 +302,7 @@ defmodule LiveStyle.ViewTransitionTest do
 
     test "stores values in styles map" do
       view_transition =
-        LiveStyle.get_metadata(
-          LiveStyle.ViewTransitionTest.ViewTransitionValueNormalization,
-          {:view_transition, :normalized}
-        )
+        LiveStyle.ViewTransition.lookup!({ViewTransitionValueNormalization, :normalized})
 
       assert view_transition != nil
 
@@ -292,7 +314,7 @@ defmodule LiveStyle.ViewTransitionTest do
     defmodule ViewTransitionStringValues do
       use LiveStyle
 
-      css_view_transition(:string_vals,
+      view_transition_class(:string_vals,
         old: [
           animation_duration: "0.5s",
           animation_timing_function: "cubic-bezier(0.4, 0, 0.2, 1)"
@@ -302,10 +324,7 @@ defmodule LiveStyle.ViewTransitionTest do
 
     test "preserves string values" do
       view_transition =
-        LiveStyle.get_metadata(
-          LiveStyle.ViewTransitionTest.ViewTransitionStringValues,
-          {:view_transition, :string_vals}
-        )
+        LiveStyle.ViewTransition.lookup!({ViewTransitionStringValues, :string_vals})
 
       assert view_transition != nil
 
@@ -317,24 +336,24 @@ defmodule LiveStyle.ViewTransitionTest do
   end
 
   # ===========================================================================
-  # css_view_transition/1 - reference syntax
+  # view_transition_class/1 - reference syntax
   # ===========================================================================
 
   describe "view transition reference syntax" do
     defmodule ViewTransitionDefinition do
       use LiveStyle
 
-      css_view_transition(:my_transition,
+      view_transition_class(:my_transition,
         group: [animation_duration: "0.3s"],
         new: [animation_timing_function: "ease-out"]
       )
     end
 
     test "can get view transition name from module" do
-      name = LiveStyle.ViewTransition.lookup!(ViewTransitionDefinition, :my_transition)
+      vt = LiveStyle.ViewTransition.lookup!({ViewTransitionDefinition, :my_transition})
 
-      assert is_binary(name)
-      assert name != ""
+      assert is_binary(vt.ident)
+      assert vt.ident != ""
     end
   end
 
@@ -346,51 +365,53 @@ defmodule LiveStyle.ViewTransitionTest do
     defmodule MultipleViewTransitions do
       use LiveStyle
 
-      css_view_transition(:fade,
+      view_transition_class(:fade,
         old: [animation_name: "fadeOut"],
         new: [animation_name: "fadeIn"]
       )
 
-      css_view_transition(:slide,
+      view_transition_class(:slide,
         old: [animation_name: "slideOut"],
         new: [animation_name: "slideIn"]
       )
 
-      css_view_transition(:scale,
+      view_transition_class(:scale,
         group: [animation_duration: "0.5s"],
         old: [transform: "scale(1.1)"],
         new: [transform: "scale(0.9)"]
       )
     end
 
-    test "each view transition gets unique name" do
-      fade_name = LiveStyle.ViewTransition.lookup!(MultipleViewTransitions, :fade)
-      slide_name = LiveStyle.ViewTransition.lookup!(MultipleViewTransitions, :slide)
-      scale_name = LiveStyle.ViewTransition.lookup!(MultipleViewTransitions, :scale)
+    test_snapshot "multiple view transitions CSS output" do
+      css = LiveStyle.Compiler.generate_css()
 
-      assert fade_name != slide_name
-      assert slide_name != scale_name
-      assert fade_name != scale_name
+      fade = LiveStyle.ViewTransition.lookup!({MultipleViewTransitions, :fade})
+      slide = LiveStyle.ViewTransition.lookup!({MultipleViewTransitions, :slide})
+      scale = LiveStyle.ViewTransition.lookup!({MultipleViewTransitions, :scale})
+
+      fade_rules = extract_view_transition_rules(css, fade.ident)
+      slide_rules = extract_view_transition_rules(css, slide.ident)
+      scale_rules = extract_view_transition_rules(css, scale.ident)
+
+      (fade_rules ++ slide_rules ++ scale_rules)
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+
+    test "each view transition gets unique name" do
+      fade = LiveStyle.ViewTransition.lookup!({MultipleViewTransitions, :fade})
+      slide = LiveStyle.ViewTransition.lookup!({MultipleViewTransitions, :slide})
+      scale = LiveStyle.ViewTransition.lookup!({MultipleViewTransitions, :scale})
+
+      assert fade.ident != slide.ident
+      assert slide.ident != scale.ident
+      assert fade.ident != scale.ident
     end
 
     test "all view transitions are registered in manifest" do
-      fade =
-        LiveStyle.get_metadata(
-          LiveStyle.ViewTransitionTest.MultipleViewTransitions,
-          {:view_transition, :fade}
-        )
-
-      slide =
-        LiveStyle.get_metadata(
-          LiveStyle.ViewTransitionTest.MultipleViewTransitions,
-          {:view_transition, :slide}
-        )
-
-      scale =
-        LiveStyle.get_metadata(
-          LiveStyle.ViewTransitionTest.MultipleViewTransitions,
-          {:view_transition, :scale}
-        )
+      fade = LiveStyle.ViewTransition.lookup!({MultipleViewTransitions, :fade})
+      slide = LiveStyle.ViewTransition.lookup!({MultipleViewTransitions, :slide})
+      scale = LiveStyle.ViewTransition.lookup!({MultipleViewTransitions, :scale})
 
       assert fade != nil
       assert slide != nil
@@ -406,7 +427,7 @@ defmodule LiveStyle.ViewTransitionTest do
     defmodule ViewTransitionCSSFormat do
       use LiveStyle
 
-      css_view_transition(:format_test,
+      view_transition_class(:format_test,
         group: [transition_property: "none"],
         image_pair: [border_radius: 8],
         old: [opacity: 0],
@@ -414,9 +435,23 @@ defmodule LiveStyle.ViewTransitionTest do
       )
     end
 
+    test_snapshot "CSS format with view transition pseudo-elements" do
+      css = LiveStyle.Compiler.generate_css()
+
+      view_transition =
+        LiveStyle.ViewTransition.lookup!({ViewTransitionCSSFormat, :format_test})
+
+      ident = view_transition.ident
+
+      css
+      |> extract_view_transition_rules(ident)
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+
     test "generates CSS with view transition pseudo-elements" do
       # Generate CSS output
-      css = generate_css()
+      css = LiveStyle.Compiler.generate_css()
 
       # The CSS should contain view-transition pseudo-elements
       assert css =~ "::view-transition-group"
@@ -426,7 +461,7 @@ defmodule LiveStyle.ViewTransitionTest do
     end
 
     test "CSS uses wildcard class selector pattern" do
-      css = generate_css()
+      css = LiveStyle.Compiler.generate_css()
 
       # StyleX pattern: ::view-transition-group(*.xchu1hv)
       assert css =~ ~r/::view-transition-\w+\(\*\.x[a-z0-9]+\)/
@@ -441,7 +476,7 @@ defmodule LiveStyle.ViewTransitionTest do
     defmodule ViewTransitionWithZero do
       use LiveStyle
 
-      css_view_transition(:zero_values,
+      view_transition_class(:zero_values,
         group: [animation_delay: 0],
         old: [opacity: 0]
       )
@@ -449,10 +484,7 @@ defmodule LiveStyle.ViewTransitionTest do
 
     test "handles zero values" do
       view_transition =
-        LiveStyle.get_metadata(
-          LiveStyle.ViewTransitionTest.ViewTransitionWithZero,
-          {:view_transition, :zero_values}
-        )
+        LiveStyle.ViewTransition.lookup!({ViewTransitionWithZero, :zero_values})
 
       assert view_transition != nil
 
@@ -464,18 +496,29 @@ defmodule LiveStyle.ViewTransitionTest do
       use LiveStyle
 
       # Only old and new, no group or image_pair
-      css_view_transition(:minimal,
+      view_transition_class(:minimal,
         old: [opacity: 0],
         new: [opacity: 1]
       )
     end
 
+    test_snapshot "minimal view transition CSS output" do
+      css = LiveStyle.Compiler.generate_css()
+
+      view_transition =
+        LiveStyle.ViewTransition.lookup!({ViewTransitionEmptyGroup, :minimal})
+
+      ident = view_transition.ident
+
+      css
+      |> extract_view_transition_rules(ident)
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+
     test "handles transition without group or image_pair" do
       view_transition =
-        LiveStyle.get_metadata(
-          LiveStyle.ViewTransitionTest.ViewTransitionEmptyGroup,
-          {:view_transition, :minimal}
-        )
+        LiveStyle.ViewTransition.lookup!({ViewTransitionEmptyGroup, :minimal})
 
       assert view_transition != nil
 
@@ -489,7 +532,7 @@ defmodule LiveStyle.ViewTransitionTest do
     defmodule ViewTransitionCSSMinimalOutput do
       use LiveStyle
 
-      css_view_transition(:css_minimal,
+      view_transition_class(:css_minimal,
         old: [opacity: 0],
         new: [opacity: 1]
       )
@@ -497,22 +540,19 @@ defmodule LiveStyle.ViewTransitionTest do
 
     test "CSS output does not include unspecified pseudo-elements" do
       view_transition =
-        LiveStyle.get_metadata(
-          LiveStyle.ViewTransitionTest.ViewTransitionCSSMinimalOutput,
-          {:view_transition, :css_minimal}
-        )
+        LiveStyle.ViewTransition.lookup!({ViewTransitionCSSMinimalOutput, :css_minimal})
 
-      css_name = view_transition.css_name
-      css = generate_css()
+      ident = view_transition.ident
+      css = LiveStyle.Compiler.generate_css()
 
       # Should have old and new
-      assert css =~ "::view-transition-old(*.#{css_name})"
-      assert css =~ "::view-transition-new(*.#{css_name})"
+      assert css =~ "::view-transition-old(*.#{ident})"
+      assert css =~ "::view-transition-new(*.#{ident})"
 
       # Should NOT have group or image_pair for this specific class
       # (They might exist from other tests, so we check the specific pattern)
-      refute css =~ "::view-transition-group(*.#{css_name})"
-      refute css =~ "::view-transition-image-pair(*.#{css_name})"
+      refute css =~ "::view-transition-group(*.#{ident})"
+      refute css =~ "::view-transition-image-pair(*.#{ident})"
     end
   end
 
@@ -525,7 +565,7 @@ defmodule LiveStyle.ViewTransitionTest do
       use LiveStyle
 
       # Matches StyleX test: "viewTransitionClass basic object"
-      css_view_transition(:test,
+      view_transition_class(:test,
         group: [transition_property: "none"],
         image_pair: [border_radius: 16],
         old: [animation_duration: "0.5s"],
@@ -533,15 +573,52 @@ defmodule LiveStyle.ViewTransitionTest do
       )
     end
 
+    test_snapshot "StyleX parity basic view transition CSS output" do
+      css = LiveStyle.Compiler.generate_css()
+
+      view_transition = LiveStyle.ViewTransition.lookup!({StyleXParityBasic, :test})
+      ident = view_transition.ident
+
+      css
+      |> extract_view_transition_rules(ident)
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+
     test "matches StyleX hash for basic view transition" do
       # Expected StyleX output: "xchu1hv"
-      view_transition =
-        LiveStyle.get_metadata(
-          LiveStyle.ViewTransitionTest.StyleXParityBasic,
-          {:view_transition, :test}
-        )
+      view_transition = LiveStyle.ViewTransition.lookup!({StyleXParityBasic, :test})
 
-      assert view_transition.css_name == "xchu1hv"
+      assert view_transition.ident == "xchu1hv"
     end
+  end
+
+  # ===========================================================================
+  # Helpers
+  # ===========================================================================
+
+  defp extract_view_transition_rules(css, ident) do
+    escaped_ident = Regex.escape(ident)
+
+    # Pattern for view-transition pseudo-elements: ::view-transition-group(*.xident){...}
+    patterns = [
+      ~r/::view-transition-group\(\*\.#{escaped_ident}\)\{[^}]+\}/,
+      ~r/::view-transition-image-pair\(\*\.#{escaped_ident}\)\{[^}]+\}/,
+      ~r/::view-transition-old\(\*\.#{escaped_ident}\)\{[^}]+\}/,
+      ~r/::view-transition-new\(\*\.#{escaped_ident}\)\{[^}]+\}/
+    ]
+
+    patterns
+    |> Enum.flat_map(fn pattern ->
+      Regex.scan(pattern, css) |> List.flatten()
+    end)
+  end
+
+  defp extract_keyframes_rules(css, ident) do
+    escaped_ident = Regex.escape(ident)
+
+    pattern = ~r/@keyframes #{escaped_ident}-B\{[^}]+(?:\{[^}]*\}[^}]*)+\}/
+
+    Regex.scan(pattern, css) |> List.flatten()
   end
 end

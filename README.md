@@ -6,9 +6,9 @@ LiveStyle provides a type-safe, composable styling system with:
 
 - **Atomic CSS**: Each property-value pair becomes a single class
 - **Deterministic hashing**: Same styles always produce same class names
-- **CSS Variables**: Type-safe design tokens with `css_vars/2`
-- **Constants**: Static values inlined at compile time with `css_consts/2`
-- **Theming**: Override variables with `css_theme/3`
+- **CSS Variables**: Type-safe design tokens with `vars/1`
+- **Constants**: Static values inlined at compile time with `consts/1`
+- **Theming**: Override variables with `theme/2`
 - **@layer support**: CSS cascade layers for predictable specificity
 - **Last-wins merging**: Like StyleX, later styles override earlier ones
 
@@ -19,7 +19,7 @@ Add `live_style` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:live_style, "~> 0.10.0"}
+    {:live_style, "~> 0.11.0"}
   ]
 end
 ```
@@ -31,22 +31,22 @@ See the [Getting Started](guides/getting-started.md) guide for complete setup in
 ```elixir
 defmodule MyAppWeb.Components.Button do
   use Phoenix.Component
-  use LiveStyle.Sheet
+  use LiveStyle
 
-  css_class :base,
+  class :base,
     display: "inline-flex",
     align_items: "center",
     padding: "8px 16px",
     border_radius: "6px"
 
-  css_class :primary,
+  class :primary,
     background_color: "#4f46e5",
     color: "white",
     ":hover": [background_color: "#4338ca"]
 
   def button(assigns) do
     ~H"""
-    <button class={css_class([:base, :primary])}>
+    <button {css([:base, :primary])}>
       <%= render_slot(@inner_block) %>
     </button>
     """
@@ -67,27 +67,27 @@ end
 
 ### Design Tokens
 
-Use `css_vars` for values that change (colors, themed tokens) and `css_consts` for static values:
+Use `vars` for values that change (colors, themed tokens) and `consts` for static values:
 
 ```elixir
-defmodule MyApp.Tokens do
-  use LiveStyle.Tokens
+defmodule MyApp.Colors do
+  use LiveStyle
 
-  # Colors use css_vars (for theming)
-  css_vars :colors,
-    primary: "#4f46e5",
-    gray_900: "#111827"
+  vars primary: "#4f46e5",
+       gray_900: "#111827"
+end
 
-  # Static values use css_consts
-  css_consts :space,
-    sm: "8px",
-    md: "16px"
+defmodule MyApp.Spacing do
+  use LiveStyle
 
-  css_consts :radius,
-    md: "8px",
-    lg: "12px"
+  consts sm: "8px",
+         md: "16px"
+end
 
-  css_keyframes :fade_in,
+defmodule MyApp.Animations do
+  use LiveStyle
+
+  keyframes :fade_in,
     from: [opacity: "0"],
     to: [opacity: "1"]
 end
@@ -95,46 +95,52 @@ end
 
 ### Component Styles
 
-Reference tokens with `css_var` for colors and `css_const` for static values:
+Reference tokens with `var` for colors and `const` for static values:
 
 ```elixir
 defmodule MyApp.Card do
-  use LiveStyle.Sheet
+  use LiveStyle
 
-  css_class :card,
-    padding: css_const({MyApp.Tokens, :space, :md}),
-    border_radius: css_const({MyApp.Tokens, :radius, :lg}),
-    color: css_var({MyApp.Tokens, :colors, :gray_900})
+  class :card,
+    padding: const({MyApp.Spacing, :md}),
+    border_radius: "12px",
+    color: var({MyApp.Colors, :gray_900})
 end
 ```
 
 ### Theming
 
-Create theme variations (only works with `css_vars`):
+Create theme variations (only works with `vars`):
 
 ```elixir
-# In your tokens
-css_theme :semantic, :dark,
-  text_primary: css_var({:colors, :white}),
-  fill_page: css_var({:colors, :gray_900})
+defmodule MyApp.Semantic do
+  use LiveStyle
+
+  vars text_primary: var({MyApp.Colors, :gray_900}),
+       fill_page: "#ffffff"
+
+  theme :dark,
+    text_primary: "#ffffff",
+    fill_page: var({MyApp.Colors, :gray_900})
+end
 
 # In your template
-<html class={@theme == :dark && css_theme({MyApp.Tokens, :semantic, :dark})}>
+<html {css(@theme == :dark && theme({MyApp.Semantic, :dark}))}>
 ```
 
 ### Pseudo-classes & Media Queries
 
 ```elixir
-css_class :link,
+class :link,
   color: %{
     :default => "blue",
     ":hover" => "darkblue"
   }
 
-css_class :container,
+class :container,
   padding: %{
-    :default => css_const({MyApp.Tokens, :space, :md}),
-    "@media (min-width: 768px)" => css_const({MyApp.Tokens, :space, :lg})
+    :default => const({MyApp.Spacing, :md}),
+    "@media (min-width: 768px)" => "24px"
   }
 ```
 
@@ -168,7 +174,7 @@ LiveStyle brings Meta's StyleX philosophy to Phoenix LiveView:
 ```elixir
 def deps do
   [
-    {:live_style, "~> 0.10.0"},
+    {:live_style, "~> 0.11.0"},
     # Automatic vendor prefixing
     {:autoprefixer_ex, "~> 0.1.0"},
     # Deprecation warnings for CSS properties

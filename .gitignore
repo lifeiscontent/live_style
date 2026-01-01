@@ -5,6 +5,7 @@
 # Generated files
 /doc/
 /cover/
+/priv/live_style_manifest.etf
 *.tar
 /live_style-*/
 

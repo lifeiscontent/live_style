@@ -2,8 +2,8 @@ defmodule LiveStyle.Runtime.Dynamic do
   @moduledoc false
 
   alias LiveStyle.Config
+  alias LiveStyle.CSSValue
   alias LiveStyle.Manifest
-  alias LiveStyle.Value
 
   @spec process_dynamic_rule(list(), list(), term(), module(), atom(), boolean()) ::
           {String.t(), map()}
@@ -26,13 +26,13 @@ defmodule LiveStyle.Runtime.Dynamic do
         declarations = apply(module, compute_fn_name, [values_list])
 
         Map.new(declarations, fn {prop, value} ->
-          {"--#{prefix}-#{Value.to_css_property(prop)}", format_css_value(value)}
+          {"--#{prefix}-#{CSSValue.to_css_property(prop)}", format_css_value(value)}
         end)
       else
         all_props
         |> Enum.zip(values_list)
         |> Map.new(fn {prop, value} ->
-          {"--#{prefix}-#{Value.to_css_property(prop)}", format_css_value(value)}
+          {"--#{prefix}-#{CSSValue.to_css_property(prop)}", format_css_value(value)}
         end)
       end
 

@@ -38,7 +38,7 @@ config :live_style,
 
 ```elixir
 # This works as expected
-css_class :card,
+class :card,
   margin: "16px",
   margin_top: "8px"  # Overrides only top margin
 ```
@@ -56,10 +56,10 @@ config :live_style,
 
 ```elixir
 # This:
-css_class :card, margin: "16px"
+class :card, margin: "16px"
 
 # Becomes:
-css_class :card,
+class :card,
   margin_top: "16px",
   margin_right: "16px",
   margin_bottom: "16px",
@@ -79,10 +79,10 @@ config :live_style,
 
 ```elixir
 # These raise compile errors:
-css_class :button, border: "1px solid red"
+class :button, border: "1px solid red"
 # Error: Use border_width, border_style, border_color instead
 
-css_class :card, background: "red url(...)"
+class :card, background: "red url(...)"
 # Error: Use background_color, background_image instead
 ```
 
@@ -159,7 +159,7 @@ LiveStyle will automatically add vendor prefixes based on your browser targets:
 
 ```elixir
 # Input
-css_class :flex, display: "flex"
+class :flex, display: "flex"
 
 # Output (with autoprefixing)
 # .x1abc123 { display: -webkit-box; display: -ms-flexbox; display: flex }
@@ -190,7 +190,7 @@ warning: CSS property "box-align" is deprecated
 LiveStyle validates CSS property names at compile time with "did you mean?" suggestions:
 
 ```elixir
-css_class :card, backgorund_color: "red"
+class :card, backgorund_color: "red"
 # Error: Unknown CSS property "backgorund_color". Did you mean "background_color"?
 ```
 
@@ -306,9 +306,9 @@ config :live_style,
 
 | Function | Description |
 |----------|-------------|
-| `LiveStyle.Compiler.run/2` | Run CSS generation for a profile |
-| `LiveStyle.Compiler.install_and_run/2` | Same as `run/2` (Tailwind API compatibility) |
-| `LiveStyle.Compiler.write_css/1` | Write CSS to file if changed |
+| `LiveStyle.Compiler.generate_css/0` | Generate CSS from all registered styles |
+| `LiveStyle.Compiler.get_css/2` | Get CSS attrs from a module (for testing) |
+| `LiveStyle.Compiler.get_css_class/2` | Get class string from a module (for testing) |
 
 ### Storage Functions
 

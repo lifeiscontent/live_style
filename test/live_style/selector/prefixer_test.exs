@@ -1,5 +1,5 @@
 defmodule LiveStyle.Selector.PrefixerTest do
-  use ExUnit.Case, async: true
+  use LiveStyle.TestCase
 
   alias LiveStyle.Selector.Prefixer
 

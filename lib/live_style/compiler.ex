@@ -1,40 +1,92 @@
 defmodule LiveStyle.Compiler do
   @moduledoc """
-  Compiler and tooling functions for LiveStyle.
+  Compiler utilities for LiveStyle.
 
-  This module provides functions used by mix tasks and watchers for
-  CSS generation and validation. These are not needed at runtime.
+  This module provides functions for working with compiled LiveStyle output,
+  including CSS generation and class resolution.
 
-  ## Development Watcher
+  ## CSS Generation
 
-  For automatic CSS regeneration during development, configure a watcher
-  in your Phoenix endpoint:
+      css = LiveStyle.Compiler.generate_css()
+      # => "@layer live_style { .x1234{display:flex} ... }"
 
-      # config/dev.exs
-      config :my_app, MyAppWeb.Endpoint,
-        watchers: [
-          live_style: {LiveStyle.Compiler, :run, [:default, ~w(--watch)]}
-        ]
+  ## Class Resolution (useful for testing)
 
-  ## Manual CSS Generation
+      # Get attrs for a module's styles
+      attrs = LiveStyle.Compiler.get_css(MyComponent, [:button])
 
-      LiveStyle.Compiler.run(:default, [])
-
-  ## Functions
-
-  - `run/2` - Run CSS generation for a profile (with optional `--watch` flag)
-  - `install_and_run/2` - Alias for `run/2` (Tailwind API compatibility)
-  - `write_css/1` - Write CSS to the configured output path
+      # Get class string only
+      class = LiveStyle.Compiler.get_css_class(MyComponent, [:button])
   """
 
-  alias LiveStyle.Compiler.{Runner, Writer}
+  alias LiveStyle.Compiler.CSS, as: CSSCompiler
 
-  @spec run(atom(), [String.t()]) :: non_neg_integer()
-  def run(profile, extra_args), do: Runner.run(profile, extra_args)
+  @doc """
+  Gets CSS attrs from a module that uses LiveStyle.
 
-  @spec install_and_run(atom(), [String.t()]) :: non_neg_integer()
-  def install_and_run(profile, args), do: Runner.install_and_run(profile, args)
+  Useful for testing and introspection.
 
-  @spec write_css(keyword()) :: :ok | {:error, term()}
-  def write_css(opts \\ []), do: Writer.write_css(opts)
+  ## Example
+
+      defmodule MyComponent do
+        use LiveStyle
+        class :button, display: "flex"
+      end
+
+      # In tests:
+      %LiveStyle.Attrs{class: class} = LiveStyle.Compiler.get_css(MyComponent, [:button])
+  """
+  @spec get_css(module(), list()) :: LiveStyle.Attrs.t()
+  def get_css(module, refs) when is_atom(module) and is_list(refs) do
+    LiveStyle.Runtime.resolve_attrs(module, refs, nil)
+  end
+
+  @spec get_css(module(), atom()) :: LiveStyle.Attrs.t()
+  def get_css(module, ref) when is_atom(module) and is_atom(ref) do
+    class_strings = module.__live_style__(:class_strings)
+    %LiveStyle.Attrs{class: Map.get(class_strings, ref, ""), style: nil}
+  end
+
+  @doc """
+  Gets the class string from a module that uses LiveStyle.
+
+  Useful for testing and introspection.
+
+  ## Example
+
+      defmodule MyComponent do
+        use LiveStyle
+        class :button, display: "flex"
+      end
+
+      # In tests:
+      class = LiveStyle.Compiler.get_css_class(MyComponent, [:button])
+  """
+  @spec get_css_class(module(), list()) :: String.t()
+  def get_css_class(module, refs) when is_atom(module) and is_list(refs) do
+    LiveStyle.Runtime.resolve_class_string(module, refs)
+  end
+
+  @spec get_css_class(module(), atom()) :: String.t()
+  def get_css_class(module, ref) when is_atom(module) and is_atom(ref) do
+    class_strings = module.__live_style__(:class_strings)
+    Map.get(class_strings, ref, "")
+  end
+
+  @doc """
+  Generates CSS from all registered styles.
+
+  Reads the manifest and generates the complete CSS output.
+  Useful for testing and build tooling.
+
+  ## Example
+
+      css = LiveStyle.Compiler.generate_css()
+      # => "@layer live_style { .x1234{display:flex} ... }"
+  """
+  @spec generate_css() :: String.t()
+  def generate_css do
+    manifest = LiveStyle.Storage.read()
+    CSSCompiler.compile(manifest)
+  end
 end

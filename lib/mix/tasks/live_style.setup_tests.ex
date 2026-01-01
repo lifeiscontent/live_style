@@ -21,8 +21,8 @@ defmodule Mix.Tasks.LiveStyle.SetupTests do
 
         # This module needs to be in the manifest before tests run
         defmodule TestStyles do
-          use LiveStyle.Sheet
-          css_class :test_button, color: "red"
+          use LiveStyle
+          class :test_button, color: "red"
         end
 
         test "renders with correct class" do

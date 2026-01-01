@@ -2,6 +2,12 @@ defmodule LiveStyle.Config do
   @moduledoc """
   Configuration management for LiveStyle.
 
+  This module provides access to all LiveStyle configuration options.
+  Complex configuration logic is split into focused submodules:
+
+  - `LiveStyle.Config.Validation` - property validation settings
+  - `LiveStyle.Config.Shorthand` - shorthand expansion behavior
+
   ## Profiles
 
   You can define multiple LiveStyle profiles. By default, there is a
@@ -18,7 +24,7 @@ defmodule LiveStyle.Config do
   There are several global configurations for the LiveStyle application:
 
     * `:manifest_path` - path where the manifest file is stored
-      (default: `"_build/live_style_manifest.etf"`)
+      (default: `"priv/live_style_manifest.etf"`)
 
     * `:shorthand_behavior` - the shorthand expansion behavior
       (default: `LiveStyle.ShorthandBehavior.AcceptShorthands`)
@@ -90,21 +96,21 @@ defmodule LiveStyle.Config do
       LiveStyle.Config.reset_all()
   """
 
-  @default_shorthand_behavior LiveStyle.ShorthandBehavior.AcceptShorthands
+  alias LiveStyle.Config.Overrides
+  alias LiveStyle.Config.Shorthand
+  alias LiveStyle.Config.Validation
+
   @default_class_name_prefix "x"
   @default_debug_class_names false
   @default_font_size_px_to_rem false
   @default_font_size_root_px 16
-  @default_use_css_layers false
-  @default_validate_properties true
-  @default_unknown_property_level :warn
-  @default_vendor_prefix_level :warn
-  @default_deprecated_property_level :warn
-  @default_prefix_css nil
-  @default_deprecated? nil
 
-  alias LiveStyle.Config.CSS
-  alias LiveStyle.Config.Overrides
+  @default_use_css_layers false
+  @default_prefix_css nil
+
+  # ===========================================================================
+  # Profile Configuration
+  # ===========================================================================
 
   @doc """
   Returns the configuration for the given profile.
@@ -130,105 +136,44 @@ defmodule LiveStyle.Config do
   end
 
   @doc """
-  Sets a per-process configuration override.
-
-  This is primarily used for test isolation, allowing each test to use
-  different configuration without affecting other tests.
-  """
-  def put(key, value), do: Overrides.put(key, value)
-
-  def reset_all, do: Overrides.reset_all()
-
-  def reset(key), do: Overrides.reset(key)
-
-  defp get_override(key), do: Overrides.get(key)
-
-  defp get_config(key, default), do: Overrides.get_config(key, default)
-
-  @doc """
   Returns the configured output path for CSS.
 
   This is a convenience function that returns the default profile's output path.
   For profile-specific paths, use `config_for!/1`.
   """
   def output_path do
-    get_override(:output_path) ||
+    Overrides.get(:output_path) ||
       case Application.get_env(:live_style, :default) do
         nil -> "priv/static/assets/live.css"
         config -> Keyword.get(config, :output, "priv/static/assets/live.css")
       end
   end
 
+  # ===========================================================================
+  # Per-Process Overrides
+  # ===========================================================================
+
   @doc """
-  Returns the configured shorthand expansion behavior and options.
+  Sets a per-process configuration override.
 
-  Returns a tuple of `{module, opts}` where opts is a keyword list.
-
-  ## Examples
-
-      # Default
-      shorthand_behavior() #=> {LiveStyle.ShorthandBehavior.AcceptShorthands, []}
-
-      # Using atom shortcut
-      shorthand_behavior() #=> {LiveStyle.ShorthandBehavior.FlattenShorthands, []}
-
-      # Custom behavior with options
-      shorthand_behavior() #=> {MyCustomBehavior, [strict: true]}
+  This is primarily used for test isolation, allowing each test to use
+  different configuration without affecting other tests.
   """
-  @atom_to_behavior_module %{
-    accept_shorthands: LiveStyle.ShorthandBehavior.AcceptShorthands,
-    flatten_shorthands: LiveStyle.ShorthandBehavior.FlattenShorthands,
-    forbid_shorthands: LiveStyle.ShorthandBehavior.ForbidShorthands
-  }
+  defdelegate put(key, value), to: Overrides
 
-  def shorthand_behavior do
-    value =
-      get_override(:shorthand_behavior) ||
-        Application.get_env(:live_style, :shorthand_behavior, @default_shorthand_behavior)
+  @doc """
+  Resets all per-process configuration overrides.
+  """
+  defdelegate reset_all(), to: Overrides
 
-    case normalize_shorthand_behavior(value) do
-      {:ok, result} ->
-        result
+  @doc """
+  Resets a specific per-process configuration override.
+  """
+  defdelegate reset(key), to: Overrides
 
-      :error ->
-        raise ArgumentError, """
-        Invalid shorthand_behavior: #{inspect(value)}
-
-        Valid formats are:
-        - An atom: :accept_shorthands, :flatten_shorthands, :forbid_shorthands
-        - A module: LiveStyle.ShorthandBehavior.AcceptShorthands
-        - A tuple: {MyCustomBehavior, some_option: true}
-        """
-    end
-  end
-
-  defp normalize_shorthand_behavior(atom) when is_map_key(@atom_to_behavior_module, atom) do
-    {:ok, {Map.fetch!(@atom_to_behavior_module, atom), []}}
-  end
-
-  defp normalize_shorthand_behavior({module, opts}) when is_atom(module) and is_list(opts) do
-    if valid_behavior_module?(module) do
-      {:ok, {module, opts}}
-    else
-      :error
-    end
-  end
-
-  defp normalize_shorthand_behavior(module) when is_atom(module) do
-    if valid_behavior_module?(module) do
-      {:ok, {module, []}}
-    else
-      :error
-    end
-  end
-
-  defp normalize_shorthand_behavior(_), do: :error
-
-  defp valid_behavior_module?(module) do
-    Code.ensure_loaded?(module) and
-      function_exported?(module, :expand_declaration, 3) and
-      function_exported?(module, :expand_shorthand_conditions, 3)
-  end
+  # ===========================================================================
+  # Naming Configuration
+  # ===========================================================================
 
   @doc """
   Returns the configured class name prefix.
@@ -236,9 +181,10 @@ defmodule LiveStyle.Config do
   Default is "x" (matching StyleX). This prefix is used for all generated
   class names, variable names, keyframe names, etc.
   """
+  @spec class_name_prefix() :: String.t()
   def class_name_prefix do
     value =
-      get_override(:class_name_prefix) ||
+      Overrides.get(:class_name_prefix) ||
         Application.get_env(:live_style, :class_name_prefix, @default_class_name_prefix)
 
     unless is_binary(value) and String.length(value) > 0 do
@@ -263,9 +209,36 @@ defmodule LiveStyle.Config do
 
       config :live_style, debug_class_names: true
   """
+  @spec debug_class_names?() :: boolean()
   def debug_class_names? do
-    get_config(:debug_class_names, @default_debug_class_names)
+    Overrides.get_config(:debug_class_names, @default_debug_class_names)
   end
+
+  # ===========================================================================
+  # Shorthand Configuration
+  # ===========================================================================
+
+  @doc """
+  Returns the configured shorthand expansion behavior and options.
+
+  Returns a tuple of `{module, opts}` where opts is a keyword list.
+
+  ## Examples
+
+      # Default
+      shorthand_behavior() #=> {LiveStyle.ShorthandBehavior.AcceptShorthands, []}
+
+      # Using atom shortcut
+      shorthand_behavior() #=> {LiveStyle.ShorthandBehavior.FlattenShorthands, []}
+
+      # Custom behavior with options
+      shorthand_behavior() #=> {MyCustomBehavior, [strict: true]}
+  """
+  defdelegate shorthand_behavior(), to: Shorthand
+
+  # ===========================================================================
+  # Font Size Configuration
+  # ===========================================================================
 
   @doc """
   Returns whether font-size px to rem conversion is enabled.
@@ -279,8 +252,9 @@ defmodule LiveStyle.Config do
         font_size_px_to_rem: true,
         font_size_root_px: 16  # optional, default is 16
   """
+  @spec font_size_px_to_rem?() :: boolean()
   def font_size_px_to_rem? do
-    get_config(:font_size_px_to_rem, @default_font_size_px_to_rem)
+    Overrides.get_config(:font_size_px_to_rem, @default_font_size_px_to_rem)
   end
 
   @doc """
@@ -288,9 +262,94 @@ defmodule LiveStyle.Config do
 
   Default is 16 (browser default). Used when `font_size_px_to_rem` is enabled.
   """
+  @spec font_size_root_px() :: number()
   def font_size_root_px do
-    get_config(:font_size_root_px, @default_font_size_root_px)
+    Overrides.get_config(:font_size_root_px, @default_font_size_root_px)
   end
+
+  # ===========================================================================
+  # Validation Configuration
+  # ===========================================================================
+
+  @doc """
+  Returns whether property validation is enabled.
+
+  When enabled, LiveStyle validates CSS property names at compile time and
+  warns or errors on unknown properties with "did you mean?" suggestions.
+
+  Custom properties (starting with `--`) are always allowed.
+
+  Default is `true`. Disable if you need to use non-standard properties:
+
+      config :live_style, validate_properties: false
+  """
+  defdelegate validate_properties?(), to: Validation
+
+  @doc """
+  Returns the level of unknown property handling.
+
+  - `:warn` (default) - Log a warning with suggestions
+  - `:error` - Raise a CompileError
+  - `:ignore` - Silently allow unknown properties
+
+  Example:
+
+      config :live_style, unknown_property_level: :error
+  """
+  defdelegate unknown_property_level(), to: Validation
+
+  @doc """
+  Returns the level of vendor prefix property handling.
+
+  When a vendor-prefixed property is used (e.g., `-webkit-mask-image`) and
+  the configured `prefix_css` would add that prefix automatically for the
+  standard property (e.g., `mask-image`), this setting controls the behavior.
+
+  - `:warn` (default) - Log a warning suggesting to use the standard property
+  - `:ignore` - Silently allow vendor-prefixed properties
+
+  Example:
+
+      config :live_style, vendor_prefix_level: :ignore
+  """
+  defdelegate vendor_prefix_level(), to: Validation
+
+  @doc """
+  Returns the level of deprecated property handling.
+
+  When a deprecated CSS property is used (e.g., `clip`), this setting
+  controls the behavior. Requires the `deprecated?` config to be set.
+
+  - `:warn` (default) - Log a warning about the deprecated property
+  - `:ignore` - Silently allow deprecated properties
+
+  Example:
+
+      config :live_style, deprecated_property_level: :ignore
+  """
+  defdelegate deprecated_property_level(), to: Validation
+
+  @doc """
+  Returns the `deprecated?` function for checking deprecated CSS properties.
+
+  Used during validation to check if properties are deprecated. Should be a
+  function that takes a property name and returns a boolean (or nil if unknown).
+
+  Default is `nil` (no deprecation checking).
+
+  ## Configuration
+
+      config :live_style, deprecated?: &MyApp.CSS.deprecated?/1
+
+  ## Function Signature
+
+      @spec deprecated?(String.t()) :: boolean() | nil
+  """
+  defdelegate deprecated?(), to: Validation
+
+  # ===========================================================================
+  # CSS Output Configuration
+  # ===========================================================================
 
   @doc """
   Returns whether CSS layers should be used for specificity control.
@@ -314,76 +373,10 @@ defmodule LiveStyle.Config do
       config :live_style, use_css_layers: true
   """
   def use_css_layers? do
-    case get_override(:use_css_layers) do
+    case Overrides.get(:use_css_layers) do
       nil -> Application.get_env(:live_style, :use_css_layers, @default_use_css_layers)
       value -> value
     end
-  end
-
-  @doc """
-  Returns whether property validation is enabled.
-
-  When enabled, LiveStyle validates CSS property names at compile time and
-  warns or errors on unknown properties with "did you mean?" suggestions.
-
-  Custom properties (starting with `--`) are always allowed.
-
-  Default is `true`. Disable if you need to use non-standard properties:
-
-      config :live_style, validate_properties: false
-  """
-  def validate_properties? do
-    get_config(:validate_properties, @default_validate_properties)
-  end
-
-  @doc """
-  Returns the level of unknown property handling.
-
-  - `:warn` (default) - Log a warning with suggestions
-  - `:error` - Raise a CompileError
-  - `:ignore` - Silently allow unknown properties
-
-  Example:
-
-      config :live_style, unknown_property_level: :error
-  """
-  def unknown_property_level do
-    get_config(:unknown_property_level, @default_unknown_property_level)
-  end
-
-  @doc """
-  Returns the level of vendor prefix property handling.
-
-  When a vendor-prefixed property is used (e.g., `-webkit-mask-image`) and
-  the configured `prefix_css` would add that prefix automatically for the
-  standard property (e.g., `mask-image`), this setting controls the behavior.
-
-  - `:warn` (default) - Log a warning suggesting to use the standard property
-  - `:ignore` - Silently allow vendor-prefixed properties
-
-  Example:
-
-      config :live_style, vendor_prefix_level: :ignore
-  """
-  def vendor_prefix_level do
-    get_config(:vendor_prefix_level, @default_vendor_prefix_level)
-  end
-
-  @doc """
-  Returns the level of deprecated property handling.
-
-  When a deprecated CSS property is used (e.g., `clip`), this setting
-  controls the behavior. Requires the `deprecated?` config to be set.
-
-  - `:warn` (default) - Log a warning about the deprecated property
-  - `:ignore` - Silently allow deprecated properties
-
-  Example:
-
-      config :live_style, deprecated_property_level: :ignore
-  """
-  def deprecated_property_level do
-    get_config(:deprecated_property_level, @default_deprecated_property_level)
   end
 
   @doc """
@@ -410,7 +403,7 @@ defmodule LiveStyle.Config do
       def prefix_css(property, value), do: "\#{property}:\#{value}"
   """
   def prefix_css do
-    get_config(:prefix_css, @default_prefix_css)
+    Overrides.get_config(:prefix_css, @default_prefix_css)
   end
 
   @doc """
@@ -420,25 +413,10 @@ defmodule LiveStyle.Config do
   the standard "property:value" format.
   """
   @spec apply_prefix_css(String.t(), String.t()) :: String.t()
-  def apply_prefix_css(property, value), do: CSS.apply_prefix_css(property, value)
-
-  @doc """
-  Returns the `deprecated?` function for checking deprecated CSS properties.
-
-  Used during validation to check if properties are deprecated. Should be a
-  function that takes a property name and returns a boolean (or nil if unknown).
-
-  Default is `nil` (no deprecation checking).
-
-  ## Configuration
-
-      config :live_style, deprecated?: &MyApp.CSS.deprecated?/1
-
-  ## Function Signature
-
-      @spec deprecated?(String.t()) :: boolean() | nil
-  """
-  def deprecated? do
-    get_config(:deprecated?, @default_deprecated?)
+  def apply_prefix_css(property, value) do
+    case prefix_css() do
+      nil -> "#{property}:#{value}"
+      prefix_fun -> prefix_fun.(property, value)
+    end
   end
 end

@@ -29,19 +29,19 @@ defmodule LiveStyle.Property.Validation do
   ## Examples
 
       # This will warn with a suggestion:
-      css_class :button,
+      class :button,
         opactiy: 0.5  # Warning: Unknown CSS property 'opactiy'. Did you mean 'opacity'?
 
       # This will warn about vendor prefix:
-      css_class :button,
+      class :button,
         "-webkit-mask-image": "url(...)"  # Warning: Use 'mask-image' instead...
 
       # This will warn about deprecated property:
-      css_class :button,
+      class :button,
         clip: "rect(0,0,0,0)"  # Warning: CSS property 'clip' is deprecated...
 
       # Custom properties are always allowed:
-      css_class :button,
+      class :button,
         "--my-custom-prop": "value"  # OK
   """
 

@@ -1,19 +1,20 @@
 defmodule LiveStyle.Dev.ClassInfo do
   @moduledoc false
 
-  alias LiveStyle.Dev.Ensure
-  alias LiveStyle.Dev.Properties
+  alias LiveStyle.Compiler
+  alias LiveStyle.Compiler.Class
+  alias LiveStyle.Dev.{Ensure, Properties}
 
   @spec class_info(module(), atom()) :: map() | {:error, :not_found}
   def class_info(module, class_name) when is_atom(module) and is_atom(class_name) do
     Ensure.ensure_live_style_module!(module)
 
-    case LiveStyle.get_metadata(module, {:class, class_name}) do
-      nil ->
+    case Class.lookup({module, class_name}) do
+      {:error, _} ->
         {:error, :not_found}
 
-      metadata ->
-        class_string = LiveStyle.get_css_class(module, class_name)
+      {:ok, metadata} ->
+        class_string = Compiler.get_css_class(module, class_name)
         properties = Properties.extract_properties(metadata)
         css = Properties.build_css_string(properties)
 

@@ -52,6 +52,8 @@ defmodule Mix.Tasks.LiveStyle.Gen.Css do
 
   use Mix.Task
 
+  alias LiveStyle.Compiler.CSS
+
   @shortdoc "Generates CSS from LiveStyle definitions"
 
   @impl Mix.Task
@@ -70,7 +72,7 @@ defmodule Mix.Tasks.LiveStyle.Gen.Css do
 
     # Read manifest and generate CSS
     manifest = LiveStyle.Storage.read()
-    css = LiveStyle.CSS.generate(manifest)
+    css = CSS.compile(manifest)
 
     # Add stats header
     stats = collect_stats(manifest)

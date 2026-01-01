@@ -2,7 +2,7 @@ defmodule LiveStyle.DevTest do
   @moduledoc """
   Tests for LiveStyle.Dev module - development helpers for inspecting styles.
   """
-  use LiveStyle.TestCase, async: true
+  use LiveStyle.TestCase
 
   alias LiveStyle.Dev
 
@@ -10,23 +10,23 @@ defmodule LiveStyle.DevTest do
   defmodule TestComponent do
     use LiveStyle
 
-    css_class(:button,
+    class(:button,
       display: "flex",
       padding: "8px 16px",
       background_color: "blue"
     )
 
-    css_class(:primary,
+    class(:primary,
       background_color: "blue",
       color: "white"
     )
 
-    css_class(:secondary,
+    class(:secondary,
       background_color: "gray",
       color: "black"
     )
 
-    css_class(:hover_style,
+    class(:hover_style,
       color: [
         default: "blue",
         ":hover": "darkblue"
@@ -37,9 +37,9 @@ defmodule LiveStyle.DevTest do
   defmodule DynamicComponent do
     use LiveStyle
 
-    css_class(:static, display: "block")
+    class(:static, display: "block")
 
-    css_class(:dynamic, fn opacity ->
+    class(:dynamic, fn opacity ->
       [opacity: opacity]
     end)
   end

@@ -6,21 +6,22 @@ LiveStyle provides a powerful theming system that allows you to override CSS var
 
 The standard pattern uses two layers:
 
-1. **Colors** - Raw color palette using `css_vars` (hex values)
-2. **Semantic tokens** - Abstract meanings that reference colors via `css_var` (themed)
+1. **Colors** - Raw color palette using `vars` (hex values)
+2. **Semantic tokens** - Abstract meanings that reference colors via `var` (themed)
 
 This separation keeps color values in one place while allowing themes to swap which colors semantic tokens point to.
 
-> **Note:** Only values defined with `css_vars` can be themed. Many teams keep spacing/typography/radii as `css_consts`, but if you want themeable spacing scales (e.g. compact/cozy), define them with `css_vars` and override with `css_theme/3`.
+> **Note:** Only values defined with `vars` can be themed. Many teams keep spacing/typography/radii as `consts`, but if you want themeable spacing scales (e.g. compact/cozy), define them with `vars` and override with `theme`.
 
 ## Defining Themes
 
-```elixir
-defmodule MyApp.Tokens do
-  use LiveStyle.Tokens
+Using the module-as-namespace pattern, define colors in one module and semantic tokens in another:
 
-  # === Colors (css_vars - needed for theming) ===
-  css_vars :colors,
+```elixir
+defmodule MyApp.Colors do
+  use LiveStyle
+
+  vars [
     white: "#ffffff",
     black: "#000000",
     gray_50: "#f9fafb",
@@ -29,36 +30,51 @@ defmodule MyApp.Tokens do
     gray_900: "#111827",
     indigo_500: "#6366f1",
     indigo_600: "#4f46e5"
+  ]
+end
 
-  # === Semantic tokens (css_vars - themed) ===
-  css_vars :semantic,
-    text_primary: css_var({:colors, :gray_900}),
-    text_secondary: css_var({:colors, :gray_800}),
-    text_inverse: css_var({:colors, :white}),
-    fill_page: css_var({:colors, :white}),
-    fill_surface: css_var({:colors, :gray_50}),
-    fill_primary: css_var({:colors, :indigo_600}),
-    fill_primary_hover: css_var({:colors, :indigo_500})
+defmodule MyApp.Semantic do
+  use LiveStyle
 
-  # === Dark theme ===
-  css_theme :semantic, :dark,
-    text_primary: css_var({:colors, :gray_50}),
-    text_secondary: css_var({:colors, :gray_100}),
-    text_inverse: css_var({:colors, :gray_900}),
-    fill_page: css_var({:colors, :gray_900}),
-    fill_surface: css_var({:colors, :gray_800}),
-    fill_primary: css_var({:colors, :indigo_500}),
-    fill_primary_hover: css_var({:colors, :indigo_600})
+  vars [
+    text_primary: var({MyApp.Colors, :gray_900}),
+    text_secondary: var({MyApp.Colors, :gray_800}),
+    text_inverse: var({MyApp.Colors, :white}),
+    fill_page: var({MyApp.Colors, :white}),
+    fill_surface: var({MyApp.Colors, :gray_50}),
+    fill_primary: var({MyApp.Colors, :indigo_600}),
+    fill_primary_hover: var({MyApp.Colors, :indigo_500})
+  ]
 
-  # === Static values (css_consts - not themed) ===
-  css_consts :space,
+  # Dark theme overrides
+  theme :dark, [
+    text_primary: var({MyApp.Colors, :gray_50}),
+    text_secondary: var({MyApp.Colors, :gray_100}),
+    text_inverse: var({MyApp.Colors, :gray_900}),
+    fill_page: var({MyApp.Colors, :gray_900}),
+    fill_surface: var({MyApp.Colors, :gray_800}),
+    fill_primary: var({MyApp.Colors, :indigo_500}),
+    fill_primary_hover: var({MyApp.Colors, :indigo_600})
+  ]
+end
+
+defmodule MyApp.Spacing do
+  use LiveStyle
+
+  consts [
     sm: "8px",
     md: "16px",
     lg: "24px"
+  ]
+end
 
-  css_consts :radius,
+defmodule MyApp.Radius do
+  use LiveStyle
+
+  consts [
     md: "8px",
     lg: "12px"
+  ]
 end
 ```
 
@@ -68,27 +84,27 @@ Components reference semantic tokens for colors, constants for static values:
 
 ```elixir
 defmodule MyApp.Card do
-  use LiveStyle.Sheet
+  use LiveStyle
 
-  css_class :card,
-    # Colors use css_var (themed)
-    background_color: css_var({MyApp.Tokens, :semantic, :fill_surface}),
-    color: css_var({MyApp.Tokens, :semantic, :text_primary}),
-    # Static values use css_const (not themed)
-    padding: css_const({MyApp.Tokens, :space, :md}),
-    border_radius: css_const({MyApp.Tokens, :radius, :lg})
+  class :card,
+    # Colors use var (themed)
+    background_color: var({MyApp.Semantic, :fill_surface}),
+    color: var({MyApp.Semantic, :text_primary}),
+    # Static values use const (not themed)
+    padding: const({MyApp.Spacing, :md}),
+    border_radius: const({MyApp.Radius, :lg})
 end
 
 defmodule MyApp.Button do
-  use LiveStyle.Sheet
+  use LiveStyle
 
-  css_class :primary,
-    background_color: css_var({MyApp.Tokens, :semantic, :fill_primary}),
-    color: css_var({MyApp.Tokens, :semantic, :text_inverse}),
-    padding: css_const({MyApp.Tokens, :space, :md}),
-    border_radius: css_const({MyApp.Tokens, :radius, :md}),
+  class :primary,
+    background_color: var({MyApp.Semantic, :fill_primary}),
+    color: var({MyApp.Semantic, :text_inverse}),
+    padding: const({MyApp.Spacing, :md}),
+    border_radius: const({MyApp.Radius, :md}),
     ":hover": [
-      background_color: css_var({MyApp.Tokens, :semantic, :fill_primary_hover})
+      background_color: var({MyApp.Semantic, :fill_primary_hover})
     ]
 end
 ```
@@ -97,10 +113,10 @@ Components don't need to know about themes - they just use semantic tokens for c
 
 ## Applying Themes
 
-Use `css_theme/1` to apply a theme to a subtree:
+Use `theme/1` to apply a theme to a subtree:
 
 ```heex
-<div class={css_theme({MyApp.Tokens, :semantic, :dark})}>
+<div class={theme({MyApp.Semantic, :dark})}>
   <!-- All children use dark theme colors -->
   <.card>
     <p>This card uses dark theme colors</p>
@@ -115,11 +131,11 @@ Apply the theme at the root level:
 
 ```heex
 <!-- In root.html.heex -->
-<html class={@theme == :dark && css_theme({MyApp.Tokens, :semantic, :dark})}>
+<html class={@theme == :dark && theme({MyApp.Semantic, :dark})}>
   <head>
     <!-- ... -->
   </head>
-  <body class={css_class({MyApp.Layout, :body})}>
+  <body {css({MyApp.Layout, :body})}>
     <%= @inner_content %>
   </body>
 </html>
@@ -143,33 +159,42 @@ Then apply the theme conditionally in your template.
 Define multiple themes for different contexts:
 
 ```elixir
-defmodule MyApp.Tokens do
-  use LiveStyle.Tokens
+defmodule MyApp.Colors do
+  use LiveStyle
 
-  css_vars :colors,
+  vars [
     white: "#ffffff",
     black: "#000000",
     gray_900: "#111827",
     yellow_400: "#facc15"
+  ]
+end
 
-  css_vars :semantic,
-    text_primary: css_var({:colors, :gray_900}),
-    fill_page: css_var({:colors, :white})
+defmodule MyApp.Semantic do
+  use LiveStyle
+
+  vars [
+    text_primary: var({MyApp.Colors, :gray_900}),
+    fill_page: var({MyApp.Colors, :white})
+  ]
 
   # Dark theme
-  css_theme :semantic, :dark,
-    text_primary: css_var({:colors, :white}),
-    fill_page: css_var({:colors, :gray_900})
+  theme :dark, [
+    text_primary: var({MyApp.Colors, :white}),
+    fill_page: var({MyApp.Colors, :gray_900})
+  ]
 
   # High contrast theme
-  css_theme :semantic, :high_contrast,
-    text_primary: css_var({:colors, :black}),
-    fill_page: css_var({:colors, :white})
+  theme :high_contrast, [
+    text_primary: var({MyApp.Colors, :black}),
+    fill_page: var({MyApp.Colors, :white})
+  ]
 
   # Special promotion theme
-  css_theme :semantic, :promo,
-    text_primary: css_var({:colors, :black}),
-    fill_page: css_var({:colors, :yellow_400})
+  theme :promo, [
+    text_primary: var({MyApp.Colors, :black}),
+    fill_page: var({MyApp.Colors, :yellow_400})
+  ]
 end
 ```
 
@@ -179,14 +204,14 @@ Use different themes in different parts of your app:
 <main>
   <!-- Default theme -->
   <.hero />
-  
+
   <!-- Promotional section -->
-  <section class={css_theme({MyApp.Tokens, :semantic, :promo})}>
+  <section class={theme({MyApp.Semantic, :promo})}>
     <.promo_banner />
   </section>
-  
+
   <!-- Footer with dark theme -->
-  <footer class={css_theme({MyApp.Tokens, :semantic, :dark})}>
+  <footer class={theme({MyApp.Semantic, :dark})}>
     <.footer_content />
   </footer>
 </main>
@@ -197,11 +222,11 @@ Use different themes in different parts of your app:
 Themes can be nested - inner themes override outer ones:
 
 ```heex
-<div class={css_theme({MyApp.Tokens, :semantic, :dark})}>
+<div class={theme({MyApp.Semantic, :dark})}>
   <!-- Dark theme -->
   <.card>Dark card</.card>
-  
-  <div class={css_theme({MyApp.Tokens, :semantic, :high_contrast})}>
+
+  <div class={theme({MyApp.Semantic, :high_contrast})}>
     <!-- High contrast theme (overrides dark) -->
     <.card>High contrast card</.card>
   </div>
@@ -215,18 +240,18 @@ Themes generate CSS that overrides the base variables:
 ```css
 /* Base semantic tokens */
 :root {
-  --semantic-text-primary: var(--colors-gray-900);
-  --semantic-fill-page: var(--colors-white);
+  --v1abc123: var(--v2def456); /* text_primary references gray_900 */
+  --v3ghi789: var(--v4jkl012); /* fill_page references white */
 }
 
 /* Dark theme overrides */
 .x1dark2theme {
-  --semantic-text-primary: var(--colors-white);
-  --semantic-fill-page: var(--colors-gray-900);
+  --v1abc123: var(--v5mno345); /* text_primary now references gray_50 */
+  --v3ghi789: var(--v2def456); /* fill_page now references gray_900 */
 }
 ```
 
-When you apply `css_theme({MyApp.Tokens, :semantic, :dark})`, it returns a class name like `x1dark2theme` that overrides the CSS variables for that element and all its descendants.
+When you apply `theme({MyApp.Semantic, :dark})`, it returns a class name like `x1dark2theme` that overrides the CSS variables for that element and all its descendants.
 
 ## Theme-Aware Components
 

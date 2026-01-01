@@ -55,6 +55,8 @@ defmodule Mix.Tasks.LiveStyle do
 
   use Mix.Task
 
+  alias LiveStyle.Compiler.Runner
+
   @impl true
   def run(args) do
     switches = [runtime_config: :boolean]
@@ -74,7 +76,7 @@ defmodule Mix.Tasks.LiveStyle do
   defp run_profile([profile | args]) do
     profile_atom = string_to_profile_atom(profile)
 
-    case LiveStyle.Compiler.run(profile_atom, args) do
+    case Runner.run(profile_atom, args) do
       0 ->
         :ok
 

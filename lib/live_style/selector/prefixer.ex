@@ -33,7 +33,7 @@ defmodule LiveStyle.Selector.Prefixer do
   default since the prefixed selectors don't add significant overhead.
   """
 
-  alias LiveStyle.Data.Parser
+  alias LiveStyle.PropertyMetadata.Parser
 
   # Load selector expansions at compile time from data file
   @external_resource Parser.data_path("selector_expansions.txt")

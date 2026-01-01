@@ -16,7 +16,7 @@ defmodule LiveStyle.Manifest do
   """
 
   @type var_entry :: %{
-          css_name: String.t(),
+          ident: String.t(),
           value: String.t() | map(),
           type: nil | %{syntax: String.t(), initial: String.t()}
         }
@@ -24,17 +24,17 @@ defmodule LiveStyle.Manifest do
   @type const_entry :: String.t()
 
   @type keyframes_entry :: %{
-          css_name: String.t(),
+          ident: String.t(),
           frames: map()
         }
 
   @type position_try_entry :: %{
-          css_name: String.t(),
+          ident: String.t(),
           declarations: map()
         }
 
   @type view_transition_entry :: %{
-          css_name: String.t(),
+          ident: String.t(),
           styles: map()
         }
 
@@ -45,7 +45,7 @@ defmodule LiveStyle.Manifest do
         }
 
   @type theme_entry :: %{
-          css_name: String.t(),
+          ident: String.t(),
           overrides: map()
         }
 
@@ -59,49 +59,62 @@ defmodule LiveStyle.Manifest do
           themes: %{String.t() => theme_entry()}
         }
 
-  alias LiveStyle.Manifest.{Entry, Keys, Ops}
-
   @spec empty() :: t()
-  def empty, do: Ops.empty()
+  def empty do
+    %{
+      vars: %{},
+      consts: %{},
+      keyframes: %{},
+      position_try: %{},
+      view_transitions: %{},
+      classes: %{},
+      themes: %{}
+    }
+  end
 
   @spec ensure_keys(term()) :: t()
-  def ensure_keys(manifest), do: Ops.ensure_keys(manifest)
+  def ensure_keys(manifest) when is_map(manifest), do: Map.merge(empty(), manifest)
+  def ensure_keys(_manifest), do: empty()
 
   @spec namespaced_key(module(), atom(), atom()) :: String.t()
-  def namespaced_key(module, namespace, name), do: Keys.namespaced_key(module, namespace, name)
+  def namespaced_key(module, namespace, name), do: "#{inspect(module)}.#{namespace}.#{name}"
 
   @spec simple_key(module(), atom()) :: String.t()
-  def simple_key(module, name), do: Keys.simple_key(module, name)
+  def simple_key(module, name), do: "#{inspect(module)}.#{name}"
 
   @spec has_styles?(t()) :: boolean()
-  def has_styles?(manifest), do: Ops.has_styles?(manifest)
+  def has_styles?(manifest) do
+    has_entries?(manifest, :vars) or
+      has_entries?(manifest, :keyframes) or
+      has_entries?(manifest, :classes) or
+      has_entries?(manifest, :position_try) or
+      has_entries?(manifest, :view_transitions) or
+      has_entries?(manifest, :themes)
+  end
 
-  # Entry helpers (kept as explicit functions for clarity)
-  def put_var(manifest, entry_key, entry), do: Entry.put(manifest, :vars, entry_key, entry)
-  def get_var(manifest, entry_key), do: Entry.get(manifest, :vars, entry_key)
+  defp has_entries?(manifest, key), do: map_size(Map.get(manifest, key, %{})) > 0
 
-  def put_const(manifest, entry_key, entry), do: Entry.put(manifest, :consts, entry_key, entry)
-  def get_const(manifest, entry_key), do: Entry.get(manifest, :consts, entry_key)
+  # Entry helpers
+  def put_var(manifest, key, entry), do: put_in(manifest, [:vars, key], entry)
+  def get_var(manifest, key), do: get_in(manifest, [:vars, key])
 
-  def put_keyframes(manifest, entry_key, entry),
-    do: Entry.put(manifest, :keyframes, entry_key, entry)
+  def put_const(manifest, key, entry), do: put_in(manifest, [:consts, key], entry)
+  def get_const(manifest, key), do: get_in(manifest, [:consts, key])
 
-  def get_keyframes(manifest, entry_key), do: Entry.get(manifest, :keyframes, entry_key)
+  def put_keyframes(manifest, key, entry), do: put_in(manifest, [:keyframes, key], entry)
+  def get_keyframes(manifest, key), do: get_in(manifest, [:keyframes, key])
 
-  def put_position_try(manifest, entry_key, entry),
-    do: Entry.put(manifest, :position_try, entry_key, entry)
+  def put_position_try(manifest, key, entry), do: put_in(manifest, [:position_try, key], entry)
+  def get_position_try(manifest, key), do: get_in(manifest, [:position_try, key])
 
-  def get_position_try(manifest, entry_key), do: Entry.get(manifest, :position_try, entry_key)
+  def put_view_transition(manifest, key, entry),
+    do: put_in(manifest, [:view_transitions, key], entry)
 
-  def put_view_transition(manifest, entry_key, entry),
-    do: Entry.put(manifest, :view_transitions, entry_key, entry)
+  def get_view_transition(manifest, key), do: get_in(manifest, [:view_transitions, key])
 
-  def get_view_transition(manifest, entry_key),
-    do: Entry.get(manifest, :view_transitions, entry_key)
+  def put_class(manifest, key, entry), do: put_in(manifest, [:classes, key], entry)
+  def get_class(manifest, key), do: get_in(manifest, [:classes, key])
 
-  def put_class(manifest, entry_key, entry), do: Entry.put(manifest, :classes, entry_key, entry)
-  def get_class(manifest, entry_key), do: Entry.get(manifest, :classes, entry_key)
-
-  def put_theme(manifest, entry_key, entry), do: Entry.put(manifest, :themes, entry_key, entry)
-  def get_theme(manifest, entry_key), do: Entry.get(manifest, :themes, entry_key)
+  def put_theme(manifest, key, entry), do: put_in(manifest, [:themes, key], entry)
+  def get_theme(manifest, key), do: get_in(manifest, [:themes, key])
 end

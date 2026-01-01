@@ -13,7 +13,10 @@ defmodule LiveStyle.NullValuesTest do
   - When styles.revert (color: null) is applied first and styles.red second,
     the result has the red class - red wins since it comes after
   """
-  use LiveStyle.TestCase, async: true
+  use LiveStyle.TestCase
+
+  alias LiveStyle.Compiler
+  alias LiveStyle.Compiler.Class
 
   # ============================================================================
   # Test Modules - Static nil values
@@ -23,13 +26,13 @@ defmodule LiveStyle.NullValuesTest do
     use LiveStyle
 
     # A style with a regular color value
-    css_class(:red, color: "red")
+    class(:red, color: "red")
 
     # A style that "unsets" the color - should not generate CSS
-    css_class(:revert, color: nil)
+    class(:revert, color: nil)
 
     # Multiple properties, one nil
-    css_class(:partial_nil,
+    class(:partial_nil,
       color: "blue",
       background_color: nil
     )
@@ -44,7 +47,7 @@ defmodule LiveStyle.NullValuesTest do
 
     # Default value with nil for hover
     # This means: apply color:blue by default, but unset it on hover
-    css_class(:default_with_nil_hover,
+    class(:default_with_nil_hover,
       color: [
         default: "blue",
         ":hover": nil
@@ -53,7 +56,7 @@ defmodule LiveStyle.NullValuesTest do
 
     # Nil default with conditional value
     # This means: no default color, but apply red on hover
-    css_class(:nil_default_with_hover,
+    class(:nil_default_with_hover,
       color: [
         default: nil,
         ":hover": "red"
@@ -69,7 +72,8 @@ defmodule LiveStyle.NullValuesTest do
     test "nil value property is excluded from generated CSS" do
       # StyleX: color: null produces kMwMTN: null in the compiled object
       # No CSS is generated for null values
-      rule = LiveStyle.get_metadata(LiveStyle.NullValuesTest.NullStaticStyles, {:class, :revert})
+      rule =
+        Class.lookup!({LiveStyle.NullValuesTest.NullStaticStyles, :revert})
 
       # The rule should exist but with no atomic classes (or nil class for color)
       # StyleX stores null as the className for the property key
@@ -91,7 +95,7 @@ defmodule LiveStyle.NullValuesTest do
 
     test "nil value results in empty class string" do
       # When only nil values exist, the class string should be empty
-      class = LiveStyle.get_css_class(NullStaticStyles, :revert)
+      class = Compiler.get_css_class(NullStaticStyles, :revert)
       assert class == "" or class == nil
     end
 
@@ -99,7 +103,7 @@ defmodule LiveStyle.NullValuesTest do
       # StyleX: multiple properties where one is null
       # Only the non-null property generates a class
       rule =
-        LiveStyle.get_metadata(LiveStyle.NullValuesTest.NullStaticStyles, {:class, :partial_nil})
+        Class.lookup!({LiveStyle.NullValuesTest.NullStaticStyles, :partial_nil})
 
       # color: blue should generate a class
       assert rule.atomic_classes["color"] != nil
@@ -113,7 +117,7 @@ defmodule LiveStyle.NullValuesTest do
 
     test "nil value does not produce CSS output" do
       # Generate the CSS and verify nil values don't appear
-      css = generate_css()
+      css = Compiler.generate_css()
 
       # The CSS should NOT contain any rules for the :revert style
       # (since color: nil doesn't generate CSS)
@@ -132,7 +136,7 @@ defmodule LiveStyle.NullValuesTest do
     test "nil value after regular value removes the property" do
       # StyleX: stylex.props([styles.red, styles.revert]) -> {}
       # The nil value removes the previously applied style
-      attrs = LiveStyle.get_css(NullStaticStyles, [:red, :revert])
+      attrs = Compiler.get_css(NullStaticStyles, [:red, :revert])
 
       # Result should have no classes (empty string)
       assert attrs.class == "" or attrs.class == nil
@@ -141,14 +145,14 @@ defmodule LiveStyle.NullValuesTest do
     test "regular value after nil value applies the value" do
       # StyleX: stylex.props([styles.revert, styles.red]) -> { className: "x1e2nbdu" }
       # The regular value wins since it comes after
-      attrs = LiveStyle.get_css(NullStaticStyles, [:revert, :red])
+      attrs = Compiler.get_css(NullStaticStyles, [:revert, :red])
 
       # Result should have the red class
       assert attrs.class != nil
       assert attrs.class != ""
 
       # Verify it's the red color class
-      rule = LiveStyle.get_metadata(LiveStyle.NullValuesTest.NullStaticStyles, {:class, :red})
+      rule = Class.lookup!({LiveStyle.NullValuesTest.NullStaticStyles, :red})
       red_class = rule.atomic_classes["color"].class
       assert attrs.class =~ red_class
     end
@@ -159,11 +163,11 @@ defmodule LiveStyle.NullValuesTest do
       # red has color:red
       # revert has color:nil (removes red's color)
       # partial_nil has color:blue (re-applies color)
-      attrs = LiveStyle.get_css(NullStaticStyles, [:red, :revert, :partial_nil])
+      attrs = Compiler.get_css(NullStaticStyles, [:red, :revert, :partial_nil])
 
       # Result should have partial_nil's blue color, not red's color
       blue_rule =
-        LiveStyle.get_metadata(LiveStyle.NullValuesTest.NullStaticStyles, {:class, :partial_nil})
+        Class.lookup!({LiveStyle.NullValuesTest.NullStaticStyles, :partial_nil})
 
       blue_class = blue_rule.atomic_classes["color"].class
 
@@ -180,10 +184,7 @@ defmodule LiveStyle.NullValuesTest do
       # StyleX: Using null for a non-default condition has no effect
       # and should be considered invalid (but doesn't error)
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.NullValuesTest.NullConditionalStyles,
-          {:class, :default_with_nil_hover}
-        )
+        Class.lookup!({LiveStyle.NullValuesTest.NullConditionalStyles, :default_with_nil_hover})
 
       # Should have a default class
       classes = rule.atomic_classes["color"].classes
@@ -199,10 +200,7 @@ defmodule LiveStyle.NullValuesTest do
       # StyleX: default: null means no style in the default case
       # but the hover style should still apply
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.NullValuesTest.NullConditionalStyles,
-          {:class, :nil_default_with_hover}
-        )
+        Class.lookup!({LiveStyle.NullValuesTest.NullConditionalStyles, :nil_default_with_hover})
 
       classes = rule.atomic_classes["color"].classes
 

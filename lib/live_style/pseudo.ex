@@ -6,7 +6,7 @@ defmodule LiveStyle.Pseudo do
   pseudo-class priority lookups, following the pattern used by the unicode library.
 
   All pseudo data is loaded from external files at compile time via
-  `LiveStyle.Data`, enabling:
+  `LiveStyle.PropertyMetadata`, enabling:
   - O(1) pattern-matched lookups instead of Map.get
   - Automatic recompilation when data files change
   - Single source of truth for pseudo metadata
@@ -35,9 +35,9 @@ defmodule LiveStyle.Pseudo do
       5000
   """
 
-  alias LiveStyle.Data
+  alias LiveStyle.PropertyMetadata
 
-  @pseudo_class_priorities Data.pseudo_priorities()
+  @pseudo_class_priorities PropertyMetadata.pseudo_priorities()
 
   # Pseudo-element base priority (StyleX constant)
   @pseudo_element_priority 5000

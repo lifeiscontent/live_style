@@ -12,20 +12,21 @@ defmodule LiveStyle.WhenTest do
 
   Reference: stylex/packages/@stylexjs/babel-plugin/__tests__/transform-stylex-when-test.js
   """
-  use LiveStyle.TestCase, async: true
+  use LiveStyle.TestCase
 
+  alias LiveStyle.Compiler.Class
   alias LiveStyle.Marker
   alias LiveStyle.When
 
   # ===========================================================================
-  # Test Modules - Integration with css_class
+  # Test Modules - Integration with class
   # ===========================================================================
 
   defmodule WhenAncestorExample do
     use LiveStyle
     alias LiveStyle.When
 
-    css_class(:card,
+    class(:card,
       background_color: %{
         :default => "blue",
         When.ancestor(":hover") => "red"
@@ -37,7 +38,7 @@ defmodule LiveStyle.WhenTest do
     use LiveStyle
     alias LiveStyle.When
 
-    css_class(:label,
+    class(:label,
       color: %{
         :default => "black",
         When.sibling_before(":focus") => "blue"
@@ -49,7 +50,7 @@ defmodule LiveStyle.WhenTest do
     use LiveStyle
     alias LiveStyle.When
 
-    css_class(:hint,
+    class(:hint,
       visibility: %{
         :default => "hidden",
         When.sibling_after(":focus") => "visible"
@@ -61,7 +62,7 @@ defmodule LiveStyle.WhenTest do
     use LiveStyle
     alias LiveStyle.When
 
-    css_class(:tab,
+    class(:tab,
       opacity: %{
         :default => "1",
         When.any_sibling(":hover") => "0.7"
@@ -73,7 +74,7 @@ defmodule LiveStyle.WhenTest do
     use LiveStyle
     alias LiveStyle.When
 
-    css_class(:container,
+    class(:container,
       border_color: %{
         :default => "gray",
         When.descendant(":focus") => "blue"
@@ -85,9 +86,9 @@ defmodule LiveStyle.WhenTest do
     use LiveStyle
     alias LiveStyle.When
 
-    @card_marker Marker.define(:card)
+    @card_marker Marker.ref(:card)
 
-    css_class(:child,
+    class(:child,
       transform: %{
         :default => "translateX(0)",
         When.ancestor(":hover", @card_marker) => "translateX(10px)"
@@ -99,7 +100,7 @@ defmodule LiveStyle.WhenTest do
     use LiveStyle
     alias LiveStyle.When
 
-    css_class(:item,
+    class(:item,
       background_color: %{
         :default => "white",
         When.ancestor(":hover") => "lightblue",
@@ -113,7 +114,7 @@ defmodule LiveStyle.WhenTest do
     use LiveStyle
     alias LiveStyle.When
 
-    css_class(:responsive_card,
+    class(:responsive_card,
       background_color: %{
         :default => "blue",
         When.ancestor(":hover") => "red",
@@ -159,21 +160,21 @@ defmodule LiveStyle.WhenTest do
 
   describe "ancestor/2 with custom marker" do
     test "uses custom marker class" do
-      marker = Marker.define(:card)
+      marker = Marker.ref(:card)
       selector = When.ancestor(":hover", marker)
-      assert selector == ":where(.#{marker}:hover *)"
+      assert selector == ":where(.#{Marker.to_class(marker)}:hover *)"
     end
 
     test "supports different markers for different contexts" do
-      row_marker = Marker.define(:row)
-      card_marker = Marker.define(:card)
+      row_marker = Marker.ref(:row)
+      card_marker = Marker.ref(:card)
 
       row_selector = When.ancestor(":hover", row_marker)
       card_selector = When.ancestor(":hover", card_marker)
 
       assert row_selector != card_selector
-      assert row_selector == ":where(.#{row_marker}:hover *)"
-      assert card_selector == ":where(.#{card_marker}:hover *)"
+      assert row_selector == ":where(.#{Marker.to_class(row_marker)}:hover *)"
+      assert card_selector == ":where(.#{Marker.to_class(card_marker)}:hover *)"
     end
   end
 
@@ -201,9 +202,9 @@ defmodule LiveStyle.WhenTest do
 
   describe "descendant/2 with custom marker" do
     test "uses custom marker class" do
-      marker = Marker.define(:input)
+      marker = Marker.ref(:input)
       selector = When.descendant(":focus", marker)
-      assert selector == ":where(:has(.#{marker}:focus))"
+      assert selector == ":where(:has(.#{Marker.to_class(marker)}:focus))"
     end
   end
 
@@ -231,9 +232,9 @@ defmodule LiveStyle.WhenTest do
 
   describe "sibling_before/2 with custom marker" do
     test "uses custom marker class" do
-      marker = Marker.define(:checkbox)
+      marker = Marker.ref(:checkbox)
       selector = When.sibling_before(":checked", marker)
-      assert selector == ":where(.#{marker}:checked ~ *)"
+      assert selector == ":where(.#{Marker.to_class(marker)}:checked ~ *)"
     end
   end
 
@@ -256,9 +257,9 @@ defmodule LiveStyle.WhenTest do
 
   describe "sibling_after/2 with custom marker" do
     test "uses custom marker class" do
-      marker = Marker.define(:label)
+      marker = Marker.ref(:label)
       selector = When.sibling_after(":focus", marker)
-      assert selector == ":where(:has(~ .#{marker}:focus))"
+      assert selector == ":where(:has(~ .#{Marker.to_class(marker)}:focus))"
     end
   end
 
@@ -287,9 +288,10 @@ defmodule LiveStyle.WhenTest do
 
   describe "any_sibling/2 with custom marker" do
     test "uses custom marker class" do
-      marker = Marker.define(:tab)
+      marker = Marker.ref(:tab)
+      class = Marker.to_class(marker)
       selector = When.any_sibling(":hover", marker)
-      assert selector == ":where(.#{marker}:hover ~ *, :has(~ .#{marker}:hover))"
+      assert selector == ":where(.#{class}:hover ~ *, :has(~ .#{class}:hover))"
     end
   end
 
@@ -297,30 +299,31 @@ defmodule LiveStyle.WhenTest do
   # marker/0 and marker/1 tests
   # ===========================================================================
 
-  describe "marker/0" do
-    test "returns default marker class name" do
+  describe "Marker.default/0" do
+    test "returns default marker struct" do
       # StyleX uses: x-default-marker
       marker = Marker.default()
-      assert marker == "x-default-marker"
+      assert %Marker{class: "x-default-marker"} = marker
     end
   end
 
-  describe "marker/1" do
-    test "creates unique marker class name" do
-      marker = Marker.define(:custom)
-      assert is_binary(marker)
-      assert marker != ""
+  describe "Marker.ref/1" do
+    test "creates marker struct with unique class" do
+      marker = Marker.ref(:custom)
+      assert %Marker{class: class} = marker
+      assert is_binary(class)
+      assert class != ""
     end
 
     test "different names produce different markers" do
-      marker1 = Marker.define(:card)
-      marker2 = Marker.define(:row)
+      marker1 = Marker.ref(:card)
+      marker2 = Marker.ref(:row)
       assert marker1 != marker2
     end
 
     test "same name produces consistent marker" do
-      marker1 = Marker.define(:test)
-      marker2 = Marker.define(:test)
+      marker1 = Marker.ref(:test)
+      marker2 = Marker.ref(:test)
       assert marker1 == marker2
     end
   end
@@ -394,12 +397,12 @@ defmodule LiveStyle.WhenTest do
   end
 
   # ===========================================================================
-  # Integration tests with css_class
+  # Integration tests with class
   # ===========================================================================
 
-  describe "integration with css_class" do
+  describe "integration with class" do
     test "ancestor generates correct CSS in rules" do
-      rule = LiveStyle.get_metadata(WhenAncestorExample, {:class, :card})
+      rule = Class.lookup!({WhenAncestorExample, :card})
 
       assert rule != nil
       assert rule.class_string != ""
@@ -409,42 +412,42 @@ defmodule LiveStyle.WhenTest do
     end
 
     test "sibling_before generates correct CSS in rules" do
-      rule = LiveStyle.get_metadata(WhenSiblingBeforeExample, {:class, :label})
+      rule = Class.lookup!({WhenSiblingBeforeExample, :label})
 
       assert rule != nil
       assert rule.class_string != ""
     end
 
     test "sibling_after generates correct CSS in rules" do
-      rule = LiveStyle.get_metadata(WhenSiblingAfterExample, {:class, :hint})
+      rule = Class.lookup!({WhenSiblingAfterExample, :hint})
 
       assert rule != nil
       assert rule.class_string != ""
     end
 
     test "any_sibling generates correct CSS in rules" do
-      rule = LiveStyle.get_metadata(WhenAnySiblingExample, {:class, :tab})
+      rule = Class.lookup!({WhenAnySiblingExample, :tab})
 
       assert rule != nil
       assert rule.class_string != ""
     end
 
     test "descendant generates correct CSS in rules" do
-      rule = LiveStyle.get_metadata(WhenDescendantExample, {:class, :container})
+      rule = Class.lookup!({WhenDescendantExample, :container})
 
       assert rule != nil
       assert rule.class_string != ""
     end
 
     test "ancestor with custom marker generates correct CSS" do
-      rule = LiveStyle.get_metadata(WhenWithCustomMarkerExample, {:class, :child})
+      rule = Class.lookup!({WhenWithCustomMarkerExample, :child})
 
       assert rule != nil
       assert rule.class_string != ""
     end
 
     test "multiple when conditions work together" do
-      rule = LiveStyle.get_metadata(WhenMultipleConditionsExample, {:class, :item})
+      rule = Class.lookup!({WhenMultipleConditionsExample, :item})
 
       assert rule != nil
       assert rule.class_string != ""
@@ -455,7 +458,7 @@ defmodule LiveStyle.WhenTest do
     end
 
     test "when selectors work with media queries" do
-      rule = LiveStyle.get_metadata(WhenWithMediaQueryExample, {:class, :responsive_card})
+      rule = Class.lookup!({WhenWithMediaQueryExample, :responsive_card})
 
       assert rule != nil
       assert rule.class_string != ""
@@ -467,22 +470,32 @@ defmodule LiveStyle.WhenTest do
   # ===========================================================================
 
   describe "LiveStyle.Marker" do
-    test "default/0 returns expected format" do
+    test "default/0 returns marker struct" do
       marker = Marker.default()
-      assert marker == "x-default-marker"
+      assert %Marker{class: "x-default-marker"} = marker
     end
 
-    test "define/1 creates hashed marker names" do
-      marker = Marker.define(:custom_marker)
-      assert is_binary(marker)
+    test "ref/1 creates marker struct with hashed class" do
+      marker = Marker.ref(:custom_marker)
+      assert %Marker{class: class} = marker
+      assert is_binary(class)
       # Should be a hashed value, not the raw name
-      refute marker == "custom_marker"
+      refute class == "custom_marker"
     end
 
-    test "define/1 is deterministic" do
-      marker1 = Marker.define(:test_marker)
-      marker2 = Marker.define(:test_marker)
+    test "ref/1 is deterministic" do
+      marker1 = Marker.ref(:test_marker)
+      marker2 = Marker.ref(:test_marker)
       assert marker1 == marker2
+    end
+
+    test "to_class/1 extracts class from struct" do
+      marker = Marker.ref(:test)
+      assert Marker.to_class(marker) == marker.class
+    end
+
+    test "to_class/1 passes through strings" do
+      assert Marker.to_class("my-class") == "my-class"
     end
   end
 end

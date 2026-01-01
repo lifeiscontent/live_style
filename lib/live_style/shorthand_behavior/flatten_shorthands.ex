@@ -39,11 +39,11 @@ defmodule LiveStyle.ShorthandBehavior.FlattenShorthands do
 
   @behaviour LiveStyle.ShorthandBehavior
 
-  alias LiveStyle.Data
+  alias LiveStyle.PropertyMetadata
 
   # Load data at compile time
-  @shorthand_properties Data.shorthand_properties()
-  @expand_to_longhands_expansions Data.expand_to_longhands_expansions()
+  @shorthand_properties PropertyMetadata.shorthand_properties()
+  @expand_to_longhands_expansions PropertyMetadata.expand_to_longhands_expansions()
 
   # ==========================================================================
   # Behavior Callbacks

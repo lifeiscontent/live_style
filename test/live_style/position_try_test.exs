@@ -5,12 +5,12 @@ defmodule LiveStyle.PositionTryTest do
   These tests mirror StyleX's transform-stylex-positionTry-test.js to ensure
   LiveStyle handles position-try the same way StyleX does.
   """
-  use LiveStyle.TestCase, async: true
+  use LiveStyle.TestCase
 
   defmodule BasicPositionTry do
     use LiveStyle
 
-    css_position_try(:bottom_fallback,
+    position_try(:bottom_fallback,
       position_anchor: "--anchor",
       top: "0",
       left: "0",
@@ -23,7 +23,7 @@ defmodule LiveStyle.PositionTryTest do
     use LiveStyle
 
     # Logical properties should stay as-is (browser handles RTL)
-    css_position_try(:inline_fallback,
+    position_try(:inline_fallback,
       inset_inline_start: "0",
       margin_inline_end: "10px"
     )
@@ -33,22 +33,22 @@ defmodule LiveStyle.PositionTryTest do
     use LiveStyle
 
     # Inline anonymous position-try
-    css_class(:anchored,
+    class(:anchored,
       position: "absolute",
       position_anchor: "--my-anchor",
-      position_try_fallbacks: css_position_try(top: "0", left: "50px")
+      position_try_fallbacks: position_try(top: "0", left: "50px")
     )
   end
 
   defmodule MultiplePositionTry do
     use LiveStyle
 
-    css_position_try(:fallback_top,
+    position_try(:fallback_top,
       top: "anchor(bottom)",
       left: "anchor(center)"
     )
 
-    css_position_try(:fallback_bottom,
+    position_try(:fallback_bottom,
       bottom: "anchor(top)",
       left: "anchor(center)"
     )
@@ -57,7 +57,7 @@ defmodule LiveStyle.PositionTryTest do
   describe "basic position-try" do
     test "generates @position-try rule" do
       # StyleX: "@position-try --xhs37kq {height:100px;left:0;position-anchor:--anchor;top:0;width:100px;}"
-      css = generate_css()
+      css = LiveStyle.Compiler.generate_css()
 
       assert css =~ ~r/@position-try --[a-z0-9]+/
     end
@@ -68,19 +68,19 @@ defmodule LiveStyle.PositionTryTest do
       # Expected output: --xhs37kq
 
       # BasicPositionTry has the same declarations as the StyleX test
-      position_try = LiveStyle.get_metadata(BasicPositionTry, {:position_try, :bottom_fallback})
-      assert position_try.css_name == "--xhs37kq"
+      position_try = LiveStyle.PositionTry.lookup!({BasicPositionTry, :bottom_fallback})
+      assert position_try.ident == "--xhs37kq"
     end
 
     test "position-try name is content-hashed" do
-      css = generate_css()
+      css = LiveStyle.Compiler.generate_css()
 
       # Name should be a hashed dashed-ident like --x123abc
       assert css =~ ~r/@position-try --x[a-z0-9]+/
     end
 
     test "position-try has all declared properties" do
-      css = generate_css()
+      css = LiveStyle.Compiler.generate_css()
 
       assert css =~ "position-anchor:--anchor" or css =~ "position-anchor: --anchor"
       assert css =~ "top:" or css =~ "top :"
@@ -91,7 +91,7 @@ defmodule LiveStyle.PositionTryTest do
     test "position-try has priority 0" do
       # StyleX: @position-try has priority 0 (like @keyframes)
       # Verify we can retrieve position-try metadata
-      position_try = LiveStyle.get_metadata(BasicPositionTry, {:position_try, :bottom_fallback})
+      position_try = LiveStyle.PositionTry.lookup!({BasicPositionTry, :bottom_fallback})
       assert position_try != nil
     end
   end
@@ -100,7 +100,7 @@ defmodule LiveStyle.PositionTryTest do
     test "logical properties stay as-is (not transformed to physical)" do
       # StyleX keeps logical properties like inset-inline-start as-is
       # Browser handles RTL automatically for these
-      css = generate_css()
+      css = LiveStyle.Compiler.generate_css()
 
       assert css =~ "inset-inline-start"
       assert css =~ "margin-inline-end"
@@ -108,7 +108,7 @@ defmodule LiveStyle.PositionTryTest do
 
     test "no RTL override for logical properties" do
       # Logical properties don't need RTL variants
-      css = generate_css()
+      css = LiveStyle.Compiler.generate_css()
 
       # Should NOT have html[dir="rtl"] wrapper for @position-try
       # (RTL is handled by browser for logical properties)
@@ -118,7 +118,7 @@ defmodule LiveStyle.PositionTryTest do
 
   describe "inline position-try" do
     test "inline position-try is referenced in position-try-fallbacks" do
-      css = generate_css()
+      css = LiveStyle.Compiler.generate_css()
 
       # Should have position-try-fallbacks property referencing the generated name
       # StyleX uses content-based --x<hash> format (e.g., --x1oyda6q)
@@ -127,7 +127,7 @@ defmodule LiveStyle.PositionTryTest do
     end
 
     test "inline position-try generates @position-try rule" do
-      css = generate_css()
+      css = LiveStyle.Compiler.generate_css()
 
       # Should have both the rule using it and the @position-try definition
       assert css =~ "@position-try"
@@ -138,16 +138,16 @@ defmodule LiveStyle.PositionTryTest do
   describe "multiple position-try rules" do
     test "different content produces different names" do
       # Should have multiple position-try entries with different names
-      fallback_top = LiveStyle.get_metadata(MultiplePositionTry, {:position_try, :fallback_top})
+      fallback_top = LiveStyle.PositionTry.lookup!({MultiplePositionTry, :fallback_top})
 
       fallback_bottom =
-        LiveStyle.get_metadata(MultiplePositionTry, {:position_try, :fallback_bottom})
+        LiveStyle.PositionTry.lookup!({MultiplePositionTry, :fallback_bottom})
 
-      assert fallback_top.css_name != fallback_bottom.css_name
+      assert fallback_top.ident != fallback_bottom.ident
     end
 
     test "can reference position-try in styles" do
-      css = generate_css()
+      css = LiveStyle.Compiler.generate_css()
 
       # The generated position-try names should be valid dashed-idents
       position_try_names =

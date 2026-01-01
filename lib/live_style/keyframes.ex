@@ -2,9 +2,9 @@ defmodule LiveStyle.Keyframes do
   @moduledoc """
   CSS @keyframes animation support for LiveStyle.
 
-  This is an internal module that handles the processing of `css_keyframes/2` definitions.
-  You typically don't use this module directly - instead use `LiveStyle.Tokens` with
-  the `css_keyframes/2` macro.
+  This is an internal module that handles the processing of `keyframes/2` definitions.
+  You typically don't use this module directly - instead use `LiveStyle` with
+  the `keyframes/2` macro.
 
   ## Features
 
@@ -16,25 +16,64 @@ defmodule LiveStyle.Keyframes do
 
   Define keyframes in a tokens module:
 
-      defmodule MyApp.Tokens do
-        use LiveStyle.Tokens
+      defmodule MyApp.Animations do
+        use LiveStyle
 
-        css_keyframes :spin,
+        keyframes :spin,
           from: [transform: "rotate(0deg)"],
           to: [transform: "rotate(360deg)"]
 
-        css_keyframes :fade_in,
+        keyframes :fade_in,
           "0%": [opacity: "0"],
           "100%": [opacity: "1"]
       end
 
   Reference in a style class:
 
-      css_class :spinner,
-        animation: "\#{css_keyframes({MyApp.Tokens, :spin})} 1s linear infinite"
+      class :spinner,
+        animation: "\#{keyframes({MyApp.Animations, :spin})} 1s linear infinite"
   """
 
-  alias LiveStyle.{Hash, Manifest, Utils, Value}
+  alias LiveStyle.{CSSValue, Hash, Manifest, Utils}
+
+  use LiveStyle.Registry,
+    entity_name: "Keyframes",
+    manifest_type: :keyframes,
+    ref_field: :ident
+
+  # Content-based CSS name generation (private)
+  # Identical keyframes produce the same name for deduplication
+  defp ident(frames) when is_map(frames) do
+    keyframes_string = serialize_frames(frames)
+    # StyleX prefixes with '<>' for hash stability
+    Hash.class_prefix() <> Hash.create_hash("<>" <> keyframes_string) <> "-B"
+  end
+
+  # Serialize frames in StyleX format: from{color:red;}to{color:blue;}
+  defp serialize_frames(frames) do
+    frames
+    |> Enum.sort_by(fn {k, _} -> to_string(k) end)
+    |> Enum.map_join("", fn {frame_key, declarations} ->
+      validate_frame_declarations!(frame_key, declarations)
+
+      decls_string =
+        declarations
+        |> Enum.sort_by(fn {k, _} -> to_string(k) end)
+        |> Enum.map_join("", fn {prop, value} ->
+          prop_str = CSSValue.to_css_property(prop)
+          "#{prop_str}:#{value};"
+        end)
+
+      "#{frame_key}{#{decls_string}}"
+    end)
+  end
+
+  defp validate_frame_declarations!(frame_key, declarations) do
+    unless is_list(declarations) or is_map(declarations) do
+      raise ArgumentError,
+            "Keyframe value must be a keyword list or map, got: #{inspect(declarations)} for frame: #{frame_key}"
+    end
+  end
 
   @doc """
   Defines a keyframes animation and stores it in the manifest.
@@ -55,20 +94,20 @@ defmodule LiveStyle.Keyframes do
     manifest = LiveStyle.Storage.read()
 
     normalized_frames = Utils.normalize_to_map(frames)
-    css_name = Hash.keyframes_name(normalized_frames)
+    ident = ident(normalized_frames)
 
     # If already defined, keep it unless the frames changed.
     # In dev/code-reload, keyframes need to update so the compiled CSS matches source.
     case Manifest.get_keyframes(manifest, key) do
-      %{css_name: ^css_name, frames: ^normalized_frames} ->
-        css_name
+      %{ident: ^ident, frames: ^normalized_frames} ->
+        ident
 
       _existing ->
         # Generate the StyleX-compatible metadata
-        ltr = generate_css(css_name, normalized_frames)
+        ltr = generate_css(ident, normalized_frames)
 
         entry = %{
-          css_name: css_name,
+          ident: ident,
           frames: normalized_frames,
           ltr: ltr,
           rtl: nil,
@@ -79,19 +118,8 @@ defmodule LiveStyle.Keyframes do
           Manifest.put_keyframes(manifest, key, entry)
         end)
 
-        css_name
+        ident
     end
-  end
-
-  @doc """
-  Looks up a keyframes animation by module and name.
-
-  Returns the CSS animation name or raises if not found.
-  """
-  @spec lookup!(module(), atom()) :: String.t()
-  def lookup!(module, name) do
-    %{css_name: css_name} = LiveStyle.Manifest.Access.keyframes!(module, name)
-    css_name
   end
 
   @doc """
@@ -100,7 +128,7 @@ defmodule LiveStyle.Keyframes do
   Format: `@keyframes name{from{prop:value;}to{prop:value;}}`
   """
   @spec generate_css(String.t(), map()) :: String.t()
-  def generate_css(css_name, frames) do
+  def generate_css(ident, frames) do
     sorted_frames =
       frames
       |> Enum.sort_by(fn {frame_key, _} -> frame_sort_order(frame_key) end)
@@ -112,7 +140,7 @@ defmodule LiveStyle.Keyframes do
         "#{frame_name}{#{props_css}}"
       end)
 
-    "@keyframes #{css_name}{#{frame_css}}"
+    "@keyframes #{ident}{#{frame_css}}"
   end
 
   @doc false
@@ -159,8 +187,8 @@ defmodule LiveStyle.Keyframes do
     props
     |> Enum.sort_by(fn {k, _} -> to_string(k) end)
     |> Enum.map_join("", fn {prop, value} ->
-      css_prop = Value.to_css_property(prop)
-      css_value = Value.to_css(value, css_prop)
+      css_prop = CSSValue.to_css_property(prop)
+      css_value = CSSValue.to_css(value, css_prop)
       "#{css_prop}:#{css_value};"
     end)
   end

@@ -1,22 +1,23 @@
 defmodule LiveStyle.Compiler.Writer do
   @moduledoc false
 
+  alias LiveStyle.Compiler.CSS
+  alias LiveStyle.Compiler.CSS.Pipeline
   alias LiveStyle.Config
+  alias LiveStyle.Storage
 
   @spec write_css(keyword()) :: :ok | {:error, term()}
   def write_css(opts \\ []) do
     output = Keyword.get(opts, :output_path, Config.output_path())
     log_fn = Keyword.get(opts, :log)
 
-    manifest = LiveStyle.Storage.read()
+    manifest = Storage.read()
 
-    case LiveStyle.CSS.write(output, stats: true) do
+    case CSS.write(output, stats: true) do
       {:ok, :written} ->
         if log_fn do
-          var_count = map_size(manifest.vars)
-          keyframe_count = map_size(manifest.keyframes)
-          class_count = map_size(manifest.classes)
-          log_fn.({:written, var_count, keyframe_count, class_count, output})
+          stats = Pipeline.stats(manifest)
+          log_fn.({:written, stats, output})
         end
 
         :ok
@@ -37,11 +38,11 @@ defmodule LiveStyle.Compiler.Writer do
     end
   end
 
-  defp log_run({:written, var_count, keyframe_count, rule_count, output_path}) do
+  defp log_run({:written, stats, output_path}) do
     require Logger
 
     Logger.info(
-      "LiveStyle: #{var_count} vars, #{keyframe_count} keyframes, #{rule_count} rules → #{output_path}"
+      "LiveStyle: #{stats.vars} vars, #{stats.keyframes} keyframes, #{stats.classes} rules → #{output_path}"
     )
   end
 end

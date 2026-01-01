@@ -1,8 +1,9 @@
 defmodule LiveStyle.Dev do
   @moduledoc """
-  Development helpers for inspecting and debugging LiveStyle classes.
+  Development helpers for LiveStyle.
 
-  These functions are designed for use in IEx during development.
+  These functions are designed for use in IEx during development for
+  debugging and introspection.
 
   ## Examples
 
@@ -17,6 +18,8 @@ defmodule LiveStyle.Dev do
 
       iex> LiveStyle.Dev.tokens(MyApp.Tokens)
       %{vars: %{...}, consts: %{...}, keyframes: [...], themes: [...]}
+
+  For testing utilities, see `LiveStyle.Compiler`.
   """
 
   alias LiveStyle.Dev.{ClassInfo, CSS, Diff, List, Pretty, Tokens}

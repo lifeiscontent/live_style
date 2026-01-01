@@ -4,25 +4,21 @@ defmodule LiveStyle.TestCase do
 
   This module provides a consistent test environment with:
   - Isolated manifest per test (for async test safety)
-  - CSS generation via `generate_css/0`
-  - Hash computation helpers
   - Per-process config overrides
 
   ## Usage
 
       defmodule MyTest do
-        use LiveStyle.TestCase, async: true
+        use LiveStyle.TestCase
 
         test "example" do
-          css = generate_css()
-          class = class_name("display", "flex")
-          metadata = LiveStyle.get_metadata(MyModule, :root)
+          css = LiveStyle.generate_css()
         end
       end
 
   ## Options
 
-  - `:async` - Whether tests can run in parallel (default: true)
+  - `:async` - Whether tests can run in parallel (default: `true`)
   - `:shorthand_behavior` - Shorthand expansion behavior (atom, module, or `{module, opts}` tuple)
   - `:class_name_prefix` - Prefix for generated class names
   - `:debug_class_names` - Include property names in class names
@@ -39,17 +35,24 @@ defmodule LiveStyle.TestCase do
     :debug_class_names,
     :font_size_px_to_rem,
     :font_size_root_px,
-    :use_css_layers
+    :use_css_layers,
+    :prefix_css,
+    :vendor_prefix_level
   ]
 
   using opts do
     config_opts = Keyword.take(opts, @config_keys)
+    async = Keyword.get(opts, :async, true)
 
     quote do
-      import LiveStyle.TestCase.Helpers
+      use ExUnit.Case, async: unquote(async)
+
+      # Store config options in module attribute for runtime access
+      # This allows functions to be preserved properly
+      @live_style_config_opts unquote(config_opts)
 
       setup do
-        LiveStyle.TestCase.setup_test(unquote(Macro.escape(config_opts)))
+        LiveStyle.TestCase.setup_test(@live_style_config_opts)
       end
     end
   end
@@ -82,70 +85,5 @@ defmodule LiveStyle.TestCase do
     end)
 
     :ok
-  end
-
-  defmodule Helpers do
-    @moduledoc """
-    Helper functions available in all LiveStyle tests.
-    """
-
-    @doc """
-    Generates CSS from all registered styles.
-
-    This is a convenience wrapper around `LiveStyle.generate_css/0`.
-    """
-    def generate_css do
-      LiveStyle.generate_css()
-    end
-
-    @doc """
-    Computes the expected class name for a CSS property-value pair.
-
-    ## Examples
-
-        iex> class_name("display", "flex")
-        "x78zum5"
-
-        iex> class_name("color", "blue", ":hover")
-        "x..."
-    """
-    def class_name(property, value, selector_suffix \\ nil, at_rule \\ nil) do
-      pseudos =
-        case selector_suffix do
-          nil -> []
-          "" -> []
-          str -> [str]
-        end
-
-      at_rules =
-        case at_rule do
-          nil -> []
-          "" -> []
-          str -> [str]
-        end
-
-      LiveStyle.Hash.class_name(property, value, pseudos, at_rules)
-    end
-
-    @doc """
-    Computes the expected CSS variable name for a module, namespace, and name.
-    """
-    def var_name(module, namespace, name) do
-      LiveStyle.Hash.var_name(module, namespace, name)
-    end
-
-    @doc """
-    Computes the expected keyframes animation name.
-    """
-    def keyframes_name(frames) do
-      LiveStyle.Hash.keyframes_name(frames)
-    end
-
-    @doc """
-    Computes the expected var group hash for a namespace.
-    """
-    def var_group_hash(namespace) do
-      LiveStyle.Hash.theme_name(namespace)
-    end
   end
 end

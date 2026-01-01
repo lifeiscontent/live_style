@@ -11,7 +11,7 @@ defmodule LiveStyle.ShorthandBehavior.ForbidShorthandsTest do
   longhand usage for ambiguous shorthands like `border`, `background`, etc.
   """
 
-  use ExUnit.Case, async: true
+  use LiveStyle.TestCase
 
   alias LiveStyle.ShorthandBehavior.ForbidShorthands
 

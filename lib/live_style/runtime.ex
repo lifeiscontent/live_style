@@ -9,7 +9,7 @@ defmodule LiveStyle.Runtime do
   - Cross-module reference resolution
 
   Note: Class reference validation is done at compile time by the
-  css_class/1 and css/1 macros in LiveStyle.
+  class/2 and css/1 macros in LiveStyle.
   """
 
   alias LiveStyle.Runtime.{Attrs, ClassString, Dynamic}
@@ -18,10 +18,10 @@ defmodule LiveStyle.Runtime do
   Resolve a list of refs into a class string.
 
   Later refs override earlier ones (StyleX merge behavior).
-  Validation is done at compile time by the css_class/1 macro.
+  Validation is done at compile time by the class/2 macro.
   """
-  @spec resolve_class_string(module(), list(), map(), list()) :: String.t()
-  def resolve_class_string(module, refs, _class_strings, _dynamic_names) when is_list(refs) do
+  @spec resolve_class_string(module(), list()) :: String.t()
+  def resolve_class_string(module, refs) when is_list(refs) do
     ClassString.resolve_class_string(module, refs)
   end
 
@@ -37,8 +37,8 @@ defmodule LiveStyle.Runtime do
 
   Validation is done at compile time by the css/1 macro.
   """
-  @spec resolve_attrs(module(), list(), map(), list(), keyword() | nil) :: LiveStyle.Attrs.t()
-  def resolve_attrs(module, refs, _class_strings, _dynamic_names, opts) when is_list(refs) do
+  @spec resolve_attrs(module(), list(), keyword() | nil) :: LiveStyle.Attrs.t()
+  def resolve_attrs(module, refs, opts) when is_list(refs) do
     Attrs.resolve_attrs(module, refs, opts)
   end
 

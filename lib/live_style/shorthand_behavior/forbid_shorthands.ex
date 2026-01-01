@@ -21,11 +21,11 @@ defmodule LiveStyle.ShorthandBehavior.ForbidShorthands do
 
   @behaviour LiveStyle.ShorthandBehavior
 
-  alias LiveStyle.Data
+  alias LiveStyle.PropertyMetadata
 
   # Load data at compile time
-  @disallowed_shorthands Data.disallowed_shorthands()
-  @disallowed_shorthands_with_messages Data.disallowed_shorthands_with_messages()
+  @disallowed_shorthands PropertyMetadata.disallowed_shorthands()
+  @disallowed_shorthands_with_messages PropertyMetadata.disallowed_shorthands_with_messages()
 
   # ==========================================================================
   # Behavior Callbacks

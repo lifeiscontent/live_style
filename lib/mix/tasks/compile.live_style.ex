@@ -45,9 +45,11 @@ defmodule Mix.Tasks.Compile.LiveStyle do
 
   use Mix.Task.Compiler
 
+  alias LiveStyle.Compiler.Writer
+
   @impl true
   def run(_args) do
-    case LiveStyle.Compiler.write_css(log: &log_write/1) do
+    case Writer.write_css(log: &log_write/1) do
       :ok -> {:ok, []}
       {:error, reason} -> {:error, [reason]}
     end

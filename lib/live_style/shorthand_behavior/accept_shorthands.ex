@@ -29,10 +29,10 @@ defmodule LiveStyle.ShorthandBehavior.AcceptShorthands do
 
   @behaviour LiveStyle.ShorthandBehavior
 
-  alias LiveStyle.Data
+  alias LiveStyle.PropertyMetadata
 
   # Load data at compile time
-  @keep_shorthands_expansions Data.keep_shorthands_expansions()
+  @keep_shorthands_expansions PropertyMetadata.keep_shorthands_expansions()
 
   # ==========================================================================
   # Behavior Callbacks

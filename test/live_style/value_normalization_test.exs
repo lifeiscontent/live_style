@@ -5,7 +5,9 @@ defmodule LiveStyle.ValueNormalizationTest do
   These tests mirror StyleX's transform-value-normalization-test.js to ensure
   LiveStyle normalizes values the same way StyleX does.
   """
-  use LiveStyle.TestCase, async: true
+  use LiveStyle.TestCase
+
+  alias LiveStyle.Compiler.Class
 
   # ============================================================================
   # Whitespace Normalization
@@ -14,8 +16,8 @@ defmodule LiveStyle.ValueNormalizationTest do
   defmodule WhitespaceNormalization do
     use LiveStyle
 
-    css_class(:transform_spaces, transform: "  rotate(10deg)  translate3d( 0 , 0 , 0 )  ")
-    css_class(:rgba_spaces, color: "rgba( 1, 222,  33 , 0.5)")
+    class(:transform_spaces, transform: "  rotate(10deg)  translate3d( 0 , 0 , 0 )  ")
+    class(:rgba_spaces, color: "rgba( 1, 222,  33 , 0.5)")
   end
 
   # ============================================================================
@@ -25,14 +27,14 @@ defmodule LiveStyle.ValueNormalizationTest do
   defmodule ZeroValues do
     use LiveStyle
 
-    css_class(:zero_px, margin: "0px", margin_left: "1px")
-    css_class(:zero_timing, transition_duration: "0ms")
-    css_class(:zero_angle_rad, transform: "0rad")
-    css_class(:zero_angle_turn, transform: "0turn")
-    css_class(:zero_angle_grad, transform: "0grad")
+    class(:zero_px, margin: "0px", margin_left: "1px")
+    class(:zero_timing, transition_duration: "0ms")
+    class(:zero_angle_rad, transform: "0rad")
+    class(:zero_angle_turn, transform: "0turn")
+    class(:zero_angle_grad, transform: "0grad")
     # Integer 0 should normalize to "0" (not "0px")
     # StyleX: margin: 0 -> ".x1ghz6dp{margin:0}"
-    css_class(:zero_integer, margin: 0, padding: 0)
+    class(:zero_integer, margin: 0, padding: 0)
   end
 
   # ============================================================================
@@ -42,12 +44,12 @@ defmodule LiveStyle.ValueNormalizationTest do
   defmodule CalcValues do
     use LiveStyle
 
-    css_class(:calc_spaces, width: "calc((100% + 3% -   100px) / 7)")
+    class(:calc_spaces, width: "calc((100% + 3% -   100px) / 7)")
     # Nested calc functions
-    css_class(:nested_calc, width: "calc(100% - calc(20px + 10px))")
-    css_class(:deeply_nested_calc, height: "calc(50vh - calc(100% / calc(3 + 1)))")
+    class(:nested_calc, width: "calc(100% - calc(20px + 10px))")
+    class(:deeply_nested_calc, height: "calc(50vh - calc(100% / calc(3 + 1)))")
     # Nested functions in clamp
-    css_class(:clamp_with_calc, padding: "clamp(10px, calc(1rem + 2vw), 30px)")
+    class(:clamp_with_calc, padding: "clamp(10px, calc(1rem + 2vw), 30px)")
   end
 
   # ============================================================================
@@ -57,8 +59,8 @@ defmodule LiveStyle.ValueNormalizationTest do
   defmodule LeadingZeros do
     use LiveStyle
 
-    css_class(:decimal, transition_duration: "0.01s")
-    css_class(:cubic_bezier, transition_timing_function: "cubic-bezier(.08,.52,.52,1)")
+    class(:decimal, transition_duration: "0.01s")
+    class(:cubic_bezier, transition_timing_function: "cubic-bezier(.08,.52,.52,1)")
   end
 
   # ============================================================================
@@ -68,10 +70,10 @@ defmodule LiveStyle.ValueNormalizationTest do
   defmodule TimingValues do
     use LiveStyle
 
-    css_class(:ms_large, transition_duration: "1234ms")
-    css_class(:ms_medium, transition_duration: "10ms")
-    css_class(:ms_small, transition_duration: "1ms")
-    css_class(:ms_500, transition_duration: "500ms")
+    class(:ms_large, transition_duration: "1234ms")
+    class(:ms_medium, transition_duration: "10ms")
+    class(:ms_small, transition_duration: "1ms")
+    class(:ms_500, transition_duration: "500ms")
   end
 
   # ============================================================================
@@ -82,14 +84,14 @@ defmodule LiveStyle.ValueNormalizationTest do
     use LiveStyle
 
     # These properties need px units added
-    css_class(:with_units,
+    class(:with_units,
       height: 500,
       margin: 10,
       width: 500
     )
 
     # These properties are unitless
-    css_class(:unitless,
+    class(:unitless,
       font_weight: 500,
       line_height: 1.5,
       opacity: 0.5,
@@ -105,7 +107,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     use LiveStyle
 
     # 100/3 = 33.333333... should round to 33.3333
-    css_class(:rounded, height: 33.33333333)
+    class(:rounded, height: 33.33333333)
   end
 
   # ============================================================================
@@ -115,16 +117,16 @@ defmodule LiveStyle.ValueNormalizationTest do
   defmodule ContentProperty do
     use LiveStyle
 
-    css_class(:empty, content: "")
-    css_class(:with_text, content: "hello")
-    css_class(:with_attr, content: "attr(data-count)")
-    css_class(:open_quote, content: "open-quote")
-    css_class(:close_quote, content: "close-quote")
-    css_class(:no_open_quote, content: "no-open-quote")
-    css_class(:no_close_quote, content: "no-close-quote")
-    css_class(:counter_fn, content: "counter(section)")
-    css_class(:counters_fn, content: "counters(section, '.')")
-    css_class(:var_fn, content: "var(--my-content)")
+    class(:empty, content: "")
+    class(:with_text, content: "hello")
+    class(:with_attr, content: "attr(data-count)")
+    class(:open_quote, content: "open-quote")
+    class(:close_quote, content: "close-quote")
+    class(:no_open_quote, content: "no-open-quote")
+    class(:no_close_quote, content: "no-close-quote")
+    class(:counter_fn, content: "counter(section)")
+    class(:counters_fn, content: "counters(section, '.')")
+    class(:var_fn, content: "var(--my-content)")
   end
 
   # ============================================================================
@@ -134,9 +136,9 @@ defmodule LiveStyle.ValueNormalizationTest do
   defmodule HyphenateCharacter do
     use LiveStyle
 
-    css_class(:auto, hyphenate_character: "auto")
-    css_class(:dash, hyphenate_character: "-")
-    css_class(:custom, hyphenate_character: "=")
+    class(:auto, hyphenate_character: "auto")
+    class(:dash, hyphenate_character: "-")
+    class(:custom, hyphenate_character: "=")
   end
 
   # ============================================================================
@@ -148,8 +150,8 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     # StyleX: quotes: "''" -> ".x169joja{quotes:\"\"}"
     # Single-quoted empty strings are normalized to double-quoted
-    css_class(:empty_single, quotes: "''")
-    css_class(:empty_double, quotes: "\"\"")
+    class(:empty_single, quotes: "''")
+    class(:empty_double, quotes: "\"\"")
   end
 
   # ============================================================================
@@ -160,13 +162,13 @@ defmodule LiveStyle.ValueNormalizationTest do
     use LiveStyle
 
     # Atom values (snake_case -> dash-case)
-    css_class(:atom_single, transition_property: :background_color)
-    css_class(:atom_opacity, transition_property: :opacity)
+    class(:atom_single, transition_property: :background_color)
+    class(:atom_opacity, transition_property: :opacity)
 
     # String values (snake_case -> dash-case for Elixir idiom)
-    css_class(:string_snake, transition_property: "background_color")
-    css_class(:string_multi, transition_property: "opacity, background_color, border_radius")
-    css_class(:string_custom_prop, transition_property: "--my_custom_prop")
+    class(:string_snake, transition_property: "background_color")
+    class(:string_multi, transition_property: "opacity, background_color, border_radius")
+    class(:string_custom_prop, transition_property: "--my_custom_prop")
   end
 
   # ============================================================================
@@ -177,7 +179,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     use LiveStyle
 
     # StyleX removes space before !important: "red !important" -> "red!important"
-    css_class(:important, color: "red !important")
+    class(:important, color: "red !important")
   end
 
   # ============================================================================
@@ -188,9 +190,8 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "normalizes whitespace in transform values" do
       # StyleX: ".x18qx21s{transform:rotate(10deg) translate3d(0,0,0)}"
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.WhitespaceNormalization,
-          {:class, :transform_spaces}
+        Class.lookup!(
+          {LiveStyle.ValueNormalizationTest.WhitespaceNormalization, :transform_spaces}
         )
 
       meta = rule.atomic_classes["transform"]
@@ -203,10 +204,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "normalizes whitespace in rgba values" do
       # StyleX: ".xe1l9yr{color:rgba(1,222,33,.5)}"
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.WhitespaceNormalization,
-          {:class, :rgba_spaces}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.WhitespaceNormalization, :rgba_spaces})
 
       meta = rule.atomic_classes["color"]
       assert meta.class == "xe1l9yr"
@@ -220,7 +218,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "removes units from 0 length values" do
       # StyleX: ".x1ghz6dp{margin:0}" and ".xgsvwom{margin-left:1px}"
       rule =
-        LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.ZeroValues, {:class, :zero_px})
+        Class.lookup!({LiveStyle.ValueNormalizationTest.ZeroValues, :zero_px})
 
       # margin: 0 (units removed)
       margin_meta = rule.atomic_classes["margin"]
@@ -238,10 +236,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "converts 0ms timing to 0s" do
       # StyleX: ".x1mq3mr6{transition-duration:0s}"
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.ZeroValues,
-          {:class, :zero_timing}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.ZeroValues, :zero_timing})
 
       meta = rule.atomic_classes["transition-duration"]
       assert meta.class == "x1mq3mr6"
@@ -252,10 +247,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "converts 0rad to 0deg" do
       # StyleX: ".x1jpfit1{transform:0deg}"
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.ZeroValues,
-          {:class, :zero_angle_rad}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.ZeroValues, :zero_angle_rad})
 
       meta = rule.atomic_classes["transform"]
       assert meta.class == "x1jpfit1"
@@ -266,10 +258,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "converts 0turn to 0deg" do
       # StyleX: ".x1jpfit1{transform:0deg}"
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.ZeroValues,
-          {:class, :zero_angle_turn}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.ZeroValues, :zero_angle_turn})
 
       meta = rule.atomic_classes["transform"]
       assert meta.class == "x1jpfit1"
@@ -280,10 +269,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "converts 0grad to 0deg" do
       # StyleX: ".x1jpfit1{transform:0deg}"
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.ZeroValues,
-          {:class, :zero_angle_grad}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.ZeroValues, :zero_angle_grad})
 
       meta = rule.atomic_classes["transform"]
       assert meta.class == "x1jpfit1"
@@ -295,10 +281,7 @@ defmodule LiveStyle.ValueNormalizationTest do
       # StyleX: margin: 0 -> ".x1ghz6dp{margin:0}" (not "0px")
       # This ensures numeric 0 values don't get px suffix before normalization
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.ZeroValues,
-          {:class, :zero_integer}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.ZeroValues, :zero_integer})
 
       # margin: 0 -> "0" (not "0px")
       margin_meta = rule.atomic_classes["margin"]
@@ -318,10 +301,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "preserves spaces around + and - in calc()" do
       # StyleX: ".x1hauit9{width:calc((100% + 3% - 100px) / 7)}"
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.CalcValues,
-          {:class, :calc_spaces}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.CalcValues, :calc_spaces})
 
       meta = rule.atomic_classes["width"]
       assert meta.class == "x1hauit9"
@@ -331,10 +311,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "nested calc() functions are preserved" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.CalcValues,
-          {:class, :nested_calc}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.CalcValues, :nested_calc})
 
       meta = rule.atomic_classes["width"]
       assert meta.ltr =~ "calc(100% - calc(20px + 10px))"
@@ -342,10 +319,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "deeply nested calc() functions are preserved" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.CalcValues,
-          {:class, :deeply_nested_calc}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.CalcValues, :deeply_nested_calc})
 
       meta = rule.atomic_classes["height"]
       assert meta.ltr =~ "calc(50vh - calc(100% / calc(3 + 1)))"
@@ -353,10 +327,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "calc() inside clamp() is preserved" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.CalcValues,
-          {:class, :clamp_with_calc}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.CalcValues, :clamp_with_calc})
 
       meta = rule.atomic_classes["padding"]
       assert meta.ltr =~ "clamp(10px,calc(1rem + 2vw),30px)"
@@ -367,7 +338,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "strips leading zeros from decimal values" do
       # StyleX: ".xpvlhck{transition-duration:.01s}"
       rule =
-        LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.LeadingZeros, {:class, :decimal})
+        Class.lookup!({LiveStyle.ValueNormalizationTest.LeadingZeros, :decimal})
 
       meta = rule.atomic_classes["transition-duration"]
       assert meta.class == "xpvlhck"
@@ -378,10 +349,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "cubic-bezier values strip leading zeros" do
       # StyleX: ".xxziih7{transition-timing-function:cubic-bezier(.08,.52,.52,1)}"
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.LeadingZeros,
-          {:class, :cubic_bezier}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.LeadingZeros, :cubic_bezier})
 
       meta = rule.atomic_classes["transition-timing-function"]
       assert meta.class == "xxziih7"
@@ -394,7 +362,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "converts 1234ms to 1.234s" do
       # StyleX: ".xsa3hc2{transition-duration:1.234s}"
       rule =
-        LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.TimingValues, {:class, :ms_large})
+        Class.lookup!({LiveStyle.ValueNormalizationTest.TimingValues, :ms_large})
 
       meta = rule.atomic_classes["transition-duration"]
       assert meta.class == "xsa3hc2"
@@ -405,10 +373,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "converts 10ms to .01s" do
       # StyleX: ".xpvlhck{transition-duration:.01s}"
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.TimingValues,
-          {:class, :ms_medium}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.TimingValues, :ms_medium})
 
       meta = rule.atomic_classes["transition-duration"]
       assert meta.class == "xpvlhck"
@@ -419,7 +384,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "keeps 1ms as is (below 10ms threshold)" do
       # StyleX: ".xjd9b36{transition-duration:1ms}"
       rule =
-        LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.TimingValues, {:class, :ms_small})
+        Class.lookup!({LiveStyle.ValueNormalizationTest.TimingValues, :ms_small})
 
       meta = rule.atomic_classes["transition-duration"]
       assert meta.class == "xjd9b36"
@@ -430,7 +395,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "converts 500ms to .5s" do
       # StyleX: ".x1wsgiic{transition-duration:.5s}"
       rule =
-        LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.TimingValues, {:class, :ms_500})
+        Class.lookup!({LiveStyle.ValueNormalizationTest.TimingValues, :ms_500})
 
       meta = rule.atomic_classes["transition-duration"]
       assert meta.class == "x1wsgiic"
@@ -443,10 +408,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "adds px to height numeric value" do
       # StyleX: ".x1egiwwb{height:500px}" with priority 4000
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.UnitlessValues,
-          {:class, :with_units}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.UnitlessValues, :with_units})
 
       meta = rule.atomic_classes["height"]
       assert meta.class == "x1egiwwb"
@@ -457,10 +419,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "adds px to margin numeric value" do
       # StyleX: ".x1oin6zd{margin:10px}" with priority 1000
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.UnitlessValues,
-          {:class, :with_units}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.UnitlessValues, :with_units})
 
       meta = rule.atomic_classes["margin"]
       assert meta.class == "x1oin6zd"
@@ -471,10 +430,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "adds px to width numeric value" do
       # StyleX: ".xvue9z{width:500px}" with priority 4000
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.UnitlessValues,
-          {:class, :with_units}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.UnitlessValues, :with_units})
 
       meta = rule.atomic_classes["width"]
       assert meta.class == "xvue9z"
@@ -485,10 +441,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "does not add units to font-weight" do
       # StyleX: ".xk50ysn{font-weight:500}"
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.UnitlessValues,
-          {:class, :unitless}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.UnitlessValues, :unitless})
 
       meta = rule.atomic_classes["font-weight"]
       assert meta.class == "xk50ysn"
@@ -499,10 +452,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "does not add units to line-height" do
       # StyleX: ".x1evy7pa{line-height:1.5}"
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.UnitlessValues,
-          {:class, :unitless}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.UnitlessValues, :unitless})
 
       meta = rule.atomic_classes["line-height"]
       assert meta.class == "x1evy7pa"
@@ -514,10 +464,7 @@ defmodule LiveStyle.ValueNormalizationTest do
       # StyleX: ".xbyyjgo{opacity:.5}"
       # Note: StyleX produces xbyyjgo but we might have different hash
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.UnitlessValues,
-          {:class, :unitless}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.UnitlessValues, :unitless})
 
       meta = rule.atomic_classes["opacity"]
       # Opacity 0.5 should become .5 (leading zero stripped)
@@ -528,10 +475,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "does not add units to zoom" do
       # StyleX: ".xy2o3ld{zoom:2}"
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.UnitlessValues,
-          {:class, :unitless}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.UnitlessValues, :unitless})
 
       meta = rule.atomic_classes["zoom"]
       assert meta.class == "xy2o3ld"
@@ -544,10 +488,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "rounds numbers to 4 decimal places" do
       # StyleX: ".x1vvwc6p{height:33.3333px}" with priority 4000
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.NumberRounding,
-          {:class, :rounded}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.NumberRounding, :rounded})
 
       meta = rule.atomic_classes["height"]
       assert meta.class == "x1vvwc6p"
@@ -560,7 +501,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "wraps empty content in quotes" do
       # StyleX: ".x14axycx{content:\"\"}"
       rule =
-        LiveStyle.get_metadata(LiveStyle.ValueNormalizationTest.ContentProperty, {:class, :empty})
+        Class.lookup!({LiveStyle.ValueNormalizationTest.ContentProperty, :empty})
 
       meta = rule.atomic_classes["content"]
       assert meta.class == "x14axycx"
@@ -571,10 +512,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "wraps text content in quotes" do
       # StyleX: ".x1r2f195{content:\"hello\"}"
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.ContentProperty,
-          {:class, :with_text}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.ContentProperty, :with_text})
 
       meta = rule.atomic_classes["content"]
       assert meta.class == "x1r2f195"
@@ -585,10 +523,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "does not wrap attr() function in quotes" do
       # StyleX does not wrap special functions like attr()
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.ContentProperty,
-          {:class, :with_attr}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.ContentProperty, :with_attr})
 
       meta = rule.atomic_classes["content"]
       assert meta.class == "xli7a2p"
@@ -598,10 +533,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "does not wrap open-quote keyword in quotes" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.ContentProperty,
-          {:class, :open_quote}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.ContentProperty, :open_quote})
 
       meta = rule.atomic_classes["content"]
       assert meta.ltr =~ ~r/content:open-quote\}/
@@ -609,10 +541,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "does not wrap close-quote keyword in quotes" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.ContentProperty,
-          {:class, :close_quote}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.ContentProperty, :close_quote})
 
       meta = rule.atomic_classes["content"]
       assert meta.ltr =~ ~r/content:close-quote\}/
@@ -620,10 +549,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "does not wrap no-open-quote keyword in quotes" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.ContentProperty,
-          {:class, :no_open_quote}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.ContentProperty, :no_open_quote})
 
       meta = rule.atomic_classes["content"]
       assert meta.ltr =~ ~r/content:no-open-quote\}/
@@ -631,10 +557,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "does not wrap no-close-quote keyword in quotes" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.ContentProperty,
-          {:class, :no_close_quote}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.ContentProperty, :no_close_quote})
 
       meta = rule.atomic_classes["content"]
       assert meta.ltr =~ ~r/content:no-close-quote\}/
@@ -642,10 +565,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "does not wrap counter() function in quotes" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.ContentProperty,
-          {:class, :counter_fn}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.ContentProperty, :counter_fn})
 
       meta = rule.atomic_classes["content"]
       assert meta.ltr =~ ~r/content:counter\(section\)\}/
@@ -653,10 +573,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "does not wrap counters() function in quotes" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.ContentProperty,
-          {:class, :counters_fn}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.ContentProperty, :counters_fn})
 
       meta = rule.atomic_classes["content"]
       assert meta.ltr =~ ~r/content:counters\(section/
@@ -664,10 +581,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "does not wrap var() function in quotes" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.ContentProperty,
-          {:class, :var_fn}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.ContentProperty, :var_fn})
 
       meta = rule.atomic_classes["content"]
       assert meta.ltr =~ ~r/content:var\(--my-content\)\}/
@@ -677,10 +591,7 @@ defmodule LiveStyle.ValueNormalizationTest do
   describe "hyphenate-character property" do
     test "auto keyword is not quoted" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.HyphenateCharacter,
-          {:class, :auto}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.HyphenateCharacter, :auto})
 
       meta = rule.atomic_classes["hyphenate-character"]
       assert meta.ltr =~ ~r/hyphenate-character:auto\}/
@@ -688,10 +599,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "dash character is quoted" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.HyphenateCharacter,
-          {:class, :dash}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.HyphenateCharacter, :dash})
 
       meta = rule.atomic_classes["hyphenate-character"]
       assert meta.ltr =~ ~r/hyphenate-character:"-"\}/
@@ -699,10 +607,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "custom character is quoted" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.HyphenateCharacter,
-          {:class, :custom}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.HyphenateCharacter, :custom})
 
       meta = rule.atomic_classes["hyphenate-character"]
       assert meta.ltr =~ ~r/hyphenate-character:"="\}/
@@ -713,10 +618,7 @@ defmodule LiveStyle.ValueNormalizationTest do
     test "single-quoted empty string normalizes to double quotes" do
       # StyleX: quotes: "''" -> ".x169joja{quotes:\"\"}"
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.QuotesProperty,
-          {:class, :empty_single}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.QuotesProperty, :empty_single})
 
       meta = rule.atomic_classes["quotes"]
       assert meta.class == "x169joja"
@@ -726,10 +628,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "double-quoted empty string stays as double quotes" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.QuotesProperty,
-          {:class, :empty_double}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.QuotesProperty, :empty_double})
 
       meta = rule.atomic_classes["quotes"]
       assert meta.class == "x169joja"
@@ -741,10 +640,7 @@ defmodule LiveStyle.ValueNormalizationTest do
   describe "transition-property value conversion" do
     test "converts atom snake_case to dash-case" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.TransitionPropertyValues,
-          {:class, :atom_single}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.TransitionPropertyValues, :atom_single})
 
       meta = rule.atomic_classes["transition-property"]
       assert meta.ltr =~ ~r/transition-property:background-color\}/
@@ -752,10 +648,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "preserves simple atom values" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.TransitionPropertyValues,
-          {:class, :atom_opacity}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.TransitionPropertyValues, :atom_opacity})
 
       meta = rule.atomic_classes["transition-property"]
       assert meta.ltr =~ ~r/transition-property:opacity\}/
@@ -763,10 +656,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "converts string snake_case to dash-case" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.TransitionPropertyValues,
-          {:class, :string_snake}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.TransitionPropertyValues, :string_snake})
 
       meta = rule.atomic_classes["transition-property"]
       assert meta.ltr =~ ~r/transition-property:background-color\}/
@@ -774,10 +664,7 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "converts multiple comma-separated snake_case values" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.TransitionPropertyValues,
-          {:class, :string_multi}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.TransitionPropertyValues, :string_multi})
 
       meta = rule.atomic_classes["transition-property"]
       # Should be "opacity,background-color,border-radius"
@@ -786,9 +673,8 @@ defmodule LiveStyle.ValueNormalizationTest do
 
     test "preserves custom properties (does not convert underscores)" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.TransitionPropertyValues,
-          {:class, :string_custom_prop}
+        Class.lookup!(
+          {LiveStyle.ValueNormalizationTest.TransitionPropertyValues, :string_custom_prop}
         )
 
       meta = rule.atomic_classes["transition-property"]
@@ -802,10 +688,7 @@ defmodule LiveStyle.ValueNormalizationTest do
       # StyleX: ".xzw3067{color:red!important}"
       # No space before !important
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.ValueNormalizationTest.ImportantValues,
-          {:class, :important}
-        )
+        Class.lookup!({LiveStyle.ValueNormalizationTest.ImportantValues, :important})
 
       meta = rule.atomic_classes["color"]
       assert meta.class == "xzw3067"

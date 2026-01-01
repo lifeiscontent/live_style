@@ -11,20 +11,22 @@ defmodule LiveStyle.ValidationTest do
 
   Reference: stylex/packages/@stylexjs/babel-plugin/__tests__/validation-*.js
   """
-  use LiveStyle.TestCase, async: true
+  use LiveStyle.TestCase
+
+  alias LiveStyle.Compiler.Class
 
   # ===========================================================================
   # Invalid constant references
   # ===========================================================================
 
-  describe "css_const validation" do
+  describe "const validation" do
     test "raises error for unknown constant reference" do
-      assert_raise ArgumentError, ~r/Unknown constant/, fn ->
+      assert_raise ArgumentError, ~r/Constant not found/, fn ->
         defmodule UnknownConstModule do
           use LiveStyle
 
           # Try to reference a constant that doesn't exist
-          @nonexistent css_const({SomeNonexistentModule, :namespace, :name})
+          @nonexistent const({SomeNonexistentModule, :name})
         end
       end
     end
@@ -34,7 +36,7 @@ defmodule LiveStyle.ValidationTest do
   # Invalid when conditions
   # ===========================================================================
 
-  describe "css_when validation" do
+  describe "when validation" do
     test "raises error for pseudo-elements in ancestor selector" do
       assert_raise ArgumentError, ~r/Pseudo-elements.*not supported/, fn ->
         LiveStyle.When.ancestor("::before", %{color: "red"})
@@ -58,63 +60,59 @@ defmodule LiveStyle.ValidationTest do
   # Runtime reference validation
   # ===========================================================================
 
-  describe "LiveStyle.Theme.lookup!/3 validation" do
+  describe "LiveStyle.Theme.lookup!/1 validation" do
     defmodule ThemeVarsModule do
       use LiveStyle
 
-      css_vars(:colors, primary: "blue")
-    end
+      vars(primary: "blue")
 
-    defmodule ValidThemeModule do
-      use LiveStyle
-
-      css_theme({ThemeVarsModule, :colors}, :dark, primary: "lightblue")
+      theme(:dark, primary: "lightblue")
     end
 
     test "raises error for unknown theme reference" do
-      assert_raise ArgumentError, ~r/Unknown theme/, fn ->
-        LiveStyle.Theme.lookup!(ValidThemeModule, :colors, :nonexistent)
+      assert_raise ArgumentError, ~r/Theme not found/, fn ->
+        LiveStyle.Theme.lookup!({ThemeVarsModule, :nonexistent})
       end
     end
   end
 
-  describe "LiveStyle.PositionTry.lookup!/2 validation" do
+  describe "LiveStyle.PositionTry.lookup!/1 validation" do
     defmodule ValidPositionTryModule do
       use LiveStyle
 
-      css_position_try(:flip_block, margin_block: "5px")
+      position_try(:flip_block, margin_block: "5px")
     end
 
     test "raises error for unknown position_try reference" do
-      assert_raise ArgumentError, ~r/Unknown position_try/, fn ->
-        LiveStyle.PositionTry.lookup!(ValidPositionTryModule, :nonexistent)
+      assert_raise ArgumentError, ~r/Position-try not found/, fn ->
+        LiveStyle.PositionTry.lookup!({ValidPositionTryModule, :nonexistent})
       end
     end
   end
 
-  describe "LiveStyle.ViewTransition.lookup!/2 validation" do
+  describe "LiveStyle.ViewTransition.lookup!/1 validation" do
     defmodule ValidViewTransitionModule do
       use LiveStyle
 
-      css_view_transition(:slide, old: [opacity: "0"], new: [opacity: "1"])
+      view_transition_class(:slide, old: [opacity: "0"], new: [opacity: "1"])
     end
 
     test "raises error for unknown view_transition reference" do
-      assert_raise ArgumentError, ~r/Unknown view_transition/, fn ->
-        LiveStyle.ViewTransition.lookup!(ValidViewTransitionModule, :nonexistent)
+      assert_raise ArgumentError, ~r/View transition not found/, fn ->
+        LiveStyle.ViewTransition.lookup!({ValidViewTransitionModule, :nonexistent})
       end
     end
   end
 
   # ===========================================================================
-  # css_vars validation
+  # vars validation
   # ===========================================================================
 
-  describe "css_vars validation" do
+  describe "vars validation" do
     defmodule ValidVarsModule do
       use LiveStyle
 
-      css_vars(:valid,
+      vars(
         simple: "10px",
         conditional: %{
           :default => "blue",
@@ -123,69 +121,57 @@ defmodule LiveStyle.ValidationTest do
       )
     end
 
-    test "valid css_vars are stored in manifest" do
-      assert LiveStyle.get_metadata(
-               LiveStyle.ValidationTest.ValidVarsModule,
-               {:var, :valid, :simple}
-             ) != nil
-
-      assert LiveStyle.get_metadata(
-               LiveStyle.ValidationTest.ValidVarsModule,
-               {:var, :valid, :conditional}
-             ) != nil
+    test "valid vars are stored in manifest" do
+      assert LiveStyle.Vars.lookup!({ValidVarsModule, :simple}) != nil
+      assert LiveStyle.Vars.lookup!({ValidVarsModule, :conditional}) != nil
     end
 
-    test "vars have correct css_name format" do
-      var =
-        LiveStyle.get_metadata(LiveStyle.ValidationTest.ValidVarsModule, {:var, :valid, :simple})
+    test "vars have correct ident format" do
+      var = LiveStyle.Vars.lookup!({ValidVarsModule, :simple})
 
       # CSS variable names should start with --
-      assert var.css_name =~ ~r/^--/
+      assert var.ident =~ ~r/^--/
     end
   end
 
   # ===========================================================================
-  # css_keyframes validation
+  # keyframes validation
   # ===========================================================================
 
-  describe "css_keyframes validation" do
+  describe "keyframes validation" do
     defmodule ValidKeyframesModule do
       use LiveStyle
 
-      css_keyframes(:spin,
+      keyframes(:spin,
         from: [transform: "rotate(0deg)"],
         to: [transform: "rotate(360deg)"]
       )
     end
 
     test "valid keyframes are stored in manifest" do
-      assert LiveStyle.get_metadata(
-               LiveStyle.ValidationTest.ValidKeyframesModule,
-               {:keyframes, :spin}
-             ) != nil
+      assert LiveStyle.Keyframes.lookup!({ValidKeyframesModule, :spin}) != nil
     end
 
-    test "keyframes have css_name" do
-      keyframes =
-        LiveStyle.get_metadata(LiveStyle.ValidationTest.ValidKeyframesModule, {:keyframes, :spin})
+    test "keyframes have ident" do
+      keyframes = LiveStyle.Keyframes.lookup!({ValidKeyframesModule, :spin})
 
-      assert keyframes.css_name =~ ~r/^[a-zA-Z]/
+      assert keyframes.ident =~ ~r/^[a-zA-Z]/
     end
   end
 
   # ===========================================================================
-  # css_class value validation (StyleX parity)
+  # class value validation (StyleX parity)
   # Reference: validation-stylex-create-test.js lines 247-378
   # ===========================================================================
 
-  describe "css_class value validation" do
+  describe "class value validation" do
     test "raises error for boolean true value" do
       # StyleX: 'invalid value: boolean' - throws messages.ILLEGAL_PROP_VALUE
       assert_raise ArgumentError, ~r/Invalid property value: boolean/, fn ->
         defmodule BooleanTrueModule do
           use LiveStyle
 
-          css_class(:test, color: true)
+          class(:test, color: true)
         end
       end
     end
@@ -195,7 +181,7 @@ defmodule LiveStyle.ValidationTest do
         defmodule BooleanFalseModule do
           use LiveStyle
 
-          css_class(:test, display: false)
+          class(:test, display: false)
         end
       end
     end
@@ -206,7 +192,7 @@ defmodule LiveStyle.ValidationTest do
         defmodule ArrayWithObjectModule do
           use LiveStyle
 
-          css_class(:test, transition_duration: [[], %{}])
+          class(:test, transition_duration: [[], %{}])
         end
       end
     end
@@ -216,7 +202,7 @@ defmodule LiveStyle.ValidationTest do
         defmodule ArrayWithBooleanModule do
           use LiveStyle
 
-          css_class(:test, transition_duration: [true, "0.5s"])
+          class(:test, transition_duration: [true, "0.5s"])
         end
       end
     end
@@ -226,7 +212,7 @@ defmodule LiveStyle.ValidationTest do
         defmodule TupleValueModule do
           use LiveStyle
 
-          css_class(:test, color: {":hover", "red"})
+          class(:test, color: {":hover", "red"})
         end
       end
     end
@@ -236,7 +222,7 @@ defmodule LiveStyle.ValidationTest do
         defmodule LegacyAtRuleObjectModule do
           use LiveStyle
 
-          css_class(:test, %{"@media (min-width: 768px)" => %{color: "red"}})
+          class(:test, %{"@media (min-width: 768px)" => %{color: "red"}})
         end
       end
     end
@@ -246,11 +232,10 @@ defmodule LiveStyle.ValidationTest do
       defmodule NumberValueModule do
         use LiveStyle
 
-        css_class(:test, padding: 5)
+        class(:test, padding: 5)
       end
 
-      assert LiveStyle.get_metadata(LiveStyle.ValidationTest.NumberValueModule, {:class, :test}) !=
-               nil
+      assert Class.lookup!({NumberValueModule, :test}) != nil
     end
 
     test "allows string values" do
@@ -258,11 +243,10 @@ defmodule LiveStyle.ValidationTest do
       defmodule StringValueModule do
         use LiveStyle
 
-        css_class(:test, background_color: "red")
+        class(:test, background_color: "red")
       end
 
-      assert LiveStyle.get_metadata(LiveStyle.ValidationTest.StringValueModule, {:class, :test}) !=
-               nil
+      assert Class.lookup!({StringValueModule, :test}) != nil
     end
 
     test "allows nil values (StyleX null behavior)" do
@@ -270,11 +254,10 @@ defmodule LiveStyle.ValidationTest do
       defmodule NilValueModule do
         use LiveStyle
 
-        css_class(:test, color: nil)
+        class(:test, color: nil)
       end
 
-      assert LiveStyle.get_metadata(LiveStyle.ValidationTest.NilValueModule, {:class, :test}) !=
-               nil
+      assert Class.lookup!({NilValueModule, :test}) != nil
     end
 
     test "allows array of numbers for fallback values" do
@@ -282,11 +265,10 @@ defmodule LiveStyle.ValidationTest do
       defmodule ArrayNumbersModule do
         use LiveStyle
 
-        css_class(:test, transition_duration: [500])
+        class(:test, transition_duration: [500])
       end
 
-      assert LiveStyle.get_metadata(LiveStyle.ValidationTest.ArrayNumbersModule, {:class, :test}) !=
-               nil
+      assert Class.lookup!({ArrayNumbersModule, :test}) != nil
     end
 
     test "allows array of strings for fallback values" do
@@ -294,27 +276,26 @@ defmodule LiveStyle.ValidationTest do
       defmodule ArrayStringsModule do
         use LiveStyle
 
-        css_class(:test, transition_duration: ["0.5s"])
+        class(:test, transition_duration: ["0.5s"])
       end
 
-      assert LiveStyle.get_metadata(LiveStyle.ValidationTest.ArrayStringsModule, {:class, :test}) !=
-               nil
+      assert Class.lookup!({ArrayStringsModule, :test}) != nil
     end
   end
 
   # ===========================================================================
-  # css_keyframes value validation
+  # keyframes value validation
   # Reference: validation-stylex-keyframes-test.js
   # ===========================================================================
 
-  describe "css_keyframes value validation" do
+  describe "keyframes value validation" do
     test "raises error for non-object keyframe value" do
       # StyleX: 'only argument must be an object of objects' - throws messages.NON_OBJECT_KEYFRAME
       assert_raise ArgumentError, ~r/Keyframe value must be a keyword list or map/, fn ->
         defmodule BooleanKeyframeModule do
           use LiveStyle
 
-          css_keyframes(:invalid, from: false)
+          keyframes(:invalid, from: false)
         end
       end
     end
@@ -324,73 +305,55 @@ defmodule LiveStyle.ValidationTest do
       defmodule PercentageKeyframesModule do
         use LiveStyle
 
-        css_keyframes(:fade,
+        keyframes(:fade,
           "0%": [opacity: 0],
           "50%": [opacity: 0.5],
           "100%": [opacity: 1]
         )
       end
 
-      assert LiveStyle.get_metadata(
-               LiveStyle.ValidationTest.PercentageKeyframesModule,
-               {:keyframes, :fade}
-             ) !=
-               nil
+      assert LiveStyle.Keyframes.lookup!({PercentageKeyframesModule, :fade}) != nil
     end
 
     test "allows from/to keyframes" do
       defmodule FromToKeyframesModule do
         use LiveStyle
 
-        css_keyframes(:slide,
+        keyframes(:slide,
           from: [transform: "translateX(0)"],
           to: [transform: "translateX(100px)"]
         )
       end
 
-      assert LiveStyle.get_metadata(
-               LiveStyle.ValidationTest.FromToKeyframesModule,
-               {:keyframes, :slide}
-             ) != nil
+      assert LiveStyle.Keyframes.lookup!({FromToKeyframesModule, :slide}) != nil
     end
   end
 
   # ===========================================================================
-  # css_theme validation
+  # theme validation
   # ===========================================================================
 
-  describe "css_theme validation" do
+  describe "theme validation" do
     defmodule ThemeBaseVars do
       use LiveStyle
 
-      css_vars(:base,
+      vars(
         color: "red",
         size: "10px"
       )
-    end
 
-    defmodule ValidThemeOverride do
-      use LiveStyle
-
-      css_theme({ThemeBaseVars, :base}, :override,
+      theme(:override,
         color: "blue",
         size: "20px"
       )
     end
 
     test "theme overrides are stored in manifest" do
-      assert LiveStyle.get_metadata(
-               LiveStyle.ValidationTest.ValidThemeOverride,
-               {:theme, :base, :override}
-             ) != nil
+      assert LiveStyle.Theme.lookup!({ThemeBaseVars, :override}) != nil
     end
 
     test "theme has overrides map" do
-      theme =
-        LiveStyle.get_metadata(
-          LiveStyle.ValidationTest.ValidThemeOverride,
-          {:theme, :base, :override}
-        )
+      theme = LiveStyle.Theme.lookup!({ThemeBaseVars, :override})
 
       assert is_map(theme.overrides)
       assert map_size(theme.overrides) > 0

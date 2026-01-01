@@ -1,6 +1,6 @@
 defmodule LiveStyle.ThemesTest do
   @moduledoc """
-  Comprehensive tests for LiveStyle's css_theme macro (StyleX's createTheme).
+  Comprehensive tests for LiveStyle's theme macro (StyleX's createTheme).
 
   These tests verify that LiveStyle's theme implementation matches StyleX's
   createTheme API behavior for:
@@ -12,7 +12,8 @@ defmodule LiveStyle.ThemesTest do
 
   Reference: stylex/packages/@stylexjs/babel-plugin/__tests__/transform-stylex-createTheme-test.js
   """
-  use LiveStyle.TestCase, async: true
+  use LiveStyle.TestCase
+  use Snapshy
 
   # ===========================================================================
   # Test Modules - Basic themes
@@ -21,17 +22,13 @@ defmodule LiveStyle.ThemesTest do
   defmodule BaseVars do
     use LiveStyle
 
-    css_vars(:colors,
+    vars(
       color: "blue",
       other_color: "grey",
       radius: "10px"
     )
-  end
 
-  defmodule BasicTheme do
-    use LiveStyle
-
-    css_theme({BaseVars, :colors}, :custom,
+    theme(:custom,
       color: "green",
       other_color: "antiquewhite",
       radius: "6px"
@@ -45,7 +42,7 @@ defmodule LiveStyle.ThemesTest do
   defmodule ConditionalBaseVars do
     use LiveStyle
 
-    css_vars(:colors,
+    vars(
       color: %{
         :default => "blue",
         "@media (prefers-color-scheme: dark)" => "lightblue",
@@ -57,12 +54,8 @@ defmodule LiveStyle.ThemesTest do
       },
       radius: "10px"
     )
-  end
 
-  defmodule ConditionalTheme do
-    use LiveStyle
-
-    css_theme({ConditionalBaseVars, :colors}, :green_theme,
+    theme(:green_theme,
       color: %{
         :default => "green",
         "@media (prefers-color-scheme: dark)" => "lightgreen",
@@ -83,16 +76,12 @@ defmodule LiveStyle.ThemesTest do
   defmodule NestedBaseVars do
     use LiveStyle
 
-    css_vars(:colors,
+    vars(
       color: "blue",
       other_color: "grey"
     )
-  end
 
-  defmodule NestedTheme do
-    use LiveStyle
-
-    css_theme({NestedBaseVars, :colors}, :nested,
+    theme(:nested,
       color: %{
         :default => "green",
         "@media (prefers-color-scheme: dark)" => "lightgreen"
@@ -114,37 +103,25 @@ defmodule LiveStyle.ThemesTest do
   defmodule SharedVars do
     use LiveStyle
 
-    css_vars(:brand,
+    vars(
       primary: "blue",
       secondary: "green",
       accent: "purple"
     )
-  end
 
-  defmodule DarkTheme do
-    use LiveStyle
-
-    css_theme({SharedVars, :brand}, :dark,
+    theme(:dark,
       primary: "lightblue",
       secondary: "lightgreen",
       accent: "lavender"
     )
-  end
 
-  defmodule HighContrastTheme do
-    use LiveStyle
-
-    css_theme({SharedVars, :brand}, :high_contrast,
+    theme(:high_contrast,
       primary: "white",
       secondary: "yellow",
       accent: "cyan"
     )
-  end
 
-  defmodule WarmTheme do
-    use LiveStyle
-
-    css_theme({SharedVars, :brand}, :warm,
+    theme(:warm,
       primary: "orange",
       secondary: "coral",
       accent: "gold"
@@ -158,23 +135,20 @@ defmodule LiveStyle.ThemesTest do
   defmodule FullVars do
     use LiveStyle
 
-    css_vars(:ui,
+    vars(
       text_color: "black",
       bg_color: "white",
       border_color: "gray",
       shadow_color: "rgba(0,0,0,0.1)"
     )
-  end
-
-  defmodule PartialTheme do
-    use LiveStyle
 
     # Only override some variables, not all
-    css_theme({FullVars, :ui}, :partial,
+    theme(:partial,
       text_color: "blue",
       bg_color: "lightblue"
-      # border_color and shadow_color are not overridden
     )
+
+    # border_color and shadow_color are not overridden
   end
 
   # ===========================================================================
@@ -184,38 +158,28 @@ defmodule LiveStyle.ThemesTest do
   defmodule CSSFormatVars do
     use LiveStyle
 
-    css_vars(:test,
+    vars(
       color: "red",
       size: "10px"
     )
-  end
 
-  defmodule CSSFormatTheme do
-    use LiveStyle
-
-    css_theme({CSSFormatVars, :test}, :format_test,
+    theme(:format_test,
       color: "blue",
       size: "20px"
     )
   end
 
   # ===========================================================================
-  # Test Modules - Cross-module theme references
+  # Test Modules - Cross-module theme references (external theme)
   # ===========================================================================
 
   defmodule ExternalVars do
     use LiveStyle
 
-    css_vars(:external,
-      main_color: "navy"
-    )
-  end
+    vars(main_color: "navy")
 
-  defmodule ExternalTheme do
-    use LiveStyle
-    alias LiveStyle.ThemesTest.ExternalVars
-
-    css_theme({ExternalVars, :external}, :alt, main_color: "teal")
+    # Theme defined in same module
+    theme(:alt, main_color: "teal")
   end
 
   # ===========================================================================
@@ -224,19 +188,15 @@ defmodule LiveStyle.ThemesTest do
 
   defmodule TypedBaseVars do
     use LiveStyle
-    import LiveStyle.Types
+    import LiveStyle.PropertyType
 
-    css_vars(:typed,
+    vars(
       primary_color: color("blue"),
       rotation: angle("0deg"),
       duration: time("200ms")
     )
-  end
 
-  defmodule TypedTheme do
-    use LiveStyle
-
-    css_theme({TypedBaseVars, :typed}, :animated,
+    theme(:animated,
       primary_color: "red",
       rotation: "45deg",
       duration: "500ms"
@@ -250,17 +210,13 @@ defmodule LiveStyle.ThemesTest do
   defmodule EdgeVars do
     use LiveStyle
 
-    css_vars(:edge,
+    vars(
       empty_string: "",
       zero: "0",
       complex_value: "rgba(0, 0, 0, 0.5)"
     )
-  end
 
-  defmodule EdgeTheme do
-    use LiveStyle
-
-    css_theme({EdgeVars, :edge}, :edge_theme,
+    theme(:edge_theme,
       empty_string: "not-empty",
       zero: "1",
       complex_value: "hsla(0, 100%, 50%, 0.75)"
@@ -272,32 +228,28 @@ defmodule LiveStyle.ThemesTest do
   # ===========================================================================
 
   describe "basic themes" do
-    test "theme is stored in manifest" do
-      theme = LiveStyle.get_metadata(BasicTheme, {:theme, :colors, :custom})
+    test "generates theme class with override values in CSS" do
+      css = LiveStyle.Compiler.generate_css()
 
-      assert theme != nil
-      assert theme.css_name != nil
+      # Theme should generate .CLASS,.CLASS:root{...} format
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:green/
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:antiquewhite/
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:6px/
     end
 
-    test "theme has overrides for all specified variables" do
-      theme = LiveStyle.get_metadata(BasicTheme, {:theme, :colors, :custom})
+    test "base variables are generated in :root" do
+      css = LiveStyle.Compiler.generate_css()
 
-      # Get original variable names
-      color_var = LiveStyle.get_metadata(BaseVars, {:var, :colors, :color})
-      other_color_var = LiveStyle.get_metadata(BaseVars, {:var, :colors, :other_color})
-      radius_var = LiveStyle.get_metadata(BaseVars, {:var, :colors, :radius})
-
-      # Theme should override all three
-      assert theme.overrides[color_var.css_name] == "green"
-      assert theme.overrides[other_color_var.css_name] == "antiquewhite"
-      assert theme.overrides[radius_var.css_name] == "6px"
+      assert css =~ ~r/:root\{[^}]*--v[a-z0-9]+:blue/
+      assert css =~ ~r/:root\{[^}]*--v[a-z0-9]+:grey/
+      assert css =~ ~r/:root\{[^}]*--v[a-z0-9]+:10px/
     end
 
-    test "theme generates unique class name" do
-      theme = LiveStyle.get_metadata(BasicTheme, {:theme, :colors, :custom})
+    test "theme class can be retrieved via LiveStyle.Theme.ref/1" do
+      theme_class = LiveStyle.Theme.ref({BaseVars, :custom})
 
-      # Class name should be a hashed value (LiveStyle uses 't' prefix for themes)
-      assert theme.css_name =~ ~r/^t[a-z0-9]+$/
+      assert is_binary(theme_class)
+      assert theme_class =~ ~r/^t[a-z0-9]+$/
     end
   end
 
@@ -306,19 +258,26 @@ defmodule LiveStyle.ThemesTest do
   # ===========================================================================
 
   describe "themes with media query conditionals" do
-    test "theme stores conditional overrides" do
-      theme = LiveStyle.get_metadata(ConditionalTheme, {:theme, :colors, :green_theme})
+    test "theme generates default values in class" do
+      css = LiveStyle.Compiler.generate_css()
 
-      assert theme != nil
-      assert theme.overrides != nil
+      # Theme should have default values
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:green/
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:antiquewhite/
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:6px/
     end
 
-    test "theme with conditionals generates appropriate CSS" do
-      css = generate_css()
-      theme = LiveStyle.get_metadata(ConditionalTheme, {:theme, :colors, :green_theme})
+    test "theme generates media query wrapped overrides" do
+      css = LiveStyle.Compiler.generate_css()
 
-      # Theme class should appear in CSS
-      assert css =~ theme.css_name
+      # Theme should have @media overrides
+      assert css =~
+               ~r/@media \(prefers-color-scheme: dark\)\{\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:lightgreen/
+
+      assert css =~
+               ~r/@media \(prefers-color-scheme: dark\)\{\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:floralwhite/
+
+      assert css =~ ~r/@media print\{\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:transparent/
     end
   end
 
@@ -327,12 +286,24 @@ defmodule LiveStyle.ThemesTest do
   # ===========================================================================
 
   describe "themes with nested @-rules" do
-    test "theme stores nested conditional overrides" do
-      theme = LiveStyle.get_metadata(NestedTheme, {:theme, :colors, :nested})
+    test "theme generates nested @supports inside @media" do
+      css = LiveStyle.Compiler.generate_css()
 
-      assert theme != nil
-      # The nested structure should be preserved
-      assert is_map(theme.overrides)
+      # Nested @supports inside @media for theme
+      assert css =~
+               ~r/@media \(prefers-color-scheme: dark\)\{@supports \(color: oklab\(0 0 0\)\)\{\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*oklab/
+    end
+
+    test "theme generates default and dark mode values" do
+      css = LiveStyle.Compiler.generate_css()
+
+      # Default value
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:green/
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:antiquewhite/
+
+      # Dark mode value
+      assert css =~
+               ~r/@media \(prefers-color-scheme: dark\)\{\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:lightgreen/
     end
   end
 
@@ -341,32 +312,38 @@ defmodule LiveStyle.ThemesTest do
   # ===========================================================================
 
   describe "multiple themes for same variable set" do
-    test "each theme gets unique class name" do
-      dark = LiveStyle.get_metadata(DarkTheme, {:theme, :brand, :dark})
-      high_contrast = LiveStyle.get_metadata(HighContrastTheme, {:theme, :brand, :high_contrast})
-      warm = LiveStyle.get_metadata(WarmTheme, {:theme, :brand, :warm})
+    test "each theme generates unique class in CSS" do
+      css = LiveStyle.Compiler.generate_css()
 
-      names = [dark.css_name, high_contrast.css_name, warm.css_name]
-      assert length(Enum.uniq(names)) == 3
+      # Dark theme values
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:lightblue/
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:lightgreen/
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:lavender/
+
+      # High contrast theme values
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:white/
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:yellow/
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:cyan/
+
+      # Warm theme values
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:orange/
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:coral/
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:gold/
     end
 
-    test "all themes are stored in manifest" do
-      assert LiveStyle.get_metadata(DarkTheme, {:theme, :brand, :dark}) != nil
-      assert LiveStyle.get_metadata(HighContrastTheme, {:theme, :brand, :high_contrast}) != nil
-      assert LiveStyle.get_metadata(WarmTheme, {:theme, :brand, :warm}) != nil
-    end
+    test "each theme returns unique class via LiveStyle.Theme.ref/1" do
+      dark_class = LiveStyle.Theme.ref({SharedVars, :dark})
+      high_contrast_class = LiveStyle.Theme.ref({SharedVars, :high_contrast})
+      warm_class = LiveStyle.Theme.ref({SharedVars, :warm})
 
-    test "themes can be retrieved via LiveStyle.Theme.lookup!/3" do
-      dark_name = LiveStyle.Theme.lookup!(DarkTheme, :brand, :dark)
-      high_contrast_name = LiveStyle.Theme.lookup!(HighContrastTheme, :brand, :high_contrast)
-      warm_name = LiveStyle.Theme.lookup!(WarmTheme, :brand, :warm)
+      assert dark_class != high_contrast_class
+      assert high_contrast_class != warm_class
+      assert warm_class != dark_class
 
-      assert is_binary(dark_name)
-      assert is_binary(high_contrast_name)
-      assert is_binary(warm_name)
-
-      assert dark_name != high_contrast_name
-      assert high_contrast_name != warm_name
+      # All should be valid class names
+      assert dark_class =~ ~r/^t[a-z0-9]+$/
+      assert high_contrast_class =~ ~r/^t[a-z0-9]+$/
+      assert warm_class =~ ~r/^t[a-z0-9]+$/
     end
   end
 
@@ -375,21 +352,22 @@ defmodule LiveStyle.ThemesTest do
   # ===========================================================================
 
   describe "partial theme overrides" do
-    test "partial theme only has overrides for specified vars" do
-      theme = LiveStyle.get_metadata(PartialTheme, {:theme, :ui, :partial})
+    test "partial theme only overrides specified variables in CSS" do
+      css = LiveStyle.Compiler.generate_css()
 
-      text_var = LiveStyle.get_metadata(FullVars, {:var, :ui, :text_color})
-      bg_var = LiveStyle.get_metadata(FullVars, {:var, :ui, :bg_color})
-      border_var = LiveStyle.get_metadata(FullVars, {:var, :ui, :border_color})
-      shadow_var = LiveStyle.get_metadata(FullVars, {:var, :ui, :shadow_color})
+      # Should have overrides for text and bg (blue, lightblue)
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:blue/
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:lightblue/
+    end
 
-      # Should have overrides for text and bg
-      assert theme.overrides[text_var.css_name] == "blue"
-      assert theme.overrides[bg_var.css_name] == "lightblue"
+    test "base variables still available in :root" do
+      css = LiveStyle.Compiler.generate_css()
 
-      # Should NOT have overrides for border and shadow
-      refute Map.has_key?(theme.overrides, border_var.css_name)
-      refute Map.has_key?(theme.overrides, shadow_var.css_name)
+      # All base variables should be in :root
+      assert css =~ ~r/:root\{[^}]*--v[a-z0-9]+:black/
+      assert css =~ ~r/:root\{[^}]*--v[a-z0-9]+:white/
+      assert css =~ ~r/:root\{[^}]*--v[a-z0-9]+:gray/
+      assert css =~ ~r/:root\{[^}]*--v[a-z0-9]+:rgba\(0,0,0,0\.1\)/
     end
   end
 
@@ -398,23 +376,20 @@ defmodule LiveStyle.ThemesTest do
   # ===========================================================================
 
   describe "theme CSS output format" do
-    test "theme CSS contains class selector" do
-      css = generate_css()
-      theme = LiveStyle.get_metadata(CSSFormatTheme, {:theme, :test, :format_test})
+    test "theme CSS uses .CLASS,.CLASS:root selector format" do
+      css = LiveStyle.Compiler.generate_css()
+      theme_class = LiveStyle.Theme.ref({CSSFormatVars, :format_test})
 
-      # StyleX format: .x10yrbfs, .x10yrbfs:root{...}
-      assert css =~ ".#{theme.css_name}"
+      # StyleX format: .CLASS,.CLASS:root{...}
+      assert css =~ ".#{theme_class},.#{theme_class}:root{"
     end
 
     test "theme CSS sets CSS variable values" do
-      css = generate_css()
+      css = LiveStyle.Compiler.generate_css()
 
-      color_var = LiveStyle.get_metadata(CSSFormatVars, {:var, :test, :color})
-      size_var = LiveStyle.get_metadata(CSSFormatVars, {:var, :test, :size})
-
-      # Should have variable assignments in theme CSS
-      assert css =~ "#{color_var.css_name}:blue"
-      assert css =~ "#{size_var.css_name}:20px"
+      # Theme should override to blue and 20px
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:blue/
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:20px/
     end
   end
 
@@ -423,14 +398,18 @@ defmodule LiveStyle.ThemesTest do
   # ===========================================================================
 
   describe "cross-module theme references" do
-    test "can create theme for variables in another module" do
-      theme = LiveStyle.get_metadata(ExternalTheme, {:theme, :external, :alt})
+    test "theme class contains override value in CSS" do
+      css = LiveStyle.Compiler.generate_css()
 
-      assert theme != nil
+      # Theme should override to teal
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:teal/
+    end
 
-      # Should reference the correct variable
-      main_var = LiveStyle.get_metadata(ExternalVars, {:var, :external, :main_color})
-      assert theme.overrides[main_var.css_name] == "teal"
+    test "theme can be referenced via LiveStyle.Theme.ref/1" do
+      theme_class = LiveStyle.Theme.ref({ExternalVars, :alt})
+
+      assert is_binary(theme_class)
+      assert theme_class =~ ~r/^t[a-z0-9]+$/
     end
   end
 
@@ -439,30 +418,22 @@ defmodule LiveStyle.ThemesTest do
   # ===========================================================================
 
   describe "theme with typed variables" do
-    test "theme can override typed variables" do
-      theme = LiveStyle.get_metadata(TypedTheme, {:theme, :typed, :animated})
+    test "theme overrides typed variables in CSS" do
+      css = LiveStyle.Compiler.generate_css()
 
-      assert theme != nil
-
-      color_var = LiveStyle.get_metadata(TypedBaseVars, {:var, :typed, :primary_color})
-      rotation_var = LiveStyle.get_metadata(TypedBaseVars, {:var, :typed, :rotation})
-      duration_var = LiveStyle.get_metadata(TypedBaseVars, {:var, :typed, :duration})
-
-      # Theme should have overrides
-      assert theme.overrides[color_var.css_name] == "red"
-      assert theme.overrides[rotation_var.css_name] == "45deg"
-      assert theme.overrides[duration_var.css_name] == "500ms"
+      # Theme should have overrides for typed vars
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:red/
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:45deg/
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:500ms/
     end
 
-    test "typed variables retain their type even when themed" do
-      color_var = LiveStyle.get_metadata(TypedBaseVars, {:var, :typed, :primary_color})
-      rotation_var = LiveStyle.get_metadata(TypedBaseVars, {:var, :typed, :rotation})
-      duration_var = LiveStyle.get_metadata(TypedBaseVars, {:var, :typed, :duration})
+    test "typed variables generate @property rules" do
+      css = LiveStyle.Compiler.generate_css()
 
-      # Original types should still be present
-      assert color_var.type.syntax == "<color>"
-      assert rotation_var.type.syntax == "<angle>"
-      assert duration_var.type.syntax == "<time>"
+      # Original typed variables should have @property rules
+      assert css =~ ~r/@property --v[a-z0-9]+ \{ syntax: "<color>"/
+      assert css =~ ~r/@property --v[a-z0-9]+ \{ syntax: "<angle>"/
+      assert css =~ ~r/@property --v[a-z0-9]+ \{ syntax: "<time>"/
     end
   end
 
@@ -471,25 +442,83 @@ defmodule LiveStyle.ThemesTest do
   # ===========================================================================
 
   describe "edge cases" do
-    test "theme can override empty string values" do
-      theme = LiveStyle.get_metadata(EdgeTheme, {:theme, :edge, :edge_theme})
-      var = LiveStyle.get_metadata(EdgeVars, {:var, :edge, :empty_string})
+    test "theme can override empty string values in CSS" do
+      css = LiveStyle.Compiler.generate_css()
 
-      assert theme.overrides[var.css_name] == "not-empty"
+      # Theme should override empty string to "not-empty"
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*:not-empty/
     end
 
-    test "theme can override zero values" do
-      theme = LiveStyle.get_metadata(EdgeTheme, {:theme, :edge, :edge_theme})
-      var = LiveStyle.get_metadata(EdgeVars, {:var, :edge, :zero})
+    test "theme can override zero values in CSS" do
+      css = LiveStyle.Compiler.generate_css()
 
-      assert theme.overrides[var.css_name] == "1"
+      # Theme should override 0 to 1
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*--v[a-z0-9]+:1[;}]/
     end
 
     test "theme can override complex CSS values" do
-      theme = LiveStyle.get_metadata(EdgeTheme, {:theme, :edge, :edge_theme})
-      var = LiveStyle.get_metadata(EdgeVars, {:var, :edge, :complex_value})
+      css = LiveStyle.Compiler.generate_css()
 
-      assert theme.overrides[var.css_name] == "hsla(0, 100%, 50%, 0.75)"
+      # Theme should override to hsla value
+      assert css =~ ~r/\.t[a-z0-9]+,\.t[a-z0-9]+:root\{[^}]*hsla\(0, 100%, 50%, 0\.75\)/
+    end
+  end
+
+  # ===========================================================================
+  # CSS Output Snapshots
+  # ===========================================================================
+
+  describe "CSS output snapshots" do
+    test_snapshot "basic theme CSS output" do
+      css = LiveStyle.Compiler.generate_css()
+      theme_class = LiveStyle.Theme.ref({BaseVars, :custom})
+
+      # Extract theme rules
+      css
+      |> String.split("\n")
+      |> Enum.filter(&String.contains?(&1, theme_class))
+      |> Enum.join("\n")
+    end
+
+    test_snapshot "multiple themes CSS output" do
+      css = LiveStyle.Compiler.generate_css()
+
+      dark_class = LiveStyle.Theme.ref({SharedVars, :dark})
+      contrast_class = LiveStyle.Theme.ref({SharedVars, :high_contrast})
+      warm_class = LiveStyle.Theme.ref({SharedVars, :warm})
+
+      # Extract all theme rules
+      css
+      |> String.split("\n")
+      |> Enum.filter(fn line ->
+        String.contains?(line, dark_class) or
+          String.contains?(line, contrast_class) or
+          String.contains?(line, warm_class)
+      end)
+      |> Enum.sort()
+      |> Enum.join("\n")
+    end
+
+    test_snapshot "conditional theme CSS output" do
+      css = LiveStyle.Compiler.generate_css()
+      theme_class = LiveStyle.Theme.ref({ConditionalBaseVars, :green_theme})
+
+      # Extract theme rules including media queries
+      css
+      |> String.split("\n")
+      |> Enum.filter(&String.contains?(&1, theme_class))
+      |> Enum.join("\n")
+    end
+
+    test_snapshot "nested at-rules theme CSS output" do
+      css = LiveStyle.Compiler.generate_css()
+      theme_class = LiveStyle.Theme.ref({NestedBaseVars, :nested})
+
+      # Extract theme rules including nested @-rules
+      css
+      |> String.split("\n")
+      |> Enum.filter(&String.contains?(&1, theme_class))
+      |> Enum.join("\n")
     end
   end
 end

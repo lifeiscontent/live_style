@@ -1,6 +1,6 @@
 defmodule LiveStyle.Hash do
   @moduledoc """
-  Hash generation functions for LiveStyle.
+  Hash generation primitives for LiveStyle.
 
   Uses MurmurHash2 algorithm (matching StyleX) for class name generation.
   Output is base36 encoded for compact class names.
@@ -10,6 +10,11 @@ defmodule LiveStyle.Hash do
       config :live_style, class_name_prefix: "x"
 
   Default is "x" (matching StyleX).
+
+  ## Artifact-Specific Hashing
+
+  Each artifact module (Keyframes, Vars, Theme, etc.) has its own private
+  `ident/1` function that calls `Hash.create_hash/1` for content-based hashing.
   """
 
   alias LiveStyle.Hash.Murmur
@@ -17,8 +22,11 @@ defmodule LiveStyle.Hash do
 
   @seed 1
 
-  # Get the class name prefix from config (default "x")
-  defp class_prefix do
+  @doc """
+  Returns the class name prefix from config (default "x").
+  """
+  @spec class_prefix() :: String.t()
+  def class_prefix do
     LiveStyle.Config.class_name_prefix()
   end
 
@@ -63,127 +71,6 @@ defmodule LiveStyle.Hash do
     else
       class_prefix() <> hash
     end
-  end
-
-  @doc """
-  Generates a CSS variable name.
-
-  ## Examples
-
-      iex> LiveStyle.Hash.var_name(MyModule, :color, :primary)
-      "--xabcdef"
-  """
-  @spec var_name(module(), atom(), atom()) :: String.t()
-  def var_name(module, namespace, name) do
-    input = "var:#{inspect(module)}.#{namespace}.#{name}"
-    "--v" <> create_hash(input)
-  end
-
-  @doc """
-  Generates a keyframes animation name.
-  Identical keyframes produce the same name (deduplication).
-
-  Uses the same hash format as StyleX:
-  - Input: "<>" + "frame{prop:value;}frame{prop:value;}"
-  - Where frames are sorted and properties within each frame are sorted
-
-  ## Examples
-
-      iex> LiveStyle.Hash.keyframes_name(%{from: %{opacity: 0}, to: %{opacity: 1}})
-      "xabcdef-B"
-  """
-  @spec keyframes_name(map()) :: String.t()
-  def keyframes_name(frames) when is_map(frames) do
-    # Build the keyframes string in StyleX format: frame{prop:value;}frame{prop:value;}
-    keyframes_string = construct_keyframes_string(frames)
-    # StyleX prefixes with '<>' for hash stability (see stylex-keyframes.js line 66)
-    class_prefix() <> create_hash("<>" <> keyframes_string) <> "-B"
-  end
-
-  # Construct keyframes string in StyleX format: from{color:red;}to{color:blue;}
-  defp construct_keyframes_string(frames) do
-    frames
-    |> Enum.sort_by(fn {k, _} -> to_string(k) end)
-    |> Enum.map_join("", fn {frame_key, declarations} ->
-      # StyleX validation: keyframe values must be objects (keyword lists or maps)
-      validate_keyframe_declarations!(frame_key, declarations)
-
-      decls_string =
-        declarations
-        |> Enum.sort_by(fn {k, _} -> to_string(k) end)
-        |> Enum.map_join("", fn {prop, value} ->
-          # Convert property to kebab-case if needed (e.g., :background_color -> "background-color")
-          prop_str = LiveStyle.Value.to_css_property(prop)
-          "#{prop_str}:#{value};"
-        end)
-
-      "#{frame_key}{#{decls_string}}"
-    end)
-  end
-
-  # StyleX validation: keyframe values must be objects (keyword lists or maps)
-  # Matches validation-stylex-keyframes-test.js: messages.NON_OBJECT_KEYFRAME
-  defp validate_keyframe_declarations!(frame_key, declarations) do
-    unless is_list(declarations) or is_map(declarations) do
-      raise ArgumentError,
-            "Keyframe value must be a keyword list or map, got: #{inspect(declarations)} for frame: #{frame_key}"
-    end
-  end
-
-  @doc """
-  Generates a theme class name from module, namespace, and theme name.
-
-  ## Examples
-
-      iex> LiveStyle.Hash.theme_name(MyModule, :color, :dark)
-      "t123456"
-  """
-  @spec theme_name(module(), atom(), atom()) :: String.t()
-  def theme_name(module, namespace, theme_name) do
-    input = "theme:#{inspect(module)}.#{namespace}.#{theme_name}"
-    "t" <> create_hash(input)
-  end
-
-  @doc """
-  Generates a theme class name from content string.
-  """
-  @spec theme_name(String.t()) :: String.t()
-  def theme_name(content) when is_binary(content) do
-    "t" <> create_hash(content)
-  end
-
-  @doc """
-  Generates a marker class name.
-  """
-  @spec marker_name(atom()) :: String.t()
-  def marker_name(name) do
-    # StyleX format: just x{hash} without any prefix
-    class_prefix() <> create_hash("marker:#{name}")
-  end
-
-  @doc """
-  Generates a position-try dashed-ident from CSS declarations.
-  """
-  @spec position_try_name(String.t()) :: String.t()
-  def position_try_name(declarations_css) do
-    "--" <> class_prefix() <> create_hash(declarations_css)
-  end
-
-  @doc """
-  Generates a position-try dashed-ident from module and name.
-  """
-  @spec position_try_name(module(), atom()) :: String.t()
-  def position_try_name(module, name) do
-    input = "position_try:#{inspect(module)}.#{name}"
-    "--pt-" <> class_prefix() <> create_hash(input)
-  end
-
-  @doc """
-  Generates a view-transition name based on content (StyleX-compatible).
-  """
-  @spec view_transition_name(String.t()) :: String.t()
-  def view_transition_name(css_content) do
-    class_prefix() <> create_hash(css_content)
   end
 
   @doc """

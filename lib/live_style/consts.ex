@@ -6,74 +6,49 @@ defmodule LiveStyle.Consts do
   in style rules. Unlike CSS variables, constants don't generate any
   CSS output - they're purely for code organization and reuse.
 
-  ## Example
+  ## Examples
 
-      css_consts :breakpoint,
-        sm: "@media (max-width: 640px)",
-        lg: "@media (min-width: 1025px)"
+      defmodule MyApp.Tokens do
+        use LiveStyle
 
-      css_consts :z,
-        modal: "50",
-        tooltip: "100"
+        consts breakpoint_sm: "@media (max-width: 640px)",
+               breakpoint_lg: "@media (min-width: 1025px)",
+               z_modal: "50",
+               z_tooltip: "100"
+      end
 
       # Reference in classes
-      css_class :responsive,
-        css_const({:breakpoint, :sm}) => [display: "none"]
+      defmodule MyApp.Components do
+        use LiveStyle
+
+        class :responsive,
+          const({MyApp.Tokens, :breakpoint_sm}) => [display: "none"]
+      end
   """
 
   alias LiveStyle.Manifest
   alias LiveStyle.Utils
 
+  use LiveStyle.Registry,
+    entity_name: "Constant",
+    manifest_type: :const,
+    ref_field: :value
+
   @doc """
-  Defines compile-time constants under a namespace.
+  Defines compile-time constants.
+
+  Called internally by the `consts` macro.
   """
-  @spec define(module(), atom(), map() | keyword()) :: :ok
-  def define(module, namespace, consts) do
+  @spec define(module(), map() | keyword()) :: :ok
+  def define(module, consts) do
     consts = Utils.normalize_to_map(consts)
 
     Enum.each(consts, fn {name, value} ->
-      key = Manifest.namespaced_key(module, namespace, name)
-      define_const(key, value)
+      key = Manifest.simple_key(module, name)
+      entry = %{value: value}
+      store_entry(key, entry)
     end)
 
     :ok
-  end
-
-  defp define_const(key, value) do
-    # Only update if the entry has changed (or doesn't exist)
-    LiveStyle.Storage.update(fn manifest ->
-      case Manifest.get_const(manifest, key) do
-        ^value -> manifest
-        _ -> Manifest.put_const(manifest, key, value)
-      end
-    end)
-  end
-
-  @doc """
-  Looks up a constant value by module, namespace, and name.
-
-  Returns the value or raises if not found.
-
-  ## Examples
-
-      LiveStyle.Consts.lookup!(MyTokens, :breakpoint, :lg)
-      # => "@media (min-width: 1025px)"
-  """
-  @spec lookup!(module(), atom(), atom()) :: term()
-  def lookup!(module, namespace, name) do
-    key = Manifest.namespaced_key(module, namespace, name)
-    manifest = LiveStyle.Storage.read()
-
-    case Manifest.get_const(manifest, key) do
-      nil ->
-        raise ArgumentError, """
-        Unknown constant: #{inspect(module)}.#{namespace}.#{name}
-
-        Make sure #{inspect(module)} is compiled before this module.
-        """
-
-      value ->
-        value
-    end
   end
 end

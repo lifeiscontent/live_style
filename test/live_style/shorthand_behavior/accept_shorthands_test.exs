@@ -14,7 +14,7 @@ defmodule LiveStyle.ShorthandBehavior.AcceptShorthandsTest do
   Property keys are returned as CSS strings (e.g., "margin-top" not :margin_top).
   """
 
-  use ExUnit.Case, async: true
+  use LiveStyle.TestCase
 
   alias LiveStyle.ShorthandBehavior.AcceptShorthands
 

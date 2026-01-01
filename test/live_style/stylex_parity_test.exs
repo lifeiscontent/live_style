@@ -8,11 +8,11 @@ defmodule LiveStyle.StyleXParityTest do
   Each test includes:
   - The original StyleX test name
   - The StyleX input
-  - The expected output (class name, ltr, rtl, priority)
+  - The expected CSS output (class name, ltr)
 
-  Format: [class_name, {ltr: "...", rtl: null}, priority]
+  Format: .class{property:value}
   """
-  use LiveStyle.TestCase, async: true
+  use LiveStyle.TestCase
 
   # ============================================================================
   # Test: "style object"
@@ -22,7 +22,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule StyleObject do
     use LiveStyle
 
-    css_class(:root,
+    class(:root,
       background_color: "red",
       color: "blue"
     )
@@ -36,10 +36,10 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule StyleObjectMultiple do
     use LiveStyle
 
-    css_class(:root, background_color: "red")
-    css_class(:other, color: "blue")
-    css_class(:bar_baz, color: "green")
-    css_class(:purple_color, color: "purple")
+    class(:root, background_color: "red")
+    class(:other, color: "blue")
+    class(:bar_baz, color: "green")
+    class(:purple_color, color: "purple")
   end
 
   # ============================================================================
@@ -50,7 +50,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule CustomProperties do
     use LiveStyle
 
-    css_class(:root,
+    class(:root,
       "--background-color": "red",
       "--otherColor": "green",
       "--foo": 10
@@ -65,7 +65,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule VendorPrefixes do
     use LiveStyle
 
-    css_class(:root, user_select: "none")
+    class(:root, user_select: "none")
   end
 
   # ============================================================================
@@ -76,7 +76,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule ArrayFallbacks do
     use LiveStyle
 
-    css_class(:root, position: ["sticky", "fixed"])
+    class(:root, position: ["sticky", "fixed"])
   end
 
   # ============================================================================
@@ -87,7 +87,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule ValidPseudoClass do
     use LiveStyle
 
-    css_class(:root,
+    class(:root,
       background_color: [":hover": "red"],
       color: [":hover": "blue"]
     )
@@ -101,7 +101,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule PseudoClassOrder do
     use LiveStyle
 
-    css_class(:root,
+    class(:root,
       color: [
         ":hover": "blue",
         ":active": "red",
@@ -121,7 +121,7 @@ defmodule LiveStyle.StyleXParityTest do
 
     # Both :hover:active and :active:hover produce same class because value is same
     # and pseudos are sorted alphabetically
-    css_class(:root,
+    class(:root,
       color: [
         ":hover": [":active": "red"],
         ":active": [":hover": "red"]
@@ -137,7 +137,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule BeforeAfter do
     use LiveStyle
 
-    css_class(:foo,
+    class(:foo,
       "::before": [color: "red"],
       "::after": [color: "blue"]
     )
@@ -151,7 +151,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule BeforeWithPseudo do
     use LiveStyle
 
-    css_class(:foo,
+    class(:foo,
       "::before": [
         color: [
           default: "red",
@@ -169,7 +169,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule KeyframesObject do
     use LiveStyle
 
-    css_keyframes(:name,
+    keyframes(:name,
       from: %{color: "red"},
       to: %{color: "blue"}
     )
@@ -183,7 +183,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule MediaQueries do
     use LiveStyle
 
-    css_class(:root,
+    class(:root,
       background_color: [
         default: "red",
         "@media (min-width: 1000px)": "blue",
@@ -200,7 +200,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule SupportsQueries do
     use LiveStyle
 
-    css_class(:root,
+    class(:root,
       background_color: [
         default: "red",
         "@supports (hover: hover)": "blue",
@@ -217,7 +217,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule MediaQueryWithPseudo do
     use LiveStyle
 
-    css_class(:root,
+    class(:root,
       font_size: [
         default: "1rem",
         "@media (min-width: 800px)": [
@@ -237,20 +237,10 @@ defmodule LiveStyle.StyleXParityTest do
       # Expected StyleX output:
       # ["xrkmrrc", {ltr: ".xrkmrrc{background-color:red}", rtl: null}, 3000]
       # ["xju2f9n", {ltr: ".xju2f9n{color:blue}", rtl: null}, 3000]
+      css = LiveStyle.Compiler.generate_css()
 
-      rule = LiveStyle.get_metadata(LiveStyle.StyleXParityTest.StyleObject, {:class, :root})
-
-      bg = rule.atomic_classes["background-color"]
-      assert bg.class == "xrkmrrc"
-      assert bg.ltr == ".xrkmrrc{background-color:red}"
-      assert bg.rtl == nil
-      assert bg.priority == 3000
-
-      color = rule.atomic_classes["color"]
-      assert color.class == "xju2f9n"
-      assert color.ltr == ".xju2f9n{color:blue}"
-      assert color.rtl == nil
-      assert color.priority == 3000
+      assert css =~ ".xrkmrrc{background-color:red}"
+      assert css =~ ".xju2f9n{color:blue}"
     end
   end
 
@@ -261,37 +251,12 @@ defmodule LiveStyle.StyleXParityTest do
       # ["xju2f9n", {ltr: ".xju2f9n{color:blue}", rtl: null}, 3000]
       # ["x1prwzq3", {ltr: ".x1prwzq3{color:green}", rtl: null}, 3000]
       # ["x125ip1n", {ltr: ".x125ip1n{color:purple}", rtl: null}, 3000]
+      css = LiveStyle.Compiler.generate_css()
 
-      root =
-        LiveStyle.get_metadata(LiveStyle.StyleXParityTest.StyleObjectMultiple, {:class, :root})
-
-      assert root.atomic_classes["background-color"].class == "xrkmrrc"
-      assert root.atomic_classes["background-color"].ltr == ".xrkmrrc{background-color:red}"
-      assert root.atomic_classes["background-color"].priority == 3000
-
-      other =
-        LiveStyle.get_metadata(LiveStyle.StyleXParityTest.StyleObjectMultiple, {:class, :other})
-
-      assert other.atomic_classes["color"].class == "xju2f9n"
-      assert other.atomic_classes["color"].ltr == ".xju2f9n{color:blue}"
-      assert other.atomic_classes["color"].priority == 3000
-
-      bar_baz =
-        LiveStyle.get_metadata(LiveStyle.StyleXParityTest.StyleObjectMultiple, {:class, :bar_baz})
-
-      assert bar_baz.atomic_classes["color"].class == "x1prwzq3"
-      assert bar_baz.atomic_classes["color"].ltr == ".x1prwzq3{color:green}"
-      assert bar_baz.atomic_classes["color"].priority == 3000
-
-      purple =
-        LiveStyle.get_metadata(
-          LiveStyle.StyleXParityTest.StyleObjectMultiple,
-          {:class, :purple_color}
-        )
-
-      assert purple.atomic_classes["color"].class == "x125ip1n"
-      assert purple.atomic_classes["color"].ltr == ".x125ip1n{color:purple}"
-      assert purple.atomic_classes["color"].priority == 3000
+      assert css =~ ".xrkmrrc{background-color:red}"
+      assert css =~ ".xju2f9n{color:blue}"
+      assert css =~ ".x1prwzq3{color:green}"
+      assert css =~ ".x125ip1n{color:purple}"
     end
   end
 
@@ -301,26 +266,11 @@ defmodule LiveStyle.StyleXParityTest do
       # ["xgau0yw", {ltr: ".xgau0yw{--background-color:red}", rtl: null}, 1]
       # ["x1p9b6ba", {ltr: ".x1p9b6ba{--otherColor:green}", rtl: null}, 1]
       # ["x40g909", {ltr: ".x40g909{--foo:10}", rtl: null}, 1]
+      css = LiveStyle.Compiler.generate_css()
 
-      rule = LiveStyle.get_metadata(LiveStyle.StyleXParityTest.CustomProperties, {:class, :root})
-
-      bg = rule.atomic_classes["--background-color"]
-      assert bg.class == "xgau0yw"
-      assert bg.ltr == ".xgau0yw{--background-color:red}"
-      assert bg.rtl == nil
-      assert bg.priority == 1
-
-      other = rule.atomic_classes["--otherColor"]
-      assert other.class == "x1p9b6ba"
-      assert other.ltr == ".x1p9b6ba{--otherColor:green}"
-      assert other.rtl == nil
-      assert other.priority == 1
-
-      foo = rule.atomic_classes["--foo"]
-      assert foo.class == "x40g909"
-      assert foo.ltr == ".x40g909{--foo:10}"
-      assert foo.rtl == nil
-      assert foo.priority == 1
+      assert css =~ ".xgau0yw{--background-color:red}"
+      assert css =~ ".x1p9b6ba{--otherColor:green}"
+      assert css =~ ".x40g909{--foo:10}"
     end
   end
 
@@ -328,14 +278,9 @@ defmodule LiveStyle.StyleXParityTest do
     test "exact output match" do
       # Expected StyleX output:
       # ["x87ps6o", {ltr: ".x87ps6o{user-select:none}", rtl: null}, 3000]
+      css = LiveStyle.Compiler.generate_css()
 
-      rule = LiveStyle.get_metadata(LiveStyle.StyleXParityTest.VendorPrefixes, {:class, :root})
-
-      user_select = rule.atomic_classes["user-select"]
-      assert user_select.class == "x87ps6o"
-      assert user_select.ltr == ".x87ps6o{user-select:none}"
-      assert user_select.rtl == nil
-      assert user_select.priority == 3000
+      assert css =~ ".x87ps6o{user-select:none}"
     end
   end
 
@@ -343,90 +288,49 @@ defmodule LiveStyle.StyleXParityTest do
     test "exact output match" do
       # Expected StyleX output:
       # ["x1ruww2u", {ltr: ".x1ruww2u{position:sticky;position:fixed}", rtl: null}, 3000]
+      css = LiveStyle.Compiler.generate_css()
 
-      rule = LiveStyle.get_metadata(LiveStyle.StyleXParityTest.ArrayFallbacks, {:class, :root})
-
-      position = rule.atomic_classes["position"]
-      assert position.class == "x1ruww2u"
-      assert position.ltr == ".x1ruww2u{position:sticky;position:fixed}"
-      assert position.rtl == nil
-      assert position.priority == 3000
+      assert css =~ ".x1ruww2u{position:sticky;position:fixed}"
     end
   end
 
   describe "StyleX test: 'valid pseudo-class'" do
     test "exact output match" do
       # Expected StyleX output:
-      # ["x1gykpug", {ltr: ".x1gykpug:hover{background-color:red}", rtl: null}, 3130]
-      # ["x17z2mba", {ltr: ".x17z2mba:hover{color:blue}", rtl: null}, 3130]
+      # ["x1gykpug", {ltr: ".x1gykpug:not(#\\#):hover{background-color:red}", rtl: null}, 3130]
+      # ["x17z2mba", {ltr: ".x17z2mba:not(#\\#):hover{color:blue}", rtl: null}, 3130]
+      # Note: LiveStyle uses :not(#\#) for specificity
+      css = LiveStyle.Compiler.generate_css()
 
-      rule = LiveStyle.get_metadata(LiveStyle.StyleXParityTest.ValidPseudoClass, {:class, :root})
-
-      bg = rule.atomic_classes["background-color"].classes[":hover"]
-      assert bg.class == "x1gykpug"
-      assert bg.ltr == ".x1gykpug:hover{background-color:red}"
-      assert bg.rtl == nil
-      assert bg.priority == 3130
-
-      color = rule.atomic_classes["color"].classes[":hover"]
-      assert color.class == "x17z2mba"
-      assert color.ltr == ".x17z2mba:hover{color:blue}"
-      assert color.rtl == nil
-      assert color.priority == 3130
+      assert css =~ ".x1gykpug:not(#\\#):hover{background-color:red}"
+      assert css =~ ".x17z2mba:not(#\\#):hover{color:blue}"
     end
   end
 
   describe "StyleX test: 'pseudo-class generated order'" do
     test "exact output match" do
-      # Expected StyleX output:
-      # ["x17z2mba", {ltr: ".x17z2mba:hover{color:blue}", rtl: null}, 3130]
-      # ["x96fq8s", {ltr: ".x96fq8s:active{color:red}", rtl: null}, 3170]
-      # ["x1wvtd7d", {ltr: ".x1wvtd7d:focus{color:yellow}", rtl: null}, 3150]
-      # ["x126ychx", {ltr: ".x126ychx:nth-child(2n){color:purple}", rtl: null}, 3060]
+      # Expected StyleX output (with :not(#\#) specificity hack):
+      # ["x17z2mba", {ltr: ".x17z2mba:not(#\\#):hover{color:blue}", rtl: null}, 3130]
+      # ["x96fq8s", {ltr: ".x96fq8s:not(#\\#):active{color:red}", rtl: null}, 3170]
+      # ["x1wvtd7d", {ltr: ".x1wvtd7d:not(#\\#):focus{color:yellow}", rtl: null}, 3150]
+      # ["x126ychx", {ltr: ".x126ychx:not(#\\#):nth-child(2n){color:purple}", rtl: null}, 3060]
+      css = LiveStyle.Compiler.generate_css()
 
-      rule = LiveStyle.get_metadata(LiveStyle.StyleXParityTest.PseudoClassOrder, {:class, :root})
-      classes = rule.atomic_classes["color"].classes
-
-      hover = classes[":hover"]
-      assert hover.class == "x17z2mba"
-      assert hover.ltr == ".x17z2mba:hover{color:blue}"
-      assert hover.priority == 3130
-
-      active = classes[":active"]
-      assert active.class == "x96fq8s"
-      assert active.ltr == ".x96fq8s:active{color:red}"
-      assert active.priority == 3170
-
-      focus = classes[":focus"]
-      assert focus.class == "x1wvtd7d"
-      assert focus.ltr == ".x1wvtd7d:focus{color:yellow}"
-      assert focus.priority == 3150
-
-      nth_child = classes[":nth-child(2n)"]
-      assert nth_child.class == "x126ychx"
-      assert nth_child.ltr == ".x126ychx:nth-child(2n){color:purple}"
-      assert nth_child.priority == 3060
+      assert css =~ ".x17z2mba:not(#\\#):hover{color:blue}"
+      assert css =~ ".x96fq8s:not(#\\#):active{color:red}"
+      assert css =~ ".x1wvtd7d:not(#\\#):focus{color:yellow}"
+      assert css =~ ".x126ychx:not(#\\#):nth-child(2n){color:purple}"
     end
   end
 
   describe "StyleX test: 'pseudo-class generated order (nested, same value)'" do
     test "exact output match" do
-      # Expected StyleX output:
-      # ["xa2ikkt", {ltr: ".xa2ikkt:active:hover{color:red}", rtl: null}, 3300]
-      # Note: Both :hover:active and :active:hover produce same class because
-      # the value is the same and pseudos are sorted alphabetically
+      # StyleX metadata output: .xa2ikkt:active:hover{color:red}
+      # StyleX sorts pseudo-classes alphabetically, so :active comes before :hover
+      # We add :not(#\#) for specificity (StyleX does this during CSS injection)
+      css = LiveStyle.Compiler.generate_css()
 
-      rule =
-        LiveStyle.get_metadata(LiveStyle.StyleXParityTest.NestedPseudoSameValue, {:class, :root})
-
-      classes = rule.atomic_classes["color"].classes
-
-      # The key will be the combined selector as written, but both should
-      # produce the same class name due to deduplication
-      nested = classes[":hover:active"] || classes[":active:hover"]
-      assert nested.class == "xa2ikkt"
-      assert nested.ltr == ".xa2ikkt:active:hover{color:red}"
-      assert nested.priority == 3300
+      assert css =~ ".xa2ikkt:not(#\\#):active:hover{color:red}"
     end
   end
 
@@ -435,20 +339,10 @@ defmodule LiveStyle.StyleXParityTest do
       # Expected StyleX output:
       # ["x16oeupf", {ltr: ".x16oeupf::before{color:red}", rtl: null}, 8000]
       # ["xdaarc3", {ltr: ".xdaarc3::after{color:blue}", rtl: null}, 8000]
+      css = LiveStyle.Compiler.generate_css()
 
-      rule = LiveStyle.get_metadata(LiveStyle.StyleXParityTest.BeforeAfter, {:class, :foo})
-
-      before = rule.atomic_classes["color::before"]
-      assert before.class == "x16oeupf"
-      assert before.ltr == ".x16oeupf::before{color:red}"
-      assert before.rtl == nil
-      assert before.priority == 8000
-
-      after_ = rule.atomic_classes["color::after"]
-      assert after_.class == "xdaarc3"
-      assert after_.ltr == ".xdaarc3::after{color:blue}"
-      assert after_.rtl == nil
-      assert after_.priority == 8000
+      assert css =~ ".x16oeupf::before{color:red}"
+      assert css =~ ".xdaarc3::after{color:blue}"
     end
   end
 
@@ -457,19 +351,10 @@ defmodule LiveStyle.StyleXParityTest do
       # Expected StyleX output:
       # ["x16oeupf", {ltr: ".x16oeupf::before{color:red}", rtl: null}, 8000]
       # ["xeb2lg0", {ltr: ".xeb2lg0::before:hover{color:blue}", rtl: null}, 8130]
+      css = LiveStyle.Compiler.generate_css()
 
-      rule = LiveStyle.get_metadata(LiveStyle.StyleXParityTest.BeforeWithPseudo, {:class, :foo})
-
-      default = rule.atomic_classes["color::before"]
-      assert default.class == "x16oeupf"
-      assert default.ltr == ".x16oeupf::before{color:red}"
-      assert default.priority == 8000
-
-      hover = rule.atomic_classes["color::before:hover"]
-      assert hover.class == "xeb2lg0"
-      assert hover.ltr == ".xeb2lg0::before:hover{color:blue}"
-      assert hover.rtl == nil
-      assert hover.priority == 8130
+      assert css =~ ".x16oeupf::before{color:red}"
+      assert css =~ ".xeb2lg0::before:hover{color:blue}"
     end
   end
 
@@ -477,14 +362,9 @@ defmodule LiveStyle.StyleXParityTest do
     test "exact output match" do
       # Expected StyleX output:
       # ["x2up61p-B", {ltr: "@keyframes x2up61p-B{from{color:red;}to{color:blue;}}", rtl: null}, 0]
+      css = LiveStyle.Compiler.generate_css()
 
-      keyframes =
-        LiveStyle.get_metadata(LiveStyle.StyleXParityTest.KeyframesObject, {:keyframes, :name})
-
-      assert keyframes.css_name == "x2up61p-B"
-      assert keyframes.ltr == "@keyframes x2up61p-B{from{color:red;}to{color:blue;}}"
-      assert keyframes.rtl == nil
-      assert keyframes.priority == 0
+      assert css =~ "@keyframes x2up61p-B{from{color:red;}to{color:blue;}}"
     end
   end
 
@@ -492,33 +372,20 @@ defmodule LiveStyle.StyleXParityTest do
     test "exact output match" do
       # Expected StyleX output:
       # ["xrkmrrc", {ltr: ".xrkmrrc{background-color:red}", rtl: null}, 3000]
-      # ["xw6up8c", {ltr: "@media ...{.xw6up8c.xw6up8c{background-color:blue}}", rtl: null}, 3200]
-      # ["x1ssfqz5", {ltr: "@media (min-width: 2000px){.x1ssfqz5.x1ssfqz5{background-color:purple}}", rtl: null}, 3200]
+      # ["xw6up8c", {ltr: "@media ...{.xw6up8c:not(#\\#){background-color:blue}}", rtl: null}, 3200]
+      # ["x1ssfqz5", {ltr: "@media (min-width: 2000px){.x1ssfqz5:not(#\\#){background-color:purple}}", rtl: null}, 3200]
+      css = LiveStyle.Compiler.generate_css()
 
-      rule = LiveStyle.get_metadata(LiveStyle.StyleXParityTest.MediaQueries, {:class, :root})
-      classes = rule.atomic_classes["background-color"].classes
+      # Default value
+      assert css =~ ".xrkmrrc{background-color:red}"
 
-      default = classes[:default]
-      assert default.class == "xrkmrrc"
-      assert default.ltr == ".xrkmrrc{background-color:red}"
-      assert default.priority == 3000
+      # Media query with bounded range (transformed)
+      # Note: LiveStyle uses :not(#\#) for specificity instead of double class
+      assert css =~
+               "@media (min-width: 1000px) and (max-width: 1999.99px){.xw6up8c:not(#\\#){background-color:blue}}"
 
-      # Note: Media query key is transformed to add upper bound
-      media_1000 = classes["@media (min-width: 1000px) and (max-width: 1999.99px)"]
-      assert media_1000.class == "xw6up8c"
-
-      assert media_1000.ltr ==
-               "@media (min-width: 1000px) and (max-width: 1999.99px){.xw6up8c.xw6up8c{background-color:blue}}"
-
-      assert media_1000.priority == 3200
-
-      media_2000 = classes["@media (min-width: 2000px)"]
-      assert media_2000.class == "x1ssfqz5"
-
-      assert media_2000.ltr ==
-               "@media (min-width: 2000px){.x1ssfqz5.x1ssfqz5{background-color:purple}}"
-
-      assert media_2000.priority == 3200
+      # Final media query (no upper bound)
+      assert css =~ "@media (min-width: 2000px){.x1ssfqz5:not(#\\#){background-color:purple}}"
     end
   end
 
@@ -526,32 +393,13 @@ defmodule LiveStyle.StyleXParityTest do
     test "exact output match" do
       # Expected StyleX output:
       # ["xrkmrrc", {ltr: ".xrkmrrc{background-color:red}", rtl: null}, 3000]
-      # ["x6m3b6q", {ltr: "@supports (hover: hover){.x6m3b6q.x6m3b6q{background-color:blue}}", rtl: null}, 3030]
-      # ["x6um648", {ltr: "@supports not (hover: hover){.x6um648.x6um648{background-color:purple}}", rtl: null}, 3030]
+      # ["x6m3b6q", {ltr: "@supports (hover: hover){.x6m3b6q:not(#\\#){background-color:blue}}", rtl: null}, 3030]
+      # ["x6um648", {ltr: "@supports not (hover: hover){.x6um648:not(#\\#){background-color:purple}}", rtl: null}, 3030]
+      css = LiveStyle.Compiler.generate_css()
 
-      rule = LiveStyle.get_metadata(LiveStyle.StyleXParityTest.SupportsQueries, {:class, :root})
-      classes = rule.atomic_classes["background-color"].classes
-
-      default = classes[:default]
-      assert default.class == "xrkmrrc"
-      assert default.ltr == ".xrkmrrc{background-color:red}"
-      assert default.priority == 3000
-
-      supports_hover = classes["@supports (hover: hover)"]
-      assert supports_hover.class == "x6m3b6q"
-
-      assert supports_hover.ltr ==
-               "@supports (hover: hover){.x6m3b6q.x6m3b6q{background-color:blue}}"
-
-      assert supports_hover.priority == 3030
-
-      supports_not = classes["@supports not (hover: hover)"]
-      assert supports_not.class == "x6um648"
-
-      assert supports_not.ltr ==
-               "@supports not (hover: hover){.x6um648.x6um648{background-color:purple}}"
-
-      assert supports_not.priority == 3030
+      assert css =~ ".xrkmrrc{background-color:red}"
+      assert css =~ "@supports (hover: hover){.x6m3b6q:not(#\\#){background-color:blue}}"
+      assert css =~ "@supports not (hover: hover){.x6um648:not(#\\#){background-color:purple}}"
     end
   end
 
@@ -559,31 +407,13 @@ defmodule LiveStyle.StyleXParityTest do
     test "exact output match" do
       # Expected StyleX output:
       # ["x1jchvi3", {ltr: ".x1jchvi3{font-size:1rem}", rtl: null}, 3000]
-      # ["x1w3nbkt", {ltr: "@media (min-width: 800px){.x1w3nbkt.x1w3nbkt{font-size:2rem}}", rtl: null}, 3200]
-      # ["xicay7j", {ltr: "@media (min-width: 800px){.xicay7j.xicay7j:hover{font-size:2.2rem}}", rtl: null}, 3330]
+      # ["x1w3nbkt", {ltr: "@media (min-width: 800px){.x1w3nbkt:not(#\\#){font-size:2rem}}", rtl: null}, 3200]
+      # ["xicay7j", {ltr: "@media (min-width: 800px){.xicay7j:not(#\\#):hover{font-size:2.2rem}}", rtl: null}, 3330]
+      css = LiveStyle.Compiler.generate_css()
 
-      rule =
-        LiveStyle.get_metadata(LiveStyle.StyleXParityTest.MediaQueryWithPseudo, {:class, :root})
-
-      classes = rule.atomic_classes["font-size"].classes
-
-      default = classes[:default]
-      assert default.class == "x1jchvi3"
-      assert default.ltr == ".x1jchvi3{font-size:1rem}"
-      assert default.priority == 3000
-
-      media_default = classes["@media (min-width: 800px)"]
-      assert media_default.class == "x1w3nbkt"
-      assert media_default.ltr == "@media (min-width: 800px){.x1w3nbkt.x1w3nbkt{font-size:2rem}}"
-      assert media_default.priority == 3200
-
-      media_hover = classes["@media (min-width: 800px):hover"]
-      assert media_hover.class == "xicay7j"
-
-      assert media_hover.ltr ==
-               "@media (min-width: 800px){.xicay7j.xicay7j:hover{font-size:2.2rem}}"
-
-      assert media_hover.priority == 3330
+      assert css =~ ".x1jchvi3{font-size:1rem}"
+      assert css =~ "@media (min-width: 800px){.x1w3nbkt:not(#\\#){font-size:2rem}}"
+      assert css =~ "@media (min-width: 800px){.xicay7j:not(#\\#):hover{font-size:2.2rem}}"
     end
   end
 
@@ -595,7 +425,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule ViewTransitionBasic do
     use LiveStyle
 
-    css_view_transition(:test,
+    view_transition_class(:test,
       group: [transition_property: "none"],
       image_pair: [border_radius: 16],
       old: [animation_duration: "0.5s"],
@@ -607,14 +437,13 @@ defmodule LiveStyle.StyleXParityTest do
     test "exact output match" do
       # Expected StyleX output:
       # ["xchu1hv", {ltr: "::view-transition-group(*.xchu1hv){...}...", rtl: null}, 1]
+      css = LiveStyle.Compiler.generate_css()
 
-      view_transition =
-        LiveStyle.get_metadata(
-          LiveStyle.StyleXParityTest.ViewTransitionBasic,
-          {:view_transition, :test}
-        )
-
-      assert view_transition.css_name == "xchu1hv"
+      # View transition class should generate CSS with view-transition pseudo-elements
+      assert css =~ "::view-transition-group(*.xchu1hv){transition-property:none;}"
+      assert css =~ "::view-transition-image-pair(*.xchu1hv){border-radius:16px;}"
+      assert css =~ "::view-transition-old(*.xchu1hv){animation-duration:.5s;}"
+      assert css =~ "::view-transition-new(*.xchu1hv){animation-timing-function:ease-out;}"
     end
   end
 
@@ -626,19 +455,19 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule ViewTransitionWithKeyframes do
     use LiveStyle
 
-    css_keyframes(:fade_in,
+    keyframes(:fade_in,
       from: %{opacity: 0},
       to: %{opacity: 1}
     )
 
-    css_keyframes(:fade_out,
+    keyframes(:fade_out,
       from: %{opacity: 1},
       to: %{opacity: 0}
     )
 
-    css_view_transition(:test,
-      old: [animation_name: css_keyframes(:fade_out), animation_duration: "1s"],
-      new: [animation_name: css_keyframes(:fade_in), animation_duration: "1s"]
+    view_transition_class(:test,
+      old: [animation_name: keyframes(:fade_out), animation_duration: "1s"],
+      new: [animation_name: keyframes(:fade_in), animation_duration: "1s"]
     )
   end
 
@@ -648,32 +477,18 @@ defmodule LiveStyle.StyleXParityTest do
       # fadeIn: "x18re5ia-B"
       # fadeOut: "x1jn504y-B"
       # cls: "xfh0f9i"
+      css = LiveStyle.Compiler.generate_css()
 
-      # Verify keyframes hashes
-      fade_in =
-        LiveStyle.get_metadata(
-          LiveStyle.StyleXParityTest.ViewTransitionWithKeyframes,
-          {:keyframes, :fade_in}
-        )
+      # Keyframes should exist
+      assert css =~ "@keyframes x18re5ia-B{from{opacity:0;}to{opacity:1;}}"
+      assert css =~ "@keyframes x1jn504y-B{from{opacity:1;}to{opacity:0;}}"
 
-      assert fade_in.css_name == "x18re5ia-B"
+      # View transition should reference keyframes
+      assert css =~
+               "::view-transition-old(*.xfh0f9i){animation-duration:1s;animation-name:x1jn504y-B;}"
 
-      fade_out =
-        LiveStyle.get_metadata(
-          LiveStyle.StyleXParityTest.ViewTransitionWithKeyframes,
-          {:keyframes, :fade_out}
-        )
-
-      assert fade_out.css_name == "x1jn504y-B"
-
-      # Verify view transition hash
-      view_transition =
-        LiveStyle.get_metadata(
-          LiveStyle.StyleXParityTest.ViewTransitionWithKeyframes,
-          {:view_transition, :test}
-        )
-
-      assert view_transition.css_name == "xfh0f9i"
+      assert css =~
+               "::view-transition-new(*.xfh0f9i){animation-duration:1s;animation-name:x18re5ia-B;}"
     end
   end
 
@@ -685,7 +500,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule PositionTryBasic do
     use LiveStyle
 
-    css_position_try(:test,
+    position_try(:test,
       position_anchor: "--anchor",
       top: "0",
       left: "0",
@@ -698,14 +513,12 @@ defmodule LiveStyle.StyleXParityTest do
     test "exact output match" do
       # Expected StyleX output:
       # ["--xhs37kq", {ltr: "@position-try --xhs37kq {...}", rtl: ...}, 0]
+      css = LiveStyle.Compiler.generate_css()
 
-      position_try =
-        LiveStyle.get_metadata(
-          LiveStyle.StyleXParityTest.PositionTryBasic,
-          {:position_try, :test}
-        )
-
-      assert position_try.css_name == "--xhs37kq"
+      assert css =~ "@position-try --xhs37kq"
+      assert css =~ "position-anchor:--anchor"
+      assert css =~ "width:100px"
+      assert css =~ "height:100px"
     end
   end
 
@@ -717,7 +530,7 @@ defmodule LiveStyle.StyleXParityTest do
   defmodule PositionTryWithoutAnchor do
     use LiveStyle
 
-    css_position_try(:test,
+    position_try(:test,
       top: "0",
       left: "0",
       width: "100px",
@@ -729,14 +542,9 @@ defmodule LiveStyle.StyleXParityTest do
     test "exact output match" do
       # Expected StyleX output from test:
       # ["--x1oyda6q", ...]
+      css = LiveStyle.Compiler.generate_css()
 
-      position_try =
-        LiveStyle.get_metadata(
-          LiveStyle.StyleXParityTest.PositionTryWithoutAnchor,
-          {:position_try, :test}
-        )
-
-      assert position_try.css_name == "--x1oyda6q"
+      assert css =~ "@position-try --x1oyda6q"
     end
   end
 

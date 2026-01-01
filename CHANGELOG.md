@@ -5,13 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.11.0] - 2025-01-01
+
+### Changed
+
+- **BREAKING**: Simplified API by removing `css_` prefix from all macros:
+  - `css_class/2` → `class/2`
+  - `css_vars/2` → `vars/1` (namespace is now the module)
+  - `css_consts/2` → `consts/1` (namespace is now the module)
+  - `css_keyframes/2` → `keyframes/2`
+  - `css_theme/3` → `theme/2` (namespace is now the module)
+  - `css_view_transition/2` → `view_transition_class/2`
+  - `css_position_try/2` → `position_try/2`
+  - `css_var/1` → `var/1` (2-tuple `{Module, :name}` instead of 3-tuple)
+  - `css_const/1` → `const/1` (2-tuple `{Module, :name}` instead of 3-tuple)
+
+- **BREAKING**: Unified module system - use `use LiveStyle` instead of:
+  - `use LiveStyle.Sheet` (removed)
+  - `use LiveStyle.Tokens` (removed)
+
+- **BREAKING**: Token references now use 2-tuples instead of 3-tuples:
+  ```elixir
+  # Before
+  css_var({MyApp.Tokens, :colors, :primary})
+  css_const({MyApp.Tokens, :spacing, :md})
+
+  # After
+  var({MyApp.Colors, :primary})
+  const({MyApp.Spacing, :md})
+  ```
+
+### Internal
+
+- Major codebase restructuring for better organization:
+  - Moved compiler-related code into `lib/live_style/compiler/`
+  - Renamed `LiveStyle.Data` → `LiveStyle.PropertyMetadata`
+  - Renamed `LiveStyle.Types` → `LiveStyle.PropertyType`
+  - Renamed `LiveStyle.Value` → `LiveStyle.CSSValue`
+  - Consolidated manifest and utility modules
+- Added comprehensive snapshot tests for CSS output verification
+- Added `LiveStyle.Registry` macro for DRY manifest registration
+- Improved conditional detection for magic string keys
 
 ## [0.10.0] - 2025-12-23
 
 ### Removed
 
-- Removed nested at-rule map syntax in `css_class/2` (top-level keys like `"@media (...)" => %{...}`); use per-property conditional values instead.
+- Removed nested at-rule map syntax in `class/2` (top-level keys like `"@media (...)" => %{...}`); use per-property conditional values instead.
 
 ## [0.9.0] - 2024-12-21
 
@@ -143,9 +183,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `view_transition_class/1` → `css_view_transition/1` (reference form)
 
 - **BREAKING**: Moved tooling functions out of `LiveStyle`:
-  - `run/2` → `LiveStyle.Compiler.run/2`
-  - `install_and_run/2` → `LiveStyle.Compiler.install_and_run/2`
-  - `write_css/1` → `LiveStyle.Compiler.write_css/1`
+  - run/2 → LiveStyle.Compiler.run/2
+  - install_and_run/2 → LiveStyle.Compiler.Runner.install_and_run/2
+  - write_css/1 → LiveStyle.Compiler.Writer.write_css/1
   
   Update your Phoenix watcher config:
   ```elixir
@@ -176,7 +216,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `LiveStyle.ShorthandBehavior.AcceptShorthands`, `FlattenShorthands`, `ForbidShorthands` implementations
 - `LiveStyle.Storage` module for file-based manifest storage
 - `LiveStyle.Config` module for unified configuration management with per-process overrides
-- `LiveStyle.Compiler.write_css/1` function for writing CSS with change detection
+- LiveStyle.Compiler.Writer.write_css/1 function for writing CSS with change detection
 
 ### Removed
 
@@ -285,7 +325,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `sibling_after/1,2` - style when following sibling has pseudo-state
   - `any_sibling/1,2` - style when any sibling has pseudo-state
 - `LiveStyle.default_marker/0` - returns the default marker class for contextual selectors
-- `LiveStyle.define_marker/1` - creates unique marker classes for custom contexts
+- `LiveStyle.marker/1` - creates unique marker classes for custom contexts
 - Nested pseudo-class conditions - combine selectors like `:nth-child(2):where(.marker:hover *)`
 
 ## [0.1.0] - 2024-12-16
@@ -296,7 +336,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `css_class/2` macro for declaring named styles with CSS declarations
 - `css_keyframes/2` macro for defining CSS animations
 - `css_var/1` macro for referencing CSS custom properties
-- `first_that_works/1` macro for CSS fallback values
+- `fallback/1` macro for CSS fallback values
 - `css_vars/2` macro for defining CSS custom properties (design tokens)
 - `css_consts/2` macro for defining compile-time constants
 - `css_theme/3` macro for creating scoped theme overrides

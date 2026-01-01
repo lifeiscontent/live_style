@@ -5,45 +5,38 @@ defmodule LiveStyle do
   All style definitions compile away to string constants. At runtime,
   only class name strings exist - no function calls or manifest lookups.
 
-  ## Recommended Usage
-
-  Use the specialized modules for clearer intent:
-
-  - **`use LiveStyle.Tokens`** - For design tokens (CSS variables, keyframes, themes)
-  - **`use LiveStyle.Sheet`** - For component styles (css_class definitions)
-
-  See `LiveStyle.Tokens` and `LiveStyle.Sheet` for detailed documentation.
-
-  ### Tokens Module
-
-      defmodule MyApp.Tokens do
-        use LiveStyle.Tokens
-
-        css_vars :color,
-          white: "#ffffff",
-          primary: "#3b82f6"
-
-        css_keyframes :spin,
-          from: [transform: "rotate(0deg)"],
-          to: [transform: "rotate(360deg)"]
-      end
-
-  ### Component with Styles
+  ## Basic Usage
 
       defmodule MyApp.Button do
         use Phoenix.Component
-        use LiveStyle.Sheet
+        use LiveStyle
 
-        css_class :base,
+        # Define CSS variables
+        vars primary: "#3b82f6",
+             white: "#ffffff"
+
+        # Define a theme that overrides variables
+        theme :dark,
+          primary: "#60a5fa",
+          white: "#1f2937"
+
+        # Define keyframes
+        keyframes :spin,
+          from: [transform: "rotate(0deg)"],
+          to: [transform: "rotate(360deg)"]
+
+        # Define classes
+        class :base,
           display: "inline-flex",
           padding: "0.5rem 1rem"
 
-        css_class :primary,
-          background_color: css_var({MyApp.Tokens, :color, :primary})
+        class :styled,
+          background_color: var(:primary),
+          color: var(:white)
 
         def render(assigns) do
           ~H\"\"\"
-          <button class={css_class([:base, :primary])}>
+          <button {css([:base, :styled])}>
             <%= render_slot(@inner_block) %>
           </button>
           \"\"\"
@@ -53,55 +46,57 @@ defmodule LiveStyle do
   ## Reference Syntax
 
   Cross-module references:
-  - `css_var({Module, :namespace, :name})` - Reference a CSS variable
-  - `css_const({Module, :namespace, :name})` - Reference a compile-time constant
-  - `css_keyframes({Module, :name})` - Reference a keyframes animation
-  - `css_theme({Module, :namespace, :theme_name})` - Reference a theme class
-  - `css_position_try({Module, :name})` - Reference a position-try rule
-  - `css_view_transition({Module, :name})` - Reference a view transition
+  - `var({Module, :name})` - Reference a CSS variable
+  - `const({Module, :name})` - Reference a compile-time constant
+  - `keyframes({Module, :name})` - Reference a keyframes animation
+  - `theme({Module, :name})` - Reference a theme class
+  - `position_try({Module, :name})` - Reference a position-try rule
+  - `view_transition_class({Module, :name})` - Reference a view transition
 
   Local references (within the same module):
-  - `css_var({:namespace, :name})`
-  - `css_keyframes(:name)`
-  - `css_theme({:namespace, :theme_name})`
+  - `var(:name)`
+  - `keyframes(:name)`
+  - `theme(:name)`
 
   ## Public API Functions
 
-  For accessing styles from outside a module (e.g., in tests):
-  - `LiveStyle.get_css/2` - Get `%LiveStyle.Attrs{}` from a module's classes
-  - `LiveStyle.get_css_class/2` - Get class string from a module's classes
   - `LiveStyle.default_marker/0` - Get the default marker class for contextual selectors
-  - `LiveStyle.define_marker/1` - Create a custom marker class
+  - `LiveStyle.marker/1` - Get a custom marker class
+
+  For testing (see `LiveStyle.Compiler`):
+  - `LiveStyle.Compiler.get_css/2` - Get `%LiveStyle.Attrs{}` from a module's classes
+  - `LiveStyle.Compiler.get_css_class/2` - Get class string from a module's classes
+  - `LiveStyle.Compiler.generate_css/0` - Generate all CSS output
 
   See the README for comprehensive documentation and examples.
   """
-
-  alias LiveStyle.Manifest
 
   defmacro __using__(_opts \\ []) do
     quote do
       import LiveStyle,
         only: [
           # Definition macros
-          css_vars: 2,
-          css_consts: 2,
-          css_keyframes: 2,
-          css_position_try: 2,
-          css_view_transition: 2,
-          css_class: 2,
-          css_theme: 3,
+          vars: 1,
+          consts: 1,
+          keyframes: 2,
+          position_try: 2,
+          view_transition_class: 2,
+          class: 2,
+          theme: 2,
           # Reference macros
-          css_var: 1,
-          css_const: 1,
-          css_keyframes: 1,
-          css_position_try: 1,
-          css_view_transition: 1,
-          css_theme: 1,
+          var: 1,
+          const: 1,
+          keyframes: 1,
+          position_try: 1,
+          view_transition_class: 1,
+          theme: 1,
           # Runtime resolution macros (validates at compile time, resolves at runtime)
-          css_class: 1,
           css: 1,
+          css: 2,
+          # Composition
+          include: 1,
           # Utilities
-          first_that_works: 1
+          fallback: 1
         ]
 
       # Accumulate class definitions for @before_compile
@@ -122,11 +117,16 @@ defmodule LiveStyle do
       end)
 
     # Build class string map and property_classes map for static classes
-    {class_strings, property_classes} = build_static_class_maps(static_classes, env.module)
+    alias LiveStyle.Compiler.BeforeCompile
+
+    manifest = LiveStyle.Storage.read()
+
+    {class_strings, property_classes} =
+      BeforeCompile.build_static_class_maps(static_classes, env.module, manifest)
 
     # Generate dynamic class functions
     # Dynamic classes: {name, {:__dynamic__, all_props, param_names, has_computed}}
-    dynamic_fns = build_dynamic_fns(dynamic_classes, env.module)
+    dynamic_fns = BeforeCompile.build_dynamic_fns(dynamic_classes, env.module)
 
     dynamic_names = Enum.map(dynamic_classes, fn {name, _} -> name end)
 
@@ -145,34 +145,30 @@ defmodule LiveStyle do
   end
 
   @doc """
-  Defines CSS custom properties (variables) under a namespace.
+  Defines CSS custom properties (variables).
 
   ## Examples
 
-      css_vars :color,
-        white: "#ffffff",
-        primary: "#3b82f6"
+      vars white: "#ffffff",
+           primary: "#3b82f6",
+           spacing_sm: "0.5rem",
+           spacing_lg: "2rem"
 
-      css_vars :space,
-        sm: "0.5rem",
-        lg: "2rem"
+  For typed variables that can be animated, use `LiveStyle.PropertyType`:
 
-  For typed variables that can be animated, use `LiveStyle.Types`:
+      import LiveStyle.PropertyType
 
-      import LiveStyle.Types
-
-      css_vars :anim,
-        angle: angle("0deg"),
-        hue: percentage("0%")
+      vars angle: angle("0deg"),
+           hue: percentage("0%")
   """
-  defmacro css_vars(namespace, vars) when is_atom(namespace) do
-    # Evaluate vars at compile time so they're available for css_var references
-    {evaluated_vars, _} = Code.eval_quoted(vars, [], __CALLER__)
+  defmacro vars(vars_list) do
+    # Evaluate vars at compile time so they're available for var references
+    {evaluated_vars, _} = Code.eval_quoted(vars_list, [], __CALLER__)
     module = __CALLER__.module
 
-    # Store immediately during macro expansion (like css_consts does)
-    # so that css_var/1 references in the same module can find them
-    LiveStyle.Vars.define(module, namespace, evaluated_vars)
+    # Store immediately during macro expansion
+    # so that var/1 references in the same module can find them
+    LiveStyle.Vars.define(module, evaluated_vars)
 
     quote do
       :ok
@@ -188,33 +184,28 @@ defmodule LiveStyle do
 
   ## Local reference (same module)
 
-      css_var({:color, :white})
+      var(:white)
 
   ## Cross-module reference
 
-      css_var({MyApp.Tokens, :color, :white})
+      var({MyApp.Tokens, :white})
 
   ## Using in keyframes (animating typed variables)
 
-      css_keyframes :rotate,
-        from: %{css_var({Tokens, :anim, :angle}) => "0deg"},
-        to: %{css_var({Tokens, :anim, :angle}) => "360deg"}
+      keyframes :rotate,
+        from: %{var({Tokens, :angle}) => "0deg"},
+        to: %{var({Tokens, :angle}) => "360deg"}
   """
-  defmacro css_var(ref) do
-    var_name =
-      case ref do
-        {:{}, _, [module_ast, namespace, name]} ->
-          # Cross-module: {Module, :namespace, :name}
-          {module, _} = Code.eval_quoted(module_ast, [], __CALLER__)
-          LiveStyle.Vars.lookup!(module, namespace, name)
+  defmacro var(ref) when is_atom(ref) do
+    # Local reference: :name
+    module = __CALLER__.module
+    LiveStyle.Vars.var({module, ref})
+  end
 
-        {namespace, name} when is_atom(namespace) and is_atom(name) ->
-          # Local reference: {:namespace, :name}
-          module = __CALLER__.module
-          LiveStyle.Vars.lookup!(module, namespace, name)
-      end
-
-    Macro.escape("var(#{var_name})")
+  defmacro var({module_ast, name}) when is_atom(name) do
+    # Cross-module: {Module, :name}
+    {module, _} = Code.eval_quoted(module_ast, [], __CALLER__)
+    LiveStyle.Vars.var({module, name})
   end
 
   @doc """
@@ -222,22 +213,19 @@ defmodule LiveStyle do
 
   ## Examples
 
-      css_consts :breakpoint,
-        sm: "@media (max-width: 640px)",
-        lg: "@media (min-width: 1025px)"
-
-      css_consts :z,
-        modal: "50",
-        tooltip: "100"
+      consts breakpoint_sm: "@media (max-width: 640px)",
+             breakpoint_lg: "@media (min-width: 1025px)",
+             z_modal: "50",
+             z_tooltip: "100"
   """
-  defmacro css_consts(namespace, consts) when is_atom(namespace) do
-    # Evaluate consts at compile time so they're available for css_const references
-    {evaluated_consts, _} = Code.eval_quoted(consts, [], __CALLER__)
+  defmacro consts(consts_list) do
+    # Evaluate consts at compile time so they're available for const references
+    {evaluated_consts, _} = Code.eval_quoted(consts_list, [], __CALLER__)
     module = __CALLER__.module
 
-    # Store immediately during macro expansion (like css_keyframes does)
-    # so that css_const/1 references in the same module can find them
-    LiveStyle.Consts.define(module, namespace, evaluated_consts)
+    # Store immediately during macro expansion
+    # so that const/1 references in the same module can find them
+    LiveStyle.Consts.define(module, evaluated_consts)
 
     quote do
       :ok
@@ -249,26 +237,24 @@ defmodule LiveStyle do
 
   ## Local reference
 
-      css_const({:breakpoint, :lg})
+      const(:breakpoint_lg)
 
   ## Cross-module reference
 
-      css_const({MyApp.Tokens, :breakpoint, :lg})
+      const({MyApp.Tokens, :breakpoint_lg})
 
   Note: Requires the defining module to be compiled first.
   """
-  defmacro css_const(ref) do
-    case ref do
-      {:{}, _, [module_ast, namespace, name]} ->
-        # Cross-module: {Module, :namespace, :name}
-        {module, _} = Code.eval_quoted(module_ast, [], __CALLER__)
-        LiveStyle.Consts.lookup!(module, namespace, name)
+  defmacro const(ref) when is_atom(ref) do
+    # Local reference: :name
+    module = __CALLER__.module
+    LiveStyle.Consts.ref({module, ref})
+  end
 
-      {namespace, name} when is_atom(namespace) and is_atom(name) ->
-        # Local reference: {:namespace, :name}
-        module = __CALLER__.module
-        LiveStyle.Consts.lookup!(module, namespace, name)
-    end
+  defmacro const({module_ast, name}) when is_atom(name) do
+    # Cross-module: {Module, :name}
+    {module, _} = Code.eval_quoted(module_ast, [], __CALLER__)
+    LiveStyle.Consts.ref({module, name})
   end
 
   @doc """
@@ -276,23 +262,23 @@ defmodule LiveStyle do
 
   ## Definition (2 args)
 
-      css_keyframes :spin,
+      keyframes :spin,
         from: [transform: "rotate(0deg)"],
         to: [transform: "rotate(360deg)"]
 
-      css_keyframes :fade_in,
+      keyframes :fade_in,
         "0%": [opacity: "0"],
         "100%": [opacity: "1"]
 
   ## Local reference (1 arg)
 
-      css_keyframes(:spin)
+      keyframes(:spin)
 
   ## Cross-module reference
 
-      css_keyframes({MyApp.Tokens, :spin})
+      keyframes({MyApp.Tokens, :spin})
   """
-  defmacro css_keyframes(name, frames) when is_atom(name) do
+  defmacro keyframes(name, frames) when is_atom(name) do
     {evaluated_frames, _} = Code.eval_quoted(frames, [], __CALLER__)
     module = __CALLER__.module
 
@@ -304,14 +290,14 @@ defmodule LiveStyle do
     end
   end
 
-  defmacro css_keyframes(ref) when is_atom(ref) do
+  defmacro keyframes(ref) when is_atom(ref) do
     module = __CALLER__.module
-    LiveStyle.Keyframes.lookup!(module, ref)
+    LiveStyle.Keyframes.ref({module, ref})
   end
 
-  defmacro css_keyframes({module_ast, name}) do
+  defmacro keyframes({module_ast, name}) do
     {module, _} = Code.eval_quoted(module_ast, [], __CALLER__)
-    LiveStyle.Keyframes.lookup!(module, name)
+    LiveStyle.Keyframes.ref({module, name})
   end
 
   @doc """
@@ -319,19 +305,19 @@ defmodule LiveStyle do
 
   ## Definition (2 args)
 
-      css_position_try :bottom_fallback,
+      position_try :bottom_fallback,
         top: "anchor(bottom)",
         left: "anchor(left)"
 
   ## Local reference (1 arg atom)
 
-      css_position_try(:bottom_fallback)
+      position_try(:bottom_fallback)
 
   ## Cross-module reference (1 arg tuple)
 
-      css_position_try({MyApp.Tokens, :bottom_fallback})
+      position_try({MyApp.Tokens, :bottom_fallback})
   """
-  defmacro css_position_try(name, declarations) when is_atom(name) do
+  defmacro position_try(name, declarations) when is_atom(name) do
     # Evaluate declarations at compile time for content-based hashing (StyleX behavior)
     {evaluated, _} = Code.eval_quoted(declarations, [], __CALLER__)
     normalized = LiveStyle.Utils.normalize_to_map(evaluated)
@@ -343,31 +329,31 @@ defmodule LiveStyle do
       |> Map.new()
 
     # Generate CSS string for hashing (StyleX format: sorted keys, "key:value;" no spaces)
-    css_name = LiveStyle.PositionTry.generate_css_name(normalized_values)
+    ident = LiveStyle.PositionTry.generate_ident(normalized_values)
 
     quote do
       LiveStyle.PositionTry.define(
         __MODULE__,
         unquote(name),
         unquote(Macro.escape(normalized_values)),
-        unquote(css_name)
+        unquote(ident)
       )
     end
   end
 
-  defmacro css_position_try(ref) when is_atom(ref) do
+  defmacro position_try(ref) when is_atom(ref) do
     module = __CALLER__.module
-    LiveStyle.PositionTry.lookup!(module, ref)
+    LiveStyle.PositionTry.ref({module, ref})
   end
 
-  defmacro css_position_try({module_ast, name}) when is_atom(name) do
+  defmacro position_try({module_ast, name}) when is_atom(name) do
     {module, _} = Code.eval_quoted(module_ast, [], __CALLER__)
-    LiveStyle.PositionTry.lookup!(module, name)
+    LiveStyle.PositionTry.ref({module, name})
   end
 
-  # Inline anonymous position-try: css_position_try(top: "0", left: "0")
+  # Inline anonymous position-try: position_try(top: "0", left: "0")
   # Returns a content-hashed dashed-ident name (like StyleX positionTry)
-  defmacro css_position_try(declarations) when is_list(declarations) do
+  defmacro position_try(declarations) when is_list(declarations) do
     module = __CALLER__.module
     {evaluated, _} = Code.eval_quoted(declarations, [], __CALLER__)
     normalized = LiveStyle.Utils.normalize_to_map(evaluated)
@@ -375,15 +361,15 @@ defmodule LiveStyle do
     # Validate and normalize declarations
     case LiveStyle.PositionTry.validate_declarations(normalized) do
       {:ok, normalized_values} ->
-        css_name = LiveStyle.PositionTry.generate_css_name(normalized_values)
-        LiveStyle.PositionTry.define_anonymous(module, normalized_values, css_name)
-        css_name
+        ident = LiveStyle.PositionTry.generate_ident(normalized_values)
+        LiveStyle.PositionTry.define_anonymous(module, normalized_values, ident)
+        ident
 
       {:error, invalid_props} ->
         allowed = LiveStyle.PositionTry.allowed_properties()
 
         raise ArgumentError, """
-        Invalid properties in css_position_try: #{inspect(invalid_props)}
+        Invalid properties in position_try: #{inspect(invalid_props)}
 
         Only these properties are allowed in @position-try rules:
         #{Enum.join(allowed, ", ")}
@@ -396,11 +382,11 @@ defmodule LiveStyle do
 
   ## Examples
 
-      css_view_transition :card_transition,
-        old: [animation_name: css_keyframes(:fade_out), animation_duration: "250ms"],
-        new: [animation_name: css_keyframes(:fade_in), animation_duration: "250ms"]
+      view_transition_class :card_transition,
+        old: [animation_name: keyframes(:fade_out), animation_duration: "250ms"],
+        new: [animation_name: keyframes(:fade_in), animation_duration: "250ms"]
   """
-  defmacro css_view_transition(name, styles) when is_atom(name) do
+  defmacro view_transition_class(name, styles) when is_atom(name) do
     # Evaluate styles at compile time to resolve keyframes references
     {evaluated_styles, _} = Code.eval_quoted(styles, [], __CALLER__)
 
@@ -419,14 +405,14 @@ defmodule LiveStyle do
     end
 
     # Generate CSS content string for content-based hashing (StyleX-compatible)
-    css_name = LiveStyle.ViewTransition.generate_css_name(evaluated_styles)
+    ident = LiveStyle.ViewTransition.generate_ident(evaluated_styles)
 
     quote do
       LiveStyle.ViewTransition.define(
         __MODULE__,
         unquote(name),
         unquote(Macro.escape(evaluated_styles)),
-        unquote(css_name)
+        unquote(ident)
       )
     end
   end
@@ -439,34 +425,34 @@ defmodule LiveStyle do
 
   ## Local reference
 
-      css_view_transition(:card)
+      view_transition_class(:card)
       # => "x9fx6z8"
 
   ## Cross-module reference
 
-      css_view_transition({Tokens, :card})
+      view_transition_class({Tokens, :card})
       # => "x9fx6z8"
 
   ## Usage in templates
 
   Use with inline styles to control view transitions:
 
-      <div style={"view-transition-class: \#{css_view_transition(:card)}; view-transition-name: card-\#{@id}"}>
+      <div style={"view-transition-class: \#{view_transition_class(:card)}; view-transition-name: card-\#{@id}"}>
 
   Or use `css/2` with the `style` option for merging with other styles:
 
-      <div {css([:card_styles], style: [view_transition_class: css_view_transition(:card), view_transition_name: "card-\#{@id}"])}>
+      <div {css([:card_styles], style: [view_transition_class: view_transition_class(:card), view_transition_name: "card-\#{@id}"])}>
   """
-  # Local reference: css_view_transition(:name)
-  defmacro css_view_transition(ref) when is_atom(ref) do
+  # Local reference: view_transition_class(:name)
+  defmacro view_transition_class(ref) when is_atom(ref) do
     module = __CALLER__.module
-    LiveStyle.ViewTransition.lookup!(module, ref)
+    LiveStyle.ViewTransition.ref({module, ref})
   end
 
-  # Cross-module reference: css_view_transition({Module, :name})
-  defmacro css_view_transition({module_ast, name}) when is_atom(name) do
+  # Cross-module reference: view_transition_class({Module, :name})
+  defmacro view_transition_class({module_ast, name}) when is_atom(name) do
     {module, _} = Code.eval_quoted(module_ast, [], __CALLER__)
-    LiveStyle.ViewTransition.lookup!(module, name)
+    LiveStyle.ViewTransition.ref({module, name})
   end
 
   @doc """
@@ -474,18 +460,18 @@ defmodule LiveStyle do
 
   ## Static classes
 
-      css_class :button,
+      class :button,
         display: "flex",
         padding: "8px 16px"
 
   ## With variable references
 
-      css_class :themed,
-        color: css_var({MyApp.Tokens, :color, :white})
+      class :themed,
+        color: var({MyApp.Tokens, :white})
 
   ## Conditional styles (pseudo-classes, media queries)
 
-      css_class :interactive,
+      class :interactive,
         color: %{
           :default => "blue",
           ":hover" => "darkblue",
@@ -497,7 +483,7 @@ defmodule LiveStyle do
   LiveStyle follows modern StyleX conditional syntax: conditions live inside each
   property's value map (or keyword list), rather than using top-level at-rule keys.
 
-      css_class :responsive_card,
+      class :responsive_card,
         padding: %{
           :default => "1rem",
           "@container (min-width: 400px)" => "2rem",
@@ -511,27 +497,28 @@ defmodule LiveStyle do
   the CSS variable values are set via inline style.
 
       # Single parameter
-      css_class :dynamic_opacity, fn opacity -> [opacity: opacity] end
-      
-      # Multiple parameters  
-      css_class :dynamic_size, fn width, height -> [width: width, height: height] end
+      class :dynamic_opacity, fn opacity -> [opacity: opacity] end
+
+      # Multiple parameters
+      class :dynamic_size, fn width, height -> [width: width, height: height] end
 
   Usage:
       <div {css([:base, {:dynamic_opacity, "0.5"}])}>
       <div {css([:base, {:dynamic_size, ["100px", "200px"]}])}>
   """
-  defmacro css_class(name, declarations) when is_atom(name) and is_list(declarations) do
+  defmacro class(name, declarations) when is_atom(name) and is_list(declarations) do
     # Static class - keyword list of declarations
     # Defer evaluation to runtime within the module to access module attributes
     module = __CALLER__.module
     file = __CALLER__.file
     line = __CALLER__.line
+    class_module = LiveStyle.Compiler.Class
 
     quote do
       declarations_evaluated = unquote(declarations)
       normalized = LiveStyle.Utils.normalize_to_map(declarations_evaluated)
 
-      LiveStyle.Class.define(
+      unquote(class_module).define(
         unquote(module),
         unquote(name),
         normalized,
@@ -543,17 +530,18 @@ defmodule LiveStyle do
     end
   end
 
-  # Static class with map syntax - css_class(:name, %{...})
-  defmacro css_class(name, {:%{}, _, _} = declarations) when is_atom(name) do
+  # Static class with map syntax - class(:name, %{...})
+  defmacro class(name, {:%{}, _, _} = declarations) when is_atom(name) do
     module = __CALLER__.module
     file = __CALLER__.file
     line = __CALLER__.line
+    class_module = LiveStyle.Compiler.Class
 
     quote do
       declarations_evaluated = unquote(declarations)
       normalized = LiveStyle.Utils.normalize_to_map(declarations_evaluated)
 
-      LiveStyle.Class.define(
+      unquote(class_module).define(
         unquote(module),
         unquote(name),
         normalized,
@@ -566,9 +554,10 @@ defmodule LiveStyle do
   end
 
   # Dynamic class - function that returns declarations
-  # css_class :dynamic_opacity, fn opacity -> [opacity: opacity] end
-  defmacro css_class(name, {:fn, _, [{:->, _, [params, body]}]} = func) when is_atom(name) do
+  # class :dynamic_opacity, fn opacity -> [opacity: opacity] end
+  defmacro class(name, {:fn, _, [{:->, _, [params, body]}]} = func) when is_atom(name) do
     module = __CALLER__.module
+    class_module = LiveStyle.Compiler.Class
 
     # Extract parameter names from the function
     param_names = extract_param_names(params)
@@ -592,7 +581,7 @@ defmodule LiveStyle do
     compute_fn_name = :"__compute_#{name}__"
 
     quote do
-      LiveStyle.Class.define_dynamic(
+      unquote(class_module).define_dynamic(
         unquote(module),
         unquote(name),
         unquote(Macro.escape(all_props)),
@@ -653,60 +642,11 @@ defmodule LiveStyle do
   end
 
   @doc """
-  References a style class, returning the class string.
-
-  ## Local reference
-
-      css_class(:button)
-
-  ## Cross-module reference
-
-      css_class({MyApp.Button, :button})
-  """
-  # Cross-module reference: css_class({OtherModule, :name})
-  defmacro css_class({module, name}) do
-    key = Manifest.simple_key(module, name)
-
-    quote do
-      manifest = LiveStyle.Storage.read()
-
-      case LiveStyle.Manifest.get_class(manifest, unquote(key)) do
-        nil ->
-          raise ArgumentError, "Unknown class: #{unquote(key)}"
-
-        %{class_string: cs} ->
-          cs
-      end
-    end
-  end
-
-  # Single atom reference: css_class(:button)
-  # Returns the class string for the given name
-  defmacro css_class(name) when is_atom(name) do
-    quote do
-      Map.get(__MODULE__.__live_style__(:class_strings), unquote(name), "")
-    end
-  end
-
-  # List of refs: css_class([:base, :primary, @active && :active])
-  # Resolves and merges multiple refs at runtime
-  defmacro css_class(refs) do
-    quote do
-      LiveStyle.resolve_class_string(
-        __MODULE__,
-        unquote(refs),
-        __MODULE__.__live_style__(:class_strings),
-        __MODULE__.__live_style__(:dynamic_names)
-      )
-    end
-  end
-
-  @doc """
   Returns CSS attributes for spreading in HEEx templates.
 
-  Similar to `css_class/1` but returns `%LiveStyle.Attrs{}` for use with
-  the spread syntax `{css(...)}` in templates. This is needed for dynamic
-  styles that set CSS variables via inline style.
+  Returns `%LiveStyle.Attrs{}` for use with the spread syntax `{css(...)}`
+  in templates. This handles both static and dynamic styles that set CSS
+  variables via inline style.
 
   ## Examples
 
@@ -725,7 +665,7 @@ defmodule LiveStyle do
 
       # With view transitions
       <div {css([:card], style: [
-        view_transition_class: css_view_transition(:card),
+        view_transition_class: view_transition_class(:card),
         view_transition_name: "card-\#{@id}"
       ])}>
   """
@@ -744,13 +684,7 @@ defmodule LiveStyle do
   # Resolves and merges multiple refs at runtime, returns Attrs struct
   defmacro css(refs) when is_list(refs) do
     quote do
-      LiveStyle.resolve_attrs(
-        __MODULE__,
-        unquote(refs),
-        __MODULE__.__live_style__(:class_strings),
-        __MODULE__.__live_style__(:dynamic_names),
-        nil
-      )
+      LiveStyle.resolve_attrs(__MODULE__, unquote(refs), nil)
     end
   end
 
@@ -769,7 +703,7 @@ defmodule LiveStyle do
 
       # With view transition styles
       <div {css([:card], style: [
-        view_transition_class: css_view_transition(:card),
+        view_transition_class: view_transition_class(:card),
         view_transition_name: "card-\#{@id}"
       ])}>
 
@@ -781,71 +715,37 @@ defmodule LiveStyle do
   """
   defmacro css(refs, opts) when is_list(opts) do
     quote do
-      LiveStyle.resolve_attrs(
-        __MODULE__,
-        unquote(refs),
-        __MODULE__.__live_style__(:class_strings),
-        __MODULE__.__live_style__(:dynamic_names),
-        unquote(opts)
-      )
+      LiveStyle.resolve_attrs(__MODULE__, unquote(refs), unquote(opts))
     end
   end
 
   @doc """
-  Defines a theme (variable overrides) for a specific var group.
+  Defines a theme (variable overrides).
 
-  Similar to StyleX's `createTheme`, this creates overrides scoped to a 
-  specific var group defined with `css_vars`.
+  Similar to StyleX's `createTheme`, this creates a class that overrides
+  CSS variables defined with `vars`.
 
   ## Examples
 
       # First define your variables
-      css_vars :color,
-        white: "#ffffff",
-        primary: "#3b82f6"
+      vars white: "#ffffff",
+           primary: "#3b82f6"
 
       # Then create a theme that overrides those variables
-      css_theme :color, :dark,
+      theme :dark,
         white: "#000000",
         primary: "#8ab4f8"
-
-      # Cross-module theme (override vars from another module)
-      css_theme {OtherModule, :color}, :dark,
-        white: "#000000"
   """
-  defmacro css_theme(var_group_ref, theme_name, overrides)
-           when is_atom(var_group_ref) and is_atom(theme_name) do
-    # Local var group reference
+  defmacro theme(name, overrides) when is_atom(name) do
     module = __CALLER__.module
-    namespace = var_group_ref
-    css_name = LiveStyle.Theme.generate_css_name(module, namespace, theme_name)
+    ident = LiveStyle.Theme.generate_ident(module, name)
 
     quote do
       LiveStyle.Theme.define(
         unquote(module),
-        unquote(namespace),
-        unquote(theme_name),
+        unquote(name),
         unquote(overrides),
-        unquote(css_name)
-      )
-    end
-  end
-
-  defmacro css_theme({var_group_module_ast, var_group_namespace}, theme_name, overrides)
-           when is_atom(theme_name) do
-    # Cross-module var group reference: {Module, :namespace}
-    {var_group_module, _} = Code.eval_quoted(var_group_module_ast, [], __CALLER__)
-    theme_module = __CALLER__.module
-    css_name = LiveStyle.Theme.generate_css_name(theme_module, var_group_namespace, theme_name)
-
-    quote do
-      LiveStyle.Theme.define(
-        unquote(var_group_module),
-        unquote(var_group_namespace),
-        unquote(theme_name),
-        unquote(overrides),
-        unquote(css_name),
-        unquote(theme_module)
+        unquote(ident)
       )
     end
   end
@@ -855,24 +755,22 @@ defmodule LiveStyle do
 
   ## Local reference
 
-      css_theme({:color, :dark})
+      theme(:dark)
 
   ## Cross-module reference
 
-      css_theme({MyApp.Tokens, :color, :dark})
+      theme({MyApp.Tokens, :dark})
   """
-  defmacro css_theme(ref) do
-    case ref do
-      {:{}, _, [module_ast, namespace, theme_name]} ->
-        # Cross-module: {Module, :namespace, :theme_name}
-        {module, _} = Code.eval_quoted(module_ast, [], __CALLER__)
-        LiveStyle.Theme.generate_css_name(module, namespace, theme_name)
+  defmacro theme(ref) when is_atom(ref) do
+    # Local reference: :name
+    module = __CALLER__.module
+    LiveStyle.Theme.ref({module, ref})
+  end
 
-      {namespace, theme_name} when is_atom(namespace) and is_atom(theme_name) ->
-        # Local reference: {:namespace, :theme_name}
-        module = __CALLER__.module
-        LiveStyle.Theme.generate_css_name(module, namespace, theme_name)
-    end
+  defmacro theme({module_ast, name}) when is_atom(name) do
+    # Cross-module: {Module, :name}
+    {module, _} = Code.eval_quoted(module_ast, [], __CALLER__)
+    LiveStyle.Theme.ref({module, name})
   end
 
   @doc """
@@ -883,16 +781,16 @@ defmodule LiveStyle do
   1. **Regular fallbacks** - Multiple declarations for browser compatibility:
 
       ```elixir
-      css_class :sticky,
-        position: first_that_works(["sticky", "fixed"])
+      class :sticky,
+        position: fallback(["sticky", "fixed"])
       # Generates: .class{position:fixed;position:sticky}
       ```
 
   2. **CSS variable fallbacks** - Nested var() with fallback values:
 
       ```elixir
-      css_class :themed,
-        background_color: first_that_works(["var(--bg-color)", "#808080"])
+      class :themed,
+        background_color: fallback(["var(--bg-color)", "#808080"])
       # Generates: .class{background-color:var(--bg-color, #808080)}
       ```
 
@@ -902,29 +800,64 @@ defmodule LiveStyle do
   ## Examples
 
       # Browser fallbacks (position: sticky not supported everywhere)
-      css_class :sticky,
-        position: first_that_works(["sticky", "fixed"])
+      class :sticky,
+        position: fallback(["sticky", "fixed"])
 
       # CSS variable with fallback
-      css_class :themed,
-        color: first_that_works(["var(--theme-color)", "blue"])
+      class :themed,
+        color: fallback(["var(--theme-color)", "blue"])
 
       # Multiple CSS variables with final fallback
-      css_class :multi_theme,
-        color: first_that_works(["var(--primary)", "var(--fallback)", "black"])
+      class :multi_theme,
+        color: fallback(["var(--primary)", "var(--fallback)", "black"])
   """
-  @spec first_that_works(list()) :: map()
-  def first_that_works(values) when is_list(values) do
+  @spec fallback(list()) :: map()
+  def fallback(values) when is_list(values) do
     %{__fallback__: true, values: values}
   end
 
+  @doc """
+  Includes styles from another class.
+
+  Used inside `class/2` definitions for style composition. Included styles
+  are merged with the current class using last-wins semantics - properties
+  defined after `include()` override properties from included classes.
+
+  ## Examples
+
+      # Include a local class
+      class :primary, [
+        include(:base),
+        background_color: "blue"
+      ]
+
+      # Include from another module
+      class :themed, [
+        include({OtherModule, :base}),
+        color: "white"
+      ]
+
+      # Multiple includes
+      class :fancy, [
+        include(:base),
+        include(:rounded),
+        include({SharedStyles, :animated}),
+        border_radius: "12px"
+      ]
+  """
+  @spec include(atom() | {module(), atom()}) :: {:__include__, atom() | {module(), atom()}}
+  def include(ref) when is_atom(ref), do: {:__include__, ref}
+
+  def include({module, name}) when is_atom(module) and is_atom(name),
+    do: {:__include__, {module, name}}
+
   # Delegate to Runtime module
   @doc false
-  defdelegate resolve_class_string(module, refs, class_strings, dynamic_names),
+  defdelegate resolve_class_string(module, refs),
     to: LiveStyle.Runtime
 
   @doc false
-  defdelegate resolve_attrs(module, refs, class_strings, dynamic_names, opts),
+  defdelegate resolve_attrs(module, refs, opts),
     to: LiveStyle.Runtime
 
   @doc false
@@ -936,254 +869,38 @@ defmodule LiveStyle do
 
   ## Example
 
-      ~H\"\"\"
-      <div class={LiveStyle.default_marker()}>
-        <div class={style(:card)}>Hover parent to move me</div>
+      <div class={default_marker()}>
+        <div {css(:card)}>Hover parent to move me</div>
       </div>
-      \"\"\"
   """
   defdelegate default_marker(), to: LiveStyle.Marker, as: :default
 
   @doc """
-  Generates a unique marker class name for use with `LiveStyle.When` selectors.
+  Returns a marker class name for use with `LiveStyle.When` selectors.
 
   Custom markers allow you to have multiple independent sets of contextual selectors
   in the same component tree.
 
-  ## Parameters
-
-    * `name` - An atom identifying this marker
-
-  ## Example
-
-      @card_marker LiveStyle.define_marker(:card)
-      @row_marker LiveStyle.define_marker(:row)
-  """
-  defdelegate define_marker(name), to: LiveStyle.Marker, as: :define
-
-  @doc false
-  defdelegate to_css_property(key), to: LiveStyle.Value
-
-  @doc """
-  Gets CSS attrs from a module that uses LiveStyle.
-
-  This is the public API for accessing a module's styles from outside
-  the module, primarily useful for testing.
-
-  ## Example
-
-      defmodule MyComponent do
-        use LiveStyle
-        css_class :button, display: "flex"
-      end
-
-      # In tests:
-      %LiveStyle.Attrs{class: class} = LiveStyle.get_css(MyComponent, [:button])
-  """
-  def get_css(module, refs) when is_atom(module) and is_list(refs) do
-    class_strings = module.__live_style__(:class_strings)
-    dynamic_names = module.__live_style__(:dynamic_names)
-    resolve_attrs(module, refs, class_strings, dynamic_names, nil)
-  end
-
-  def get_css(module, ref) when is_atom(module) and is_atom(ref) do
-    class_strings = module.__live_style__(:class_strings)
-    %LiveStyle.Attrs{class: Map.get(class_strings, ref, ""), style: nil}
-  end
-
-  @doc """
-  Generates CSS from all registered styles.
-
-  This reads the manifest and generates the complete CSS output.
-  Primarily useful for testing and build tooling.
-
-  ## Example
-
-      css = LiveStyle.generate_css()
-      # => "@layer live_style { .x1234{display:flex} ... }"
-  """
-  def generate_css do
-    manifest = LiveStyle.Storage.read()
-    LiveStyle.CSS.generate(manifest)
-  end
-
-  @doc """
-  Gets the class string from a module that uses LiveStyle.
-
-  This is the public API for accessing a module's styles from outside
-  the module, primarily useful for testing.
-
-  ## Example
-
-      defmodule MyComponent do
-        use LiveStyle
-        css_class :button, display: "flex"
-      end
-
-      # In tests:
-      class = LiveStyle.get_css_class(MyComponent, [:button])
-  """
-  def get_css_class(module, refs) when is_atom(module) and is_list(refs) do
-    class_strings = module.__live_style__(:class_strings)
-    dynamic_names = module.__live_style__(:dynamic_names)
-    resolve_class_string(module, refs, class_strings, dynamic_names)
-  end
-
-  def get_css_class(module, ref) when is_atom(module) and is_atom(ref) do
-    class_strings = module.__live_style__(:class_strings)
-    Map.get(class_strings, ref, "")
-  end
-
-  @doc """
-  Gets metadata for a LiveStyle artifact from the manifest.
-
-  This is primarily useful for testing and introspection. It provides access
-  to internal metadata like class names, CSS output, and priority levels.
-
   ## Examples
 
-      # Get metadata for a style rule
-      LiveStyle.get_metadata(MyComponent, :button)
-      # => %{class_string: "x1234 x5678", atomic_classes: %{...}, ...}
+      # Local marker
+      marker(:row)
 
-      # Get metadata for a style class
-      LiveStyle.get_metadata(MyComponent, {:class, :button})
-      # => %{class_string: "x1234 x5678", atomic_classes: %{...}, ...}
+      # Cross-module marker
+      marker({OtherModule, :row})
 
-      # Get metadata for keyframes
-      LiveStyle.get_metadata(MyComponent, {:keyframes, :spin})
-      # => %{css_name: "x1abc", frames: %{...}}
+  ## Usage
 
-      # Get metadata for a CSS variable
-      LiveStyle.get_metadata(MyTokens, {:var, :colors, :primary})
-      # => %{css_name: "--x1234", value: "blue", ...}
-
-      # Get metadata for a theme
-      LiveStyle.get_metadata(MyTokens, {:theme, :dark})
-      # => %{css_name: "x1234", overrides: %{...}}
+      <tr class={marker(:row)}>
+        <td {css(:cell)}>...</td>
+      </tr>
   """
-  def get_metadata(module, {:class, name}) when is_atom(module) and is_atom(name) do
-    key = Manifest.simple_key(module, name)
-    manifest = LiveStyle.Storage.read()
-    Manifest.get_class(manifest, key)
+  def marker(name) when is_atom(name) do
+    LiveStyle.Marker.ref(name)
   end
 
-  def get_metadata(module, {:keyframes, name}) when is_atom(module) and is_atom(name) do
-    key = Manifest.simple_key(module, name)
-    manifest = LiveStyle.Storage.read()
-    Manifest.get_keyframes(manifest, key)
-  end
-
-  def get_metadata(module, {:var, namespace, name})
-      when is_atom(module) and is_atom(namespace) and is_atom(name) do
-    key = Manifest.namespaced_key(module, namespace, name)
-    manifest = LiveStyle.Storage.read()
-    Manifest.get_var(manifest, key)
-  end
-
-  def get_metadata(module, {:const, namespace, name})
-      when is_atom(module) and is_atom(namespace) and is_atom(name) do
-    key = Manifest.namespaced_key(module, namespace, name)
-    manifest = LiveStyle.Storage.read()
-    Manifest.get_const(manifest, key)
-  end
-
-  def get_metadata(module, {:theme, name}) when is_atom(module) and is_atom(name) do
-    key = Manifest.simple_key(module, name)
-    manifest = LiveStyle.Storage.read()
-    Manifest.get_theme(manifest, key)
-  end
-
-  def get_metadata(module, {:theme, namespace, name})
-      when is_atom(module) and is_atom(namespace) and is_atom(name) do
-    key = Manifest.namespaced_key(module, namespace, name)
-    manifest = LiveStyle.Storage.read()
-    Manifest.get_theme(manifest, key)
-  end
-
-  def get_metadata(module, {:position_try, name}) when is_atom(module) and is_atom(name) do
-    key = Manifest.simple_key(module, name)
-    manifest = LiveStyle.Storage.read()
-    Manifest.get_position_try(manifest, key)
-  end
-
-  def get_metadata(module, {:view_transition, name}) when is_atom(module) and is_atom(name) do
-    key = Manifest.simple_key(module, name)
-    manifest = LiveStyle.Storage.read()
-    Manifest.get_view_transition(manifest, key)
-  end
-
-  # Helper functions for __before_compile__
-
-  @doc false
-  def build_static_class_maps(static_classes, module) do
-    Enum.reduce(static_classes, {%{}, %{}}, fn {name, _decl}, {cs_acc, pc_acc} ->
-      build_static_class_map(name, module, cs_acc, pc_acc)
-    end)
-  end
-
-  defp build_static_class_map(name, module, cs_acc, pc_acc) do
-    key = Manifest.simple_key(module, name)
-    manifest = LiveStyle.Storage.read()
-
-    case Manifest.get_class(manifest, key) do
-      %{class_string: cs, atomic_classes: atomic_classes} ->
-        prop_classes = build_prop_classes(atomic_classes)
-        {Map.put(cs_acc, name, cs), Map.put(pc_acc, name, prop_classes)}
-
-      nil ->
-        {Map.put(cs_acc, name, ""), Map.put(pc_acc, name, %{})}
-    end
-  end
-
-  defp build_prop_classes(atomic_classes) do
-    atomic_classes
-    |> Enum.flat_map(&build_prop_class_entry/1)
-    |> Map.new()
-  end
-
-  defp build_prop_class_entry({prop, %{class: nil, unset: true}}) do
-    [{prop, :__unset__}]
-  end
-
-  defp build_prop_class_entry({prop, %{class: class}}) when class != nil do
-    [{prop, class}]
-  end
-
-  defp build_prop_class_entry({prop, %{classes: classes}}) do
-    Enum.flat_map(classes, fn entry -> build_conditional_entry(prop, entry) end)
-  end
-
-  defp build_prop_class_entry(_), do: []
-
-  defp build_conditional_entry(prop, {condition, %{class: nil}}) do
-    [{"#{prop}::#{condition}", :__unset__}]
-  end
-
-  defp build_conditional_entry(prop, {condition, %{class: class}}) when class != nil do
-    [{"#{prop}::#{condition}", class}]
-  end
-
-  defp build_conditional_entry(_prop, _), do: []
-
-  @doc false
-  def build_dynamic_fns(dynamic_rules, module) do
-    Enum.map(dynamic_rules, fn {name, {:__dynamic__, all_props, param_names, has_computed}} ->
-      fn_name = :"__dynamic_#{name}__"
-
-      quote do
-        @doc false
-        def unquote(fn_name)(values) do
-          LiveStyle.process_dynamic_rule(
-            unquote(Macro.escape(all_props)),
-            unquote(param_names),
-            values,
-            unquote(module),
-            unquote(name),
-            unquote(has_computed)
-          )
-        end
-      end
-    end)
+  def marker({_module, name}) when is_atom(name) do
+    # Module is ignored since markers are content-hashed by name only
+    LiveStyle.Marker.ref(name)
   end
 end

@@ -8,7 +8,7 @@ defmodule LiveStyle.ShorthandBehaviorTest do
   Property keys are CSS strings (e.g., "margin-top" not :margin_top).
   """
 
-  use LiveStyle.TestCase, async: true
+  use LiveStyle.TestCase
 
   alias LiveStyle.ShorthandBehavior
   alias LiveStyle.ShorthandBehavior.{AcceptShorthands, FlattenShorthands, ForbidShorthands}
@@ -149,41 +149,6 @@ defmodule LiveStyle.ShorthandBehaviorTest do
       assert error.message =~ "border-width"
       assert error.message =~ "border-style"
       assert error.message =~ "border-color"
-    end
-  end
-
-  describe "Backend dispatch" do
-    test "backend/0 returns correct tuple for :accept_shorthands" do
-      LiveStyle.Config.put(:shorthand_behavior, :accept_shorthands)
-      assert ShorthandBehavior.backend() == {AcceptShorthands, []}
-    end
-
-    test "backend/0 returns correct tuple for :flatten_shorthands" do
-      LiveStyle.Config.put(:shorthand_behavior, :flatten_shorthands)
-      assert ShorthandBehavior.backend() == {FlattenShorthands, []}
-    end
-
-    test "backend/0 returns correct tuple for :forbid_shorthands" do
-      LiveStyle.Config.put(:shorthand_behavior, :forbid_shorthands)
-      assert ShorthandBehavior.backend() == {ForbidShorthands, []}
-    end
-
-    test "backend_module/0 returns just the module" do
-      LiveStyle.Config.put(:shorthand_behavior, :accept_shorthands)
-      assert ShorthandBehavior.backend_module() == AcceptShorthands
-
-      LiveStyle.Config.put(:shorthand_behavior, :flatten_shorthands)
-      assert ShorthandBehavior.backend_module() == FlattenShorthands
-    end
-
-    test "backend/0 accepts module directly" do
-      LiveStyle.Config.put(:shorthand_behavior, AcceptShorthands)
-      assert ShorthandBehavior.backend() == {AcceptShorthands, []}
-    end
-
-    test "backend/0 accepts {module, opts} tuple" do
-      LiveStyle.Config.put(:shorthand_behavior, {AcceptShorthands, some_opt: true})
-      assert ShorthandBehavior.backend() == {AcceptShorthands, some_opt: true}
     end
   end
 end

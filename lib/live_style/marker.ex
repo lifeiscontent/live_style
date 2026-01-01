@@ -7,17 +7,17 @@ defmodule LiveStyle.Marker do
 
   ## Usage
 
-  Use `LiveStyle.default_marker/0` or `LiveStyle.define_marker/1` from the main
-  LiveStyle module, which delegates to this module.
+  Use `LiveStyle.default_marker/0` or `LiveStyle.marker/1` from the main
+  LiveStyle module.
 
   ## Example
 
       defmodule MyComponent do
         use Phoenix.Component
-        use LiveStyle.Sheet
+        use LiveStyle
         alias LiveStyle.When
 
-        css_class :card,
+        class :card,
           transform: %{
             :default => "translateX(0)",
             When.ancestor(":hover") => "translateX(10px)"
@@ -25,8 +25,8 @@ defmodule LiveStyle.Marker do
 
         def render(assigns) do
           ~H\"\"\"
-          <div class={LiveStyle.default_marker()}>
-            <div class={css_class(:card)}>Hover parent to move me</div>
+          <div {css(default_marker())}>
+            <div {css(:card)}>Hover parent to move me</div>
           </div>
           \"\"\"
         end
@@ -36,62 +36,57 @@ defmodule LiveStyle.Marker do
 
   For multiple independent sets of contextual selectors, use custom markers:
 
-      @row_marker LiveStyle.define_marker(:row)
-      @card_marker LiveStyle.define_marker(:card)
-
-      css_class :cell,
+      class :cell,
         background: %{
           :default => "transparent",
-          When.ancestor(":hover", @row_marker) => "#eee"
+          When.ancestor(":hover", marker(:row)) => "#eee"
         }
+
+      # In template:
+      <tr {css(marker(:row))}>
+        <td {css(:cell)}>...</td>
+      </tr>
   """
 
   alias LiveStyle.{Config, Hash}
 
-  @doc """
-  Returns the default marker class name for use with `LiveStyle.When` selectors.
+  @type t :: %__MODULE__{class: String.t()}
+  defstruct [:class]
 
-  The marker name is derived from the configured `class_name_prefix` (default: "x"),
-  producing `"{prefix}-default-marker"`.
+  # Content-based CSS name generation (private)
+  defp ident(name) do
+    Hash.class_prefix() <> Hash.create_hash("marker:#{name}")
+  end
+
+  @doc """
+  Returns the default marker for use with `LiveStyle.When` selectors.
 
   This matches StyleX's `stylex.defaultMarker()` behavior.
 
   ## Example
 
-      ~H\"\"\"
-      <div class={Marker.default()}>
-        <div class={css_class([:card])}>Hover parent to move me</div>
+      <div {css(default_marker())}>
+        <div {css(:card)}>Hover parent to move me</div>
       </div>
-      \"\"\"
   """
-  @spec default() :: String.t()
+  @spec default() :: t()
   def default do
-    "#{Config.class_name_prefix()}-default-marker"
+    %__MODULE__{class: "#{Config.class_name_prefix()}-default-marker"}
+  end
+
+  # Internal: use LiveStyle.marker/1 instead
+  @doc false
+  @spec ref(atom()) :: t()
+  def ref(name) when is_atom(name) do
+    %__MODULE__{class: ident(name)}
   end
 
   @doc """
-  Generates a unique marker class name for use with `LiveStyle.When` selectors.
+  Extracts the class string from a marker (struct or string).
 
-  Custom markers allow you to have multiple independent sets of contextual selectors
-  in the same component tree.
-
-  ## Parameters
-
-    * `name` - An atom identifying this marker
-
-  ## Example
-
-      @card_marker Marker.define(:card)
-      @row_marker Marker.define(:row)
-
-      css_class :heading,
-        transform: %{
-          :default => "translateX(0)",
-          When.ancestor(":hover", @card_marker) => "translateX(10px)"
-        }
+  Used by `LiveStyle.When` to get the class name for CSS selectors.
   """
-  @spec define(atom()) :: String.t()
-  def define(name) when is_atom(name) do
-    Hash.marker_name(name)
-  end
+  @spec to_class(t() | String.t()) :: String.t()
+  def to_class(%__MODULE__{class: class}), do: class
+  def to_class(class) when is_binary(class), do: class
 end

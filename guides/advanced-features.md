@@ -11,10 +11,10 @@ Style elements based on ancestor, descendant, or sibling state - similar to Styl
 ```elixir
 defmodule MyApp.Card do
   use Phoenix.Component
-  use LiveStyle.Sheet
+  use LiveStyle
   alias LiveStyle.When
 
-  css_class :card_content,
+  class :card_content,
     transform: %{
       :default => "translateX(0)",
       When.ancestor(":hover") => "translateX(10px)"
@@ -27,7 +27,7 @@ defmodule MyApp.Card do
   def render(assigns) do
     ~H"""
     <div class={LiveStyle.default_marker()}>
-      <div class={css_class(:card_content)}>
+      <div {css(:card_content)}>
         Hover the parent to move me
       </div>
     </div>
@@ -55,13 +55,13 @@ Use custom markers to create independent sets of contextual selectors:
 ```elixir
 defmodule MyApp.Table do
   use Phoenix.Component
-  use LiveStyle.Sheet
+  use LiveStyle
   alias LiveStyle.When
 
-  @row_marker LiveStyle.define_marker(:row)
+  @row_marker LiveStyle.marker(:row)
   @row_hover When.ancestor(":hover", @row_marker)
 
-  css_class :cell,
+  class :cell,
     opacity: [
       {:default, "1"},
       {When.ancestor(":hover"), "0.3"},  # Dim when container hovered
@@ -78,7 +78,7 @@ defmodule MyApp.Table do
     <div class={LiveStyle.default_marker()}>
       <table>
         <tr :for={row <- @rows} class={@row_marker}>
-          <td :for={cell <- row} class={css_class(:cell)}>
+          <td :for={cell <- row} {css(:cell)}>
             <%= cell %>
           </td>
         </tr>
@@ -94,7 +94,7 @@ end
 Combine pseudo-classes with contextual selectors:
 
 ```elixir
-css_class :cell,
+class :cell,
   background_color: [
     {:default, "transparent"},
     {":nth-child(2)", %{
@@ -111,47 +111,63 @@ LiveStyle provides first-class support for the [View Transitions API](https://de
 ### Defining Transitions
 
 ```elixir
-defmodule MyApp.Tokens do
-  use LiveStyle.Tokens
+defmodule MyApp.Animations do
+  use LiveStyle
 
   # Define keyframes
-  css_keyframes :scale_in,
+  keyframes :scale_in,
     from: [opacity: "0", transform: "scale(0.8)"],
     to: [opacity: "1", transform: "scale(1)"]
 
-  css_keyframes :scale_out,
+  keyframes :scale_out,
     from: [opacity: "1", transform: "scale(1)"],
     to: [opacity: "0", transform: "scale(0.8)"]
 
-  css_keyframes :slide_from_right,
+  keyframes :slide_from_right,
     from: [transform: "translateX(100%)"],
     to: [transform: "translateX(0)"]
 
-  css_keyframes :slide_to_left,
+  keyframes :slide_to_left,
     from: [transform: "translateX(0)"],
     to: [transform: "translateX(-100%)"]
 
   # Define view transitions
-  css_view_transition :card,
+  view_transition_class :card,
     old: [
-      animation_name: css_keyframes(:scale_out),
+      animation_name: keyframes(:scale_out),
       animation_duration: "200ms",
       animation_fill_mode: "both"
     ],
     new: [
-      animation_name: css_keyframes(:scale_in),
+      animation_name: keyframes(:scale_in),
       animation_duration: "200ms",
       animation_fill_mode: "both"
     ]
 
-  css_view_transition :slide,
+  view_transition_class :slide,
     old: [
-      animation_name: css_keyframes(:slide_to_left),
+      animation_name: keyframes(:slide_to_left),
       animation_duration: "300ms"
     ],
     new: [
-      animation_name: css_keyframes(:slide_from_right),
+      animation_name: keyframes(:slide_from_right),
       animation_duration: "300ms"
+    ]
+end
+
+defmodule MyApp.ViewTransitions do
+  use LiveStyle
+
+  view_transition_class :card,
+    old: [
+      animation_name: keyframes({MyApp.Animations, :scale_out}),
+      animation_duration: "200ms",
+      animation_fill_mode: "both"
+    ],
+    new: [
+      animation_name: keyframes({MyApp.Animations, :scale_in}),
+      animation_duration: "200ms",
+      animation_fill_mode: "both"
     ]
 end
 ```
@@ -170,17 +186,17 @@ end
 ### Respecting Reduced Motion
 
 ```elixir
-css_view_transition :card,
+view_transition_class :card,
   old: [
     animation_name: %{
-      :default => css_keyframes(:scale_out),
+      :default => keyframes(:scale_out),
       "@media (prefers-reduced-motion: reduce)" => "none"
     },
     animation_duration: "200ms"
   ],
   new: [
     animation_name: %{
-      :default => css_keyframes(:scale_in),
+      :default => keyframes(:scale_in),
       "@media (prefers-reduced-motion: reduce)" => "none"
     },
     animation_duration: "200ms"
@@ -386,10 +402,16 @@ Then use the component in your LiveViews:
 ```elixir
 defmodule MyAppWeb.TodoLive do
   use MyAppWeb, :live_view
+  use LiveStyle
   import MyAppWeb.ViewTransition
 
+  # Define your item styles
+  class :todo_item,
+    padding: "1rem",
+    border_bottom: "1px solid #eee"
+
   # Define your transition styles
-  css_view_transition :todo_item,
+  view_transition_class :todo_item,
     group: [
       animation_duration: ".3s",
       animation_timing_function: "ease-out"
@@ -401,8 +423,8 @@ defmodule MyAppWeb.TodoLive do
       <.view_transition
         :for={todo <- @todos}
         id={"todo-#{todo.id}"}
-        class={css_class(:todo_item)}
-        view-transition-class={css_view_transition(:todo_item)}
+        {css(:todo_item)}
+        view-transition-class={view_transition_class(:todo_item)}
       >
         <%= todo.text %>
       </.view_transition>
@@ -473,15 +495,15 @@ Animate based on scroll position of the document or a scrollable container:
 
 ```elixir
 defmodule MyApp.ScrollProgress do
-  use LiveStyle.Sheet
+  use LiveStyle
 
   # Keyframes for the progress bar
-  css_keyframes :grow_progress,
+  keyframes :grow_progress,
     from: %{transform: "scaleX(0)"},
     to: %{transform: "scaleX(1)"}
 
   # Reading progress bar at top of page
-  css_class :progress_bar,
+  class :progress_bar,
     position: "fixed",
     top: "0",
     left: "0",
@@ -490,7 +512,7 @@ defmodule MyApp.ScrollProgress do
     background: "linear-gradient(90deg, #4f46e5, #7c3aed)",
     transform_origin: "left",
     # Scroll-driven animation
-    animation_name: css_keyframes(:grow_progress),
+    animation_name: keyframes(:grow_progress),
     animation_timeline: "scroll()",
     animation_timing_function: "linear"
 end
@@ -504,14 +526,14 @@ Animate based on an element's visibility within the viewport:
 
 ```elixir
 defmodule MyApp.RevealOnScroll do
-  use LiveStyle.Sheet
+  use LiveStyle
 
-  css_keyframes :reveal,
+  keyframes :reveal,
     from: %{opacity: "0", transform: "translateY(50px)"},
     to: %{opacity: "1", transform: "translateY(0)"}
 
-  css_class :reveal_card,
-    animation_name: css_keyframes(:reveal),
+  class :reveal_card,
+    animation_name: keyframes(:reveal),
     animation_timeline: "view()",
     animation_range: "entry 0% cover 40%",
     animation_fill_mode: "both"
@@ -526,15 +548,15 @@ For parallax effects where a child animates based on its parent's visibility, us
 
 ```elixir
 defmodule MyApp.Parallax do
-  use LiveStyle.Sheet
+  use LiveStyle
 
   # Parallax animation - shifts background position as container scrolls
-  css_keyframes :parallax_shift,
+  keyframes :parallax_shift,
     from: %{background_position: "center 100%"},
     to: %{background_position: "center 0%"}
 
   # Container defines the named view timeline
-  css_class :parallax_container,
+  class :parallax_container,
     position: "relative",
     height: "400px",
     overflow: "hidden",
@@ -543,13 +565,13 @@ defmodule MyApp.Parallax do
     view_timeline_axis: "block"
 
   # Child references the named timeline
-  css_class :parallax_bg,
+  class :parallax_bg,
     position: "absolute",
     inset: "0",
     # Gradient taller than container for parallax movement
     background: "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #667eea 100%)",
     background_size: "100% 200%",
-    animation_name: css_keyframes(:parallax_shift),
+    animation_name: keyframes(:parallax_shift),
     # Reference the container's timeline (not view())
     animation_timeline: "--parallax-container",
     animation_fill_mode: "both",
@@ -567,25 +589,25 @@ Track horizontal scroll progress with named scroll timelines:
 
 ```elixir
 defmodule MyApp.HorizontalScroll do
-  use LiveStyle.Sheet
+  use LiveStyle
 
-  css_keyframes :grow_progress,
+  keyframes :grow_progress,
     from: %{transform: "scaleX(0)"},
     to: %{transform: "scaleX(1)"}
 
-  css_class :horizontal_scroll_wrapper,
+  class :horizontal_scroll_wrapper,
     overflow_x: "auto",
     # Define a named scroll timeline for horizontal axis
     scroll_timeline_name: "--horizontal-scroll",
     scroll_timeline_axis: "x"
 
-  css_class :horizontal_progress_bar,
+  class :horizontal_progress_bar,
     width: "100%",
     height: "4px",
     background: "linear-gradient(90deg, #10b981, #059669)",
     transform_origin: "left",
     # Reference the named scroll timeline
-    animation_name: css_keyframes(:grow_progress),
+    animation_name: keyframes(:grow_progress),
     animation_timeline: "--horizontal-scroll",
     animation_timing_function: "linear",
     animation_duration: "1ms"
@@ -625,12 +647,12 @@ LiveStyle supports [CSS Anchor Positioning](https://developer.mozilla.org/en-US/
 
 ```elixir
 defmodule MyApp.Tooltip do
-  use LiveStyle.Sheet
+  use LiveStyle
 
-  css_class :trigger,
+  class :trigger,
     anchor_name: "--tooltip-trigger"
 
-  css_class :tooltip,
+  class :tooltip,
     position: "absolute",
     position_anchor: "--tooltip-trigger",
     top: "anchor(bottom)",
@@ -641,30 +663,30 @@ end
 
 ### Position Fallbacks
 
-Use `css_position_try/2` for fallback positions when the preferred position doesn't fit:
+Use `position_try/2` for fallback positions when the preferred position doesn't fit:
 
 ```elixir
 defmodule MyApp.Tokens do
-  use LiveStyle.Tokens
+  use LiveStyle
 
-  css_position_try :flip_to_top,
+  position_try :flip_to_top,
     bottom: "anchor(top)",
     left: "anchor(center)"
 
-  css_position_try :flip_to_left,
+  position_try :flip_to_left,
     right: "anchor(left)",
     top: "anchor(center)"
 end
 
 defmodule MyApp.Tooltip do
-  use LiveStyle.Sheet
+  use LiveStyle
 
-  css_class :tooltip,
+  class :tooltip,
     position: "absolute",
     position_anchor: "--trigger",
     top: "anchor(bottom)",
     left: "anchor(center)",
-    position_try_fallbacks: "#{css_position_try({MyApp.Tokens, :flip_to_top})}, #{css_position_try({MyApp.Tokens, :flip_to_left})}"
+    position_try_fallbacks: "#{position_try({MyApp.Tokens, :flip_to_top})}, #{position_try({MyApp.Tokens, :flip_to_left})}"
 end
 ```
 
@@ -673,11 +695,11 @@ end
 For simple cases, use inline position try:
 
 ```elixir
-css_class :tooltip,
+class :tooltip,
   position: "absolute",
   position_anchor: "--trigger",
   top: "anchor(bottom)",
-  position_try_fallbacks: css_position_try(
+  position_try_fallbacks: position_try(
     bottom: "anchor(top)",
     left: "anchor(center)"
   )
@@ -685,7 +707,7 @@ css_class :tooltip,
 
 ### Allowed Properties
 
-Only positioning-related properties are allowed in `css_position_try`:
+Only positioning-related properties are allowed in `position_try`:
 
 - **Anchor**: `position_anchor`, `position_area`
 - **Inset**: `top`, `right`, `bottom`, `left`, `inset`, `inset_block`, `inset_inline`
@@ -704,12 +726,12 @@ These features can be combined for powerful effects:
 ```elixir
 defmodule MyApp.Dropdown do
   use Phoenix.Component
-  use LiveStyle.Sheet
+  use LiveStyle
   alias LiveStyle.When
 
-  @trigger_marker LiveStyle.define_marker(:trigger)
+  @trigger_marker LiveStyle.marker(:trigger)
 
-  css_class :menu,
+  class :menu,
     position: "absolute",
     position_anchor: "--dropdown-trigger",
     top: "anchor(bottom)",
@@ -729,7 +751,7 @@ defmodule MyApp.Dropdown do
       <button class={[@trigger_marker]} style="anchor-name: --dropdown-trigger">
         Menu
       </button>
-      <div class={css_class(:menu)}>
+      <div {css(:menu)}>
         <%= render_slot(@inner_block) %>
       </div>
     </div>

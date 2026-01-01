@@ -1,17 +1,17 @@
 # Styling Components
 
-This guide covers how to define and compose styles for your Phoenix components using `LiveStyle.Sheet`.
+This guide covers how to define and compose styles for your Phoenix components.
 
 ## Basic Usage
 
-Use `css_class/2` to define named styles:
+Use `class/2` to define named styles:
 
 ```elixir
 defmodule MyApp.Button do
   use Phoenix.Component
-  use LiveStyle.Sheet
+  use LiveStyle
 
-  css_class :base,
+  class :base,
     display: "inline-flex",
     align_items: "center",
     justify_content: "center",
@@ -20,13 +20,13 @@ defmodule MyApp.Button do
     font_weight: "500",
     cursor: "pointer"
 
-  css_class :primary,
+  class :primary,
     background_color: "#4f46e5",
     color: "white"
 
   def button(assigns) do
     ~H"""
-    <button class={css_class([:base, :primary])}>
+    <button {css([:base, :primary])}>
       <%= render_slot(@inner_block) %>
     </button>
     """
@@ -36,21 +36,21 @@ end
 
 ## Using Tokens
 
-Reference tokens using `css_var` for colors/themed values and `css_const` for static values:
+Reference tokens using `var` for colors/themed values and `const` for static values:
 
 ```elixir
 defmodule MyApp.Card do
-  use LiveStyle.Sheet
+  use LiveStyle
 
-  css_class :card,
-    # Static values use css_const
-    padding: css_const({MyApp.Tokens, :space, :md}),
-    border_radius: css_const({MyApp.Tokens, :radius, :lg}),
-    font_size: css_const({MyApp.Tokens, :font_size, :base}),
-    box_shadow: css_const({MyApp.Tokens, :shadow, :md}),
-    # Colors use css_var (for theming)
-    background_color: css_var({MyApp.Tokens, :semantic, :fill_surface}),
-    color: css_var({MyApp.Tokens, :semantic, :text_primary})
+  class :card,
+    # Static values use const
+    padding: const({MyApp.Spacing, :md}),
+    border_radius: const({MyApp.Radius, :lg}),
+    font_size: const({MyApp.FontSize, :base}),
+    box_shadow: const({MyApp.Shadow, :md}),
+    # Colors use var (for theming)
+    background_color: var({MyApp.Semantic, :fill_surface}),
+    color: var({MyApp.Semantic, :text_primary})
 end
 ```
 
@@ -60,12 +60,12 @@ LiveStyle supports both keyword list and map syntax:
 
 ```elixir
 # Keyword list syntax (recommended)
-css_class :button,
+class :button,
   display: "flex",
   padding: "8px"
 
 # Map syntax
-css_class :button, %{
+class :button, %{
   display: "flex",
   padding: "8px"
 }
@@ -73,21 +73,21 @@ css_class :button, %{
 
 ### Computed Keys
 
-When using `css_const` or module attributes as keys, use map syntax with `=>` or tuple lists:
+When using `const` or module attributes as keys, use map syntax with `=>` or tuple lists:
 
 ```elixir
 # Map syntax with =>
-css_class :responsive,
+class :responsive,
   font_size: %{
-    :default => css_const({MyApp.Tokens, :font_size, :base}),
-    css_const({MyApp.Tokens, :breakpoint, :lg}) => css_const({MyApp.Tokens, :font_size, :lg})
+    :default => const({MyApp.FontSize, :base}),
+    const({MyApp.Breakpoints, :lg}) => const({MyApp.FontSize, :lg})
   }
 
 # Tuple list syntax
-css_class :responsive,
+class :responsive,
   font_size: [
-    {:default, css_const({MyApp.Tokens, :font_size, :base})},
-    {css_const({MyApp.Tokens, :breakpoint, :lg}), css_const({MyApp.Tokens, :font_size, :lg})}
+    {:default, const({MyApp.FontSize, :base})},
+    {const({MyApp.Breakpoints, :lg}), const({MyApp.FontSize, :lg})}
   ]
 ```
 
@@ -96,22 +96,22 @@ css_class :responsive,
 Use the StyleX pattern of condition-in-value:
 
 ```elixir
-css_class :link,
+class :link,
   color: %{
-    :default => css_var({MyApp.Tokens, :semantic, :text_link}),
-    ":hover" => css_var({MyApp.Tokens, :colors, :indigo_700}),
-    ":focus" => css_var({MyApp.Tokens, :colors, :indigo_800})
+    :default => var({MyApp.Semantic, :text_link}),
+    ":hover" => var({MyApp.Colors, :indigo_700}),
+    ":focus" => var({MyApp.Colors, :indigo_800})
   },
   text_decoration: %{
     :default => "none",
     ":hover" => "underline"
   }
 
-css_class :input,
+class :input,
   border_color: %{
-    :default => css_var({MyApp.Tokens, :semantic, :border_default}),
-    ":focus" => css_var({MyApp.Tokens, :semantic, :border_focus}),
-    ":disabled" => css_var({MyApp.Tokens, :colors, :gray_200})
+    :default => var({MyApp.Semantic, :border_default}),
+    ":focus" => var({MyApp.Semantic, :border_focus}),
+    ":disabled" => var({MyApp.Colors, :gray_200})
   }
 ```
 
@@ -120,11 +120,11 @@ css_class :input,
 Responsive styles follow the same pattern:
 
 ```elixir
-css_class :container,
+class :container,
   padding: %{
-    :default => css_const({MyApp.Tokens, :space, :md}),
-    "@media (min-width: 768px)" => css_const({MyApp.Tokens, :space, :lg}),
-    "@media (min-width: 1024px)" => css_const({MyApp.Tokens, :space, :xl})
+    :default => const({MyApp.Spacing, :md}),
+    "@media (min-width: 768px)" => const({MyApp.Spacing, :lg}),
+    "@media (min-width: 1024px)" => const({MyApp.Spacing, :xl})
   },
   max_width: %{
     :default => "100%",
@@ -135,28 +135,28 @@ css_class :container,
 Using constants for breakpoints:
 
 ```elixir
-css_class :grid,
+class :grid,
   display: "grid",
   grid_template_columns: %{
     :default => "1fr",
-    "@media #{css_const({MyApp.Tokens, :breakpoint, :md})}" => "repeat(2, 1fr)",
-    "@media #{css_const({MyApp.Tokens, :breakpoint, :lg})}" => "repeat(3, 1fr)"
+    "@media #{const({MyApp.Breakpoints, :md})}" => "repeat(2, 1fr)",
+    "@media #{const({MyApp.Breakpoints, :lg})}" => "repeat(3, 1fr)"
   }
 ```
 
 ## Pseudo-elements
 
 ```elixir
-css_class :required_field,
+class :required_field,
   position: "relative",
   "::before": [
     content: "'*'",
-    color: css_var({MyApp.Tokens, :colors, :red_500}),
+    color: var({MyApp.Colors, :red_500}),
     position: "absolute",
     left: "-1em"
   ]
 
-css_class :custom_checkbox,
+class :custom_checkbox,
   "::after": [
     content: "''",
     display: "block",
@@ -164,7 +164,7 @@ css_class :custom_checkbox,
     height: "16px",
     background_color: %{
       :default => "transparent",
-      ":checked" => css_var({MyApp.Tokens, :semantic, :fill_primary})
+      ":checked" => var({MyApp.Semantic, :fill_primary})
     }
   ]
 ```
@@ -175,27 +175,29 @@ css_class :custom_checkbox,
 
 ```elixir
 defmodule MyApp.BaseStyles do
-  use LiveStyle.Sheet
+  use LiveStyle
 
-  css_class :button_base,
+  class :button_base,
     display: "inline-flex",
-    padding: css_const({MyApp.Tokens, :space, :md}),
+    padding: const({MyApp.Spacing, :md}),
     border: "none",
     cursor: "pointer"
 end
 
 defmodule MyApp.Button do
-  use LiveStyle.Sheet
+  use LiveStyle
 
-  css_class :primary,
-    __include__: [{MyApp.BaseStyles, :button_base}],
-    background_color: css_var({MyApp.Tokens, :semantic, :fill_primary}),
-    color: css_var({MyApp.Tokens, :semantic, :text_inverse})
+  class :primary, [
+    include({MyApp.BaseStyles, :button_base}),
+    background_color: var({MyApp.Semantic, :fill_primary}),
+    color: var({MyApp.Semantic, :text_inverse})
+  ]
 
-  css_class :secondary,
-    __include__: [{MyApp.BaseStyles, :button_base}],
-    background_color: css_var({MyApp.Tokens, :semantic, :fill_secondary}),
-    color: css_var({MyApp.Tokens, :semantic, :text_primary})
+  class :secondary, [
+    include({MyApp.BaseStyles, :button_base}),
+    background_color: var({MyApp.Semantic, :fill_secondary}),
+    color: var({MyApp.Semantic, :text_primary})
+  ]
 end
 ```
 
@@ -203,22 +205,24 @@ end
 
 ```elixir
 defmodule MyApp.Card do
-  use LiveStyle.Sheet
+  use LiveStyle
 
-  css_class :base,
-    border_radius: css_const({MyApp.Tokens, :radius, :lg}),
-    padding: css_const({MyApp.Tokens, :space, :md}),
-    background_color: css_var({MyApp.Tokens, :semantic, :fill_card})
+  class :base,
+    border_radius: const({MyApp.Radius, :lg}),
+    padding: const({MyApp.Spacing, :md}),
+    background_color: var({MyApp.Semantic, :fill_card})
 
-  css_class :elevated,
-    __include__: [:base],
-    box_shadow: css_const({MyApp.Tokens, :shadow, :md})
+  class :elevated, [
+    include(:base),
+    box_shadow: const({MyApp.Shadow, :md})
+  ]
 
-  css_class :outlined,
-    __include__: [:base],
+  class :outlined, [
+    include(:base),
     border_width: "1px",
     border_style: "solid",
-    border_color: css_var({MyApp.Tokens, :semantic, :border_default})
+    border_color: var({MyApp.Semantic, :border_default})
+  ]
 end
 ```
 
@@ -229,7 +233,7 @@ Use Elixir's boolean logic for conditional class application:
 ```elixir
 def button(assigns) do
   ~H"""
-  <button class={css_class([
+  <button {css([
     :base,
     @variant == :primary && :primary,
     @variant == :secondary && :secondary,
@@ -248,17 +252,17 @@ For styles that depend on runtime values, use a function:
 
 ```elixir
 defmodule MyApp.Components do
-  use LiveStyle.Sheet
+  use LiveStyle
 
-  css_class :dynamic_opacity, fn opacity ->
+  class :dynamic_opacity, fn opacity ->
     [opacity: opacity]
   end
 
-  css_class :dynamic_color, fn r, g, b ->
+  class :dynamic_color, fn r, g, b ->
     [color: "rgb(#{r}, #{g}, #{b})"]
   end
 
-  css_class :dynamic_size, fn width, height ->
+  class :dynamic_size, fn width, height ->
     [width: "#{width}px", height: "#{height}px"]
   end
 end
@@ -296,14 +300,14 @@ The list can contain:
 
 ## Fallback Values
 
-Use `first_that_works/1` for CSS fallbacks:
+Use `fallback/1` for CSS fallbacks:
 
 ```elixir
-css_class :sticky_header,
-  position: first_that_works(["sticky", "-webkit-sticky", "fixed"])
+class :sticky_header,
+  position: fallback(["sticky", "-webkit-sticky", "fixed"])
 
-css_class :modern_layout,
-  display: first_that_works(["grid", "flex"])
+class :modern_layout,
+  display: fallback(["grid", "flex"])
 ```
 
 This generates:
@@ -318,22 +322,22 @@ This generates:
 
 ## Cross-Module Style Access
 
-Access styles from other modules:
+Access styles from other modules in templates using tuple syntax:
+
+```heex
+<button {css({MyApp.Button, :primary})}>
+  Click me
+</button>
+```
+
+For testing and introspection, use the Compiler module:
 
 ```elixir
 # Get class string
-class = LiveStyle.get_css_class(MyApp.Button, :primary)
+class_string = LiveStyle.Compiler.get_css_class(MyApp.Button, :primary)
 
 # Get LiveStyle.Attrs struct
-attrs = LiveStyle.get_css(MyApp.Button, :primary)
-```
-
-In templates:
-
-```heex
-<button class={LiveStyle.get_css_class(MyApp.Button, :primary)}>
-  Click me
-</button>
+attrs = LiveStyle.Compiler.get_css(MyApp.Button, :primary)
 ```
 
 ## Generated CSS Structure
@@ -355,7 +359,7 @@ LiveStyle generates atomic CSS where each property-value pair becomes a single c
 }
 ```
 
-When you use `css_class([:base, :primary])`, LiveStyle combines the relevant atomic classes into a single class string.
+When you use `css([:base, :primary])`, LiveStyle combines the relevant atomic classes into a single class string.
 
 ## Next Steps
 

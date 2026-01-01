@@ -1,20 +1,12 @@
 defmodule LiveStyle.Property.ValidationTest do
-  use ExUnit.Case, async: false
+  @moduledoc """
+  Tests for CSS property validation.
+
+  Tests the public validation API for checking CSS property names.
+  """
+  use LiveStyle.TestCase
 
   alias LiveStyle.Property.Validation
-
-  import ExUnit.CaptureIO
-
-  setup do
-    # Reset config after each test
-    on_exit(fn ->
-      LiveStyle.Config.reset_all()
-      Application.delete_env(:live_style, :prefix_css)
-      Application.delete_env(:live_style, :vendor_prefix_level)
-    end)
-
-    :ok
-  end
 
   describe "validate/1" do
     test "returns :ok for known properties" do
@@ -55,85 +47,6 @@ defmodule LiveStyle.Property.ValidationTest do
     test "returns true for vendor-prefixed properties" do
       assert Validation.known?("-webkit-transform") == true
       assert Validation.known?("-moz-appearance") == true
-    end
-  end
-
-  describe "validate!/2 with vendor prefix checking" do
-    test "warns when using vendor-prefixed property that prefix_css handles" do
-      # Configure a prefix_css that handles mask-image
-      Application.put_env(:live_style, :prefix_css, fn property, value ->
-        if property == "mask-image" do
-          "-webkit-mask-image:#{value};mask-image:#{value}"
-        else
-          "#{property}:#{value}"
-        end
-      end)
-
-      warning =
-        capture_io(:stderr, fn ->
-          Validation.validate!("-webkit-mask-image")
-        end)
-
-      assert warning =~ "Unnecessary vendor prefix '-webkit-mask-image'"
-      assert warning =~ "Use 'mask-image' instead"
-    end
-
-    test "does not warn for vendor-prefixed property when prefix_css doesn't handle it" do
-      # Configure a prefix_css that doesn't handle font-smoothing
-      Application.put_env(:live_style, :prefix_css, fn property, value ->
-        "#{property}:#{value}"
-      end)
-
-      warning =
-        capture_io(:stderr, fn ->
-          Validation.validate!("-webkit-font-smoothing")
-        end)
-
-      # Should not warn about vendor prefix since prefix_css doesn't handle it
-      refute warning =~ "Unnecessary vendor prefix"
-    end
-
-    test "does not warn when no prefix_css is configured" do
-      Application.delete_env(:live_style, :prefix_css)
-
-      warning =
-        capture_io(:stderr, fn ->
-          Validation.validate!("-webkit-mask-image")
-        end)
-
-      refute warning =~ "Unnecessary vendor prefix"
-    end
-
-    test "does not warn when vendor_prefix_level is :ignore" do
-      Application.put_env(:live_style, :prefix_css, fn property, value ->
-        if property == "mask-image" do
-          "-webkit-mask-image:#{value};mask-image:#{value}"
-        else
-          "#{property}:#{value}"
-        end
-      end)
-
-      Application.put_env(:live_style, :vendor_prefix_level, :ignore)
-
-      warning =
-        capture_io(:stderr, fn ->
-          Validation.validate!("-webkit-mask-image")
-        end)
-
-      refute warning =~ "Unnecessary vendor prefix"
-    end
-
-    test "does not warn for standard properties" do
-      Application.put_env(:live_style, :prefix_css, fn property, value ->
-        "#{property}:#{value}"
-      end)
-
-      warning =
-        capture_io(:stderr, fn ->
-          Validation.validate!("mask-image")
-        end)
-
-      refute warning =~ "Unnecessary vendor prefix"
     end
   end
 

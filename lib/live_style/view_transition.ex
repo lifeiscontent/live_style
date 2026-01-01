@@ -15,24 +15,24 @@ defmodule LiveStyle.ViewTransition do
 
   Define view transitions in a tokens module:
 
-      defmodule MyApp.Tokens do
-        use LiveStyle.Tokens
+      defmodule MyApp.Transitions do
+        use LiveStyle
 
-        css_keyframes :scale_in,
+        keyframes :scale_in,
           from: [opacity: "0", transform: "scale(0.8)"],
           to: [opacity: "1", transform: "scale(1)"]
 
-        css_keyframes :scale_out,
+        keyframes :scale_out,
           from: [opacity: "1", transform: "scale(1)"],
           to: [opacity: "0", transform: "scale(0.8)"]
 
-        css_view_transition :card,
+        view_transition_class :card,
           old: [
-            animation_name: css_keyframes(:scale_out),
+            animation_name: keyframes(:scale_out),
             animation_duration: "200ms"
           ],
           new: [
-            animation_name: css_keyframes(:scale_in),
+            animation_name: keyframes(:scale_in),
             animation_duration: "200ms"
           ]
       end
@@ -40,13 +40,13 @@ defmodule LiveStyle.ViewTransition do
   Apply in templates using `css/2` with the `style` option:
 
       <div {css([:card_styles], style: [
-        view_transition_class: css_view_transition(:card),
+        view_transition_class: view_transition_class(:card),
         view_transition_name: "card-\#{@id}"
       ])}>
 
   Or directly in inline styles:
 
-      <div style={"view-transition-class: \#{css_view_transition(:card)}; view-transition-name: card-\#{@id}"}>
+      <div style={"view-transition-class: \#{view_transition_class(:card)}; view-transition-name: card-\#{@id}"}>
 
   ## Available Pseudo-element Keys
 
@@ -72,10 +72,12 @@ defmodule LiveStyle.ViewTransition do
       })
   """
 
-  alias LiveStyle.Hash
-  alias LiveStyle.Manifest
-  alias LiveStyle.Utils
-  alias LiveStyle.Value
+  alias LiveStyle.{CSSValue, Hash, Manifest, Utils}
+
+  use LiveStyle.Registry,
+    entity_name: "View transition",
+    manifest_type: :view_transition,
+    ref_field: :ident
 
   # Valid view transition keys: snake_case atoms or CSS-format strings
   @valid_atom_keys [:group, :image_pair, :old, :new]
@@ -110,41 +112,29 @@ defmodule LiveStyle.ViewTransition do
   Defines a named view transition and stores it in the manifest.
   """
   @spec define(module(), atom(), map() | keyword(), String.t()) :: :ok
-  def define(module, name, styles, css_name) do
+  def define(module, name, styles, ident) do
     key = Manifest.simple_key(module, name)
     styles = Utils.normalize_to_map(styles)
 
     entry = %{
-      css_name: css_name,
+      ident: ident,
       styles: styles
     }
 
-    # Only update if the entry has changed (or doesn't exist)
-    LiveStyle.Storage.update(fn manifest ->
-      case Manifest.get_view_transition(manifest, key) do
-        ^entry -> manifest
-        _ -> Manifest.put_view_transition(manifest, key, entry)
-      end
-    end)
-
+    store_entry(key, entry)
     :ok
   end
 
-  @doc """
-  Looks up a view transition by module and name.
-  Returns the css_name or raises if not found.
-  """
-  @spec lookup!(module(), atom()) :: String.t()
-  def lookup!(module, name) do
-    %{css_name: css_name} = LiveStyle.Manifest.Access.view_transition!(module, name)
-    css_name
+  @doc false
+  @spec generate_ident(keyword() | map()) :: String.t()
+  def generate_ident(styles) do
+    ident(styles)
   end
 
-  @doc false
-  @spec generate_css_name(keyword() | map()) :: String.t()
-  def generate_css_name(styles) do
+  # Content-based CSS name generation (private)
+  defp ident(styles) do
     css_content = generate_css_string(styles)
-    Hash.view_transition_name(css_content)
+    Hash.class_prefix() <> Hash.create_hash(css_content)
   end
 
   @doc false
@@ -171,9 +161,9 @@ defmodule LiveStyle.ViewTransition do
       # IMPORTANT: Preserve the original property order, do NOT sort
       decl_str =
         Enum.map_join(decl_list, "", fn {prop, value} ->
-          css_prop = Value.to_css_property(prop)
+          css_prop = CSSValue.to_css_property(prop)
           # Apply value normalization (numbers get px, timings normalized, leading zeros removed)
-          css_value = Value.to_css(value, css_prop)
+          css_value = CSSValue.to_css(value, css_prop)
           "#{css_prop}:#{css_value};"
         end)
 

@@ -3,69 +3,98 @@ defmodule LiveStyle.Vars do
   CSS custom properties (variables) support.
 
   This module handles:
-  - CSS custom properties (variables) defined with `css_vars`
+  - CSS custom properties (variables) defined with `vars`
   - Typed variables with `@property` rules for animation support
 
   For compile-time constants, see `LiveStyle.Consts`.
+
+  ## Examples
+
+      defmodule MyApp.Tokens do
+        use LiveStyle
+
+        vars primary: "#3b82f6",
+             secondary: "#8b5cf6",
+             spacing_sm: "8px"
+      end
+
+      # Reference in another module
+      defmodule MyApp.Components do
+        use LiveStyle
+
+        class :button,
+          color: var({MyApp.Tokens, :primary}),
+          padding: var({MyApp.Tokens, :spacing_sm})
+      end
   """
 
   alias LiveStyle.Hash
   alias LiveStyle.Manifest
   alias LiveStyle.Utils
 
+  use LiveStyle.Registry,
+    entity_name: "CSS variable",
+    manifest_type: :var,
+    ref_field: :ident
+
+  # Content-based CSS name generation (private)
+  # Hashes module + name for identity-based naming
+  defp ident(module, name) do
+    input = "var:#{inspect(module)}.#{name}"
+    "--v" <> Hash.create_hash(input)
+  end
+
   @doc """
-  Defines CSS custom properties under a namespace.
+  Defines CSS custom properties.
+
+  Called internally by the `vars` macro.
   """
-  @spec define(module(), atom(), map() | keyword()) :: :ok
-  def define(module, namespace, vars) do
+  @spec define(module(), map() | keyword()) :: :ok
+  def define(module, vars) do
     vars = Utils.normalize_to_map(vars)
 
     Enum.each(vars, fn {name, value} ->
-      key = Manifest.namespaced_key(module, namespace, name)
-      define_var(module, namespace, name, key, value)
+      key = Manifest.simple_key(module, name)
+      define_var(module, name, key, value)
     end)
 
     :ok
   end
 
-  defp define_var(module, namespace, name, key, value) do
-    css_name = Hash.var_name(module, namespace, name)
+  defp define_var(module, name, key, value) do
+    ident = ident(module, name)
     {css_value, type_info} = extract_var_value(value)
 
     entry = %{
-      css_name: css_name,
+      ident: ident,
       value: css_value,
       type: type_info
     }
 
-    # Only update if the entry has changed (or doesn't exist)
-    LiveStyle.Storage.update(fn manifest ->
-      case Manifest.get_var(manifest, key) do
-        ^entry -> manifest
-        _ -> Manifest.put_var(manifest, key, entry)
-      end
-    end)
+    store_entry(key, entry)
   end
 
   @doc """
-  Looks up a CSS variable by module/namespace/name.
+  Gets the CSS variable reference wrapped in `var()` for use in style definitions.
 
-  Returns the raw CSS custom property name (`--...`) or raises if not found.
-
-  This matches the convention across LiveStyle where `lookup!/…` returns the
-  concrete CSS "key" string.
+  This is a convenience function equivalent to `"var(\#{ref(name)})"`.
 
   ## Examples
 
-      name = LiveStyle.Vars.lookup!(MyTokens, :color, :primary)
-      # => "--vabc123"
-      "var(\#{name})"
-      # => "var(--vabc123)"
+      class :themed,
+        color: Vars.var({MyApp.Tokens, :primary})
+        # => "var(--vabc123)"
+
+      # Within the defining module:
+      class :themed,
+        color: Vars.var(:primary)
+        # => "var(--vabc123)"
   """
-  @spec lookup!(module(), atom(), atom()) :: String.t()
-  def lookup!(module, namespace, name) do
-    %{css_name: css_name} = LiveStyle.Manifest.Access.var!(module, namespace, name)
-    css_name
+  @spec var(atom() | {module(), atom()}) :: String.t()
+  def var(name) when is_atom(name), do: var({__MODULE__, name})
+
+  def var({module, name}) do
+    "var(#{ref({module, name})})"
   end
 
   # Extract value and type info from a variable definition
@@ -74,9 +103,15 @@ defmodule LiveStyle.Vars do
     {value, %{syntax: syntax, initial: value}}
   end
 
-  # LiveStyle.Types module format: %{__type__: :typed_var, syntax: "<angle>", value: "0deg"}
+  # LiveStyle.TypedProperty format: %{syntax: "<angle>", initial: "0deg", inherits: true}
+  defp extract_var_value(%{syntax: syntax, initial: initial} = typed)
+       when is_binary(syntax) do
+    inherits = Map.get(typed, :inherits, true)
+    {initial, %{syntax: syntax, initial: initial, inherits: inherits}}
+  end
+
+  # LiveStyle.PropertyType module format: %{__type__: :typed_var, syntax: "<angle>", value: "0deg"}
   defp extract_var_value(%{__type__: :typed_var, syntax: syntax, value: value} = typed) do
-    # Default to inherits: true for CSS custom properties
     inherits = Map.get(typed, :inherits, true)
     {value, %{syntax: syntax, initial: value, inherits: inherits}}
   end
@@ -87,7 +122,7 @@ defmodule LiveStyle.Vars do
 
   defp extract_var_value(value)
        when is_map(value) and not is_map_key(value, :__css_type__) and
-              not is_map_key(value, :__type__) do
+              not is_map_key(value, :__type__) and not is_map_key(value, :syntax) do
     {value, nil}
   end
 

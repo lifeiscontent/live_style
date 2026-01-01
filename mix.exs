@@ -1,7 +1,7 @@
 defmodule LiveStyle.MixProject do
   use Mix.Project
 
-  @version "0.10.0"
+  @version "0.11.0"
   @source_url "https://github.com/lifeiscontent/live_style"
 
   def project do
@@ -55,7 +55,8 @@ defmodule LiveStyle.MixProject do
       {:ex_doc, "~> 0.31", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
-      {:benchee, "~> 1.0", only: :dev, optional: true}
+      {:benchee, "~> 1.0", only: :dev, optional: true},
+      {:snapshy, "~> 0.4", only: :test}
     ]
   end
 

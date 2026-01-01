@@ -12,7 +12,9 @@ defmodule LiveStyle.LogicalPropertiesTest do
   - Converts logical values (float: inline-start → float: left with RTL)
   - Converts block longhands to physical (margin-block-start → margin-top)
   """
-  use LiveStyle.TestCase, async: true
+  use LiveStyle.TestCase
+
+  alias LiveStyle.Compiler.Class
 
   # ============================================================================
   # Logical Values (float, clear, text-align)
@@ -23,18 +25,18 @@ defmodule LiveStyle.LogicalPropertiesTest do
     use LiveStyle
 
     # float: inline-start → float: left (LTR), float: right (RTL)
-    css_class(:float_start, float: "inline-start")
+    class(:float_start, float: "inline-start")
     # float: inline-end → float: right (LTR), float: left (RTL)
-    css_class(:float_end, float: "inline-end")
+    class(:float_end, float: "inline-end")
 
     # clear: inline-start → clear: left (LTR), clear: right (RTL)
-    css_class(:clear_start, clear: "inline-start")
+    class(:clear_start, clear: "inline-start")
     # clear: inline-end → clear: right (LTR), clear: left (RTL)
-    css_class(:clear_end, clear: "inline-end")
+    class(:clear_end, clear: "inline-end")
 
     # text-align: start/end - browser handles these natively, NO transformation
-    css_class(:text_align_start, text_align: "start")
-    css_class(:text_align_end, text_align: "end")
+    class(:text_align_start, text_align: "start")
+    class(:text_align_end, text_align: "end")
   end
 
   # ============================================================================
@@ -48,39 +50,39 @@ defmodule LiveStyle.LogicalPropertiesTest do
     # These should stay as logical properties (NOT converted to physical)
 
     # Border inline (shorthands stay as-is)
-    css_class(:border_inline_color, border_inline_color: "red")
+    class(:border_inline_color, border_inline_color: "red")
 
     # Border inline longhands (stay as logical)
-    css_class(:border_inline_start_color, border_inline_start_color: "red")
-    css_class(:border_inline_end_color, border_inline_end_color: "red")
+    class(:border_inline_start_color, border_inline_start_color: "red")
+    class(:border_inline_end_color, border_inline_end_color: "red")
 
     # Margin inline shorthand (stays as-is)
-    css_class(:margin_inline, margin_inline: "10px")
+    class(:margin_inline, margin_inline: "10px")
 
     # Margin inline longhands (stay as logical)
-    css_class(:margin_inline_start, margin_inline_start: "10px")
-    css_class(:margin_inline_end, margin_inline_end: "10px")
+    class(:margin_inline_start, margin_inline_start: "10px")
+    class(:margin_inline_end, margin_inline_end: "10px")
 
     # Padding inline shorthand
-    css_class(:padding_inline, padding_inline: "10px")
+    class(:padding_inline, padding_inline: "10px")
 
     # Padding inline longhands
-    css_class(:padding_inline_start, padding_inline_start: "10px")
-    css_class(:padding_inline_end, padding_inline_end: "10px")
+    class(:padding_inline_start, padding_inline_start: "10px")
+    class(:padding_inline_end, padding_inline_end: "10px")
 
     # Inset inline shorthand
-    css_class(:inset_inline, inset_inline: "10px")
+    class(:inset_inline, inset_inline: "10px")
 
     # Inset inline longhands
-    css_class(:inset_inline_start, inset_inline_start: "10px")
-    css_class(:inset_inline_end, inset_inline_end: "10px")
+    class(:inset_inline_start, inset_inline_start: "10px")
+    class(:inset_inline_end, inset_inline_end: "10px")
 
     # Block shorthands (stay as-is)
-    css_class(:margin_block, margin_block: "10px")
+    class(:margin_block, margin_block: "10px")
 
     # Block longhands (converted to physical - top/bottom don't flip)
-    css_class(:margin_block_start, margin_block_start: "10px")
-    css_class(:margin_block_end, margin_block_end: "10px")
+    class(:margin_block_start, margin_block_start: "10px")
+    class(:margin_block_end, margin_block_end: "10px")
   end
 
   # ============================================================================
@@ -91,10 +93,7 @@ defmodule LiveStyle.LogicalPropertiesTest do
     test "float: inline-start generates LTR (left) and RTL (right)" do
       # StyleX: ltr: ".x1kmio9f{float:left}", rtl: ".x1kmio9f{float:right}"
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.LogicalPropertiesTest.LogicalValues,
-          {:class, :float_start}
-        )
+        Class.lookup!({LiveStyle.LogicalPropertiesTest.LogicalValues, :float_start})
 
       meta = rule.atomic_classes["float"]
       assert meta.class == "x1kmio9f"
@@ -106,10 +105,7 @@ defmodule LiveStyle.LogicalPropertiesTest do
     test "float: inline-end generates LTR (right) and RTL (left)" do
       # StyleX: ltr: ".x1h0q493{float:right}", rtl: ".x1h0q493{float:left}"
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.LogicalPropertiesTest.LogicalValues,
-          {:class, :float_end}
-        )
+        Class.lookup!({LiveStyle.LogicalPropertiesTest.LogicalValues, :float_end})
 
       meta = rule.atomic_classes["float"]
       assert meta.class == "x1h0q493"
@@ -123,10 +119,7 @@ defmodule LiveStyle.LogicalPropertiesTest do
     test "clear: inline-start generates LTR (left) and RTL (right)" do
       # StyleX: ltr: ".x18lmvvi{clear:left}", rtl: ".x18lmvvi{clear:right}"
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.LogicalPropertiesTest.LogicalValues,
-          {:class, :clear_start}
-        )
+        Class.lookup!({LiveStyle.LogicalPropertiesTest.LogicalValues, :clear_start})
 
       meta = rule.atomic_classes["clear"]
       assert meta.class == "x18lmvvi"
@@ -138,10 +131,7 @@ defmodule LiveStyle.LogicalPropertiesTest do
     test "clear: inline-end generates LTR (right) and RTL (left)" do
       # StyleX: ltr: ".xof8tvn{clear:right}", rtl: ".xof8tvn{clear:left}"
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.LogicalPropertiesTest.LogicalValues,
-          {:class, :clear_end}
-        )
+        Class.lookup!({LiveStyle.LogicalPropertiesTest.LogicalValues, :clear_end})
 
       meta = rule.atomic_classes["clear"]
       assert meta.class == "xof8tvn"
@@ -155,10 +145,7 @@ defmodule LiveStyle.LogicalPropertiesTest do
     test "text-align: start is NOT transformed (browser handles RTL)" do
       # StyleX: ltr: ".x1yc453h{text-align:start}" (NO RTL override)
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.LogicalPropertiesTest.LogicalValues,
-          {:class, :text_align_start}
-        )
+        Class.lookup!({LiveStyle.LogicalPropertiesTest.LogicalValues, :text_align_start})
 
       meta = rule.atomic_classes["text-align"]
       assert meta.class == "x1yc453h"
@@ -170,10 +157,7 @@ defmodule LiveStyle.LogicalPropertiesTest do
     test "text-align: end is NOT transformed (browser handles RTL)" do
       # StyleX: ltr: ".xp4054r{text-align:end}" (NO RTL override)
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.LogicalPropertiesTest.LogicalValues,
-          {:class, :text_align_end}
-        )
+        Class.lookup!({LiveStyle.LogicalPropertiesTest.LogicalValues, :text_align_end})
 
       meta = rule.atomic_classes["text-align"]
       assert meta.class == "xp4054r"
@@ -190,9 +174,8 @@ defmodule LiveStyle.LogicalPropertiesTest do
     test "border-inline-color stays as logical property" do
       # StyleX: ".x1v09clb{border-inline-color:0}" with priority 2000
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
-          {:class, :border_inline_color}
+        Class.lookup!(
+          {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :border_inline_color}
         )
 
       meta = rule.atomic_classes["border-inline-color"]
@@ -203,9 +186,8 @@ defmodule LiveStyle.LogicalPropertiesTest do
     test "border-inline-start-color stays as logical property" do
       # StyleX: ".x1t19a1o{border-inline-start-color:0}" with priority 3000
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
-          {:class, :border_inline_start_color}
+        Class.lookup!(
+          {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :border_inline_start_color}
         )
 
       meta = rule.atomic_classes["border-inline-start-color"]
@@ -217,9 +199,8 @@ defmodule LiveStyle.LogicalPropertiesTest do
     test "border-inline-end-color stays as logical property" do
       # StyleX: ".x14mj1wy{border-inline-end-color:0}" with priority 3000
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
-          {:class, :border_inline_end_color}
+        Class.lookup!(
+          {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :border_inline_end_color}
         )
 
       meta = rule.atomic_classes["border-inline-end-color"]
@@ -231,10 +212,7 @@ defmodule LiveStyle.LogicalPropertiesTest do
     test "margin-inline stays as logical property" do
       # StyleX: ".xrxpjvj{margin-inline:0}" with priority 2000
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
-          {:class, :margin_inline}
-        )
+        Class.lookup!({LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :margin_inline})
 
       meta = rule.atomic_classes["margin-inline"]
       assert meta.ltr =~ "margin-inline:10px"
@@ -244,9 +222,8 @@ defmodule LiveStyle.LogicalPropertiesTest do
     test "margin-inline-start stays as logical property" do
       # StyleX: ".x1lziwak{margin-inline-start:0}" with priority 3000
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
-          {:class, :margin_inline_start}
+        Class.lookup!(
+          {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :margin_inline_start}
         )
 
       meta = rule.atomic_classes["margin-inline-start"]
@@ -258,9 +235,8 @@ defmodule LiveStyle.LogicalPropertiesTest do
     test "margin-inline-end stays as logical property" do
       # StyleX: ".x14z9mp{margin-inline-end:0}" with priority 3000
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
-          {:class, :margin_inline_end}
+        Class.lookup!(
+          {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :margin_inline_end}
         )
 
       meta = rule.atomic_classes["margin-inline-end"]
@@ -271,10 +247,7 @@ defmodule LiveStyle.LogicalPropertiesTest do
 
     test "padding-inline stays as logical property" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
-          {:class, :padding_inline}
-        )
+        Class.lookup!({LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :padding_inline})
 
       meta = rule.atomic_classes["padding-inline"]
       assert meta.ltr =~ "padding-inline:10px"
@@ -283,9 +256,8 @@ defmodule LiveStyle.LogicalPropertiesTest do
 
     test "padding-inline-start stays as logical property" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
-          {:class, :padding_inline_start}
+        Class.lookup!(
+          {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :padding_inline_start}
         )
 
       meta = rule.atomic_classes["padding-inline-start"]
@@ -295,10 +267,7 @@ defmodule LiveStyle.LogicalPropertiesTest do
 
     test "inset-inline stays as logical property" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
-          {:class, :inset_inline}
-        )
+        Class.lookup!({LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :inset_inline})
 
       meta = rule.atomic_classes["inset-inline"]
       assert meta.ltr =~ "inset-inline:10px"
@@ -307,9 +276,8 @@ defmodule LiveStyle.LogicalPropertiesTest do
 
     test "inset-inline-start stays as logical property" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
-          {:class, :inset_inline_start}
+        Class.lookup!(
+          {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :inset_inline_start}
         )
 
       meta = rule.atomic_classes["inset-inline-start"]
@@ -319,9 +287,8 @@ defmodule LiveStyle.LogicalPropertiesTest do
 
     test "inset-inline-end stays as logical property" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
-          {:class, :inset_inline_end}
+        Class.lookup!(
+          {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :inset_inline_end}
         )
 
       meta = rule.atomic_classes["inset-inline-end"]
@@ -334,10 +301,7 @@ defmodule LiveStyle.LogicalPropertiesTest do
     test "margin-block stays as logical shorthand" do
       # StyleX: ".x10im51j{margin-block:0}" with priority 2000
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
-          {:class, :margin_block}
-        )
+        Class.lookup!({LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :margin_block})
 
       meta = rule.atomic_classes["margin-block"]
       assert meta.ltr =~ "margin-block:10px"
@@ -347,9 +311,8 @@ defmodule LiveStyle.LogicalPropertiesTest do
     test "margin-block-start becomes margin-top (physical)" do
       # StyleX: ".xdj266r{margin-top:0}" with priority 4000
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
-          {:class, :margin_block_start}
+        Class.lookup!(
+          {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :margin_block_start}
         )
 
       meta = rule.atomic_classes["margin-top"]
@@ -361,9 +324,8 @@ defmodule LiveStyle.LogicalPropertiesTest do
     test "margin-block-end becomes margin-bottom (physical)" do
       # StyleX: ".xat24cr{margin-bottom:0}" with priority 4000
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
-          {:class, :margin_block_end}
+        Class.lookup!(
+          {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :margin_block_end}
         )
 
       meta = rule.atomic_classes["margin-bottom"]
@@ -382,10 +344,7 @@ defmodule LiveStyle.LogicalPropertiesTest do
 
     test "margin-inline has shorthand priority" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
-          {:class, :margin_inline}
-        )
+        Class.lookup!({LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :margin_inline})
 
       # margin-inline is a shorthand -> priority 1000 or 2000
       assert rule.atomic_classes["margin-inline"].priority in [1000, 2000]
@@ -393,9 +352,8 @@ defmodule LiveStyle.LogicalPropertiesTest do
 
     test "margin-inline-start has logical longhand priority (3000)" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
-          {:class, :margin_inline_start}
+        Class.lookup!(
+          {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :margin_inline_start}
         )
 
       assert rule.atomic_classes["margin-inline-start"].priority == 3000
@@ -403,9 +361,8 @@ defmodule LiveStyle.LogicalPropertiesTest do
 
     test "margin-block-start becomes margin-top with physical priority (4000)" do
       rule =
-        LiveStyle.get_metadata(
-          LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern,
-          {:class, :margin_block_start}
+        Class.lookup!(
+          {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :margin_block_start}
         )
 
       assert rule.atomic_classes["margin-top"].priority == 4000

@@ -7,7 +7,7 @@ defmodule LiveStyle.Dev.Diff do
   def diff(module, refs) when is_atom(module) and is_list(refs) do
     Ensure.ensure_live_style_module!(module)
 
-    merged_class = LiveStyle.get_css_class(module, refs)
+    merged_class = LiveStyle.Compiler.get_css_class(module, refs)
     property_classes = module.__live_style__(:property_classes)
 
     properties =

@@ -78,13 +78,13 @@ defmodule BenchHelper do
       quote do
         defmodule unquote(module_name) do
           use LiveStyle
-          css_class(:bench_style, unquote(Macro.escape(styles)))
+          class(:bench_style, unquote(Macro.escape(styles)))
         end
       end
 
     Code.compile_quoted(quoted)
     manifest = LiveStyle.Storage.read()
-    LiveStyle.CSS.generate(manifest)
+    LiveStyle.CSS.Compiler.compile(manifest)
   end
 end
 

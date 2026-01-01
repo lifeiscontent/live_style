@@ -75,9 +75,10 @@ defmodule LiveStyle.ShorthandBehavior do
   """
   def opts do
     %{
-      shorthand_properties: LiveStyle.Data.shorthand_properties(),
-      disallowed_shorthands: LiveStyle.Data.disallowed_shorthands(),
-      disallowed_shorthands_with_messages: LiveStyle.Data.disallowed_shorthands_with_messages()
+      shorthand_properties: LiveStyle.PropertyMetadata.shorthand_properties(),
+      disallowed_shorthands: LiveStyle.PropertyMetadata.disallowed_shorthands(),
+      disallowed_shorthands_with_messages:
+        LiveStyle.PropertyMetadata.disallowed_shorthands_with_messages()
     }
   end
 
