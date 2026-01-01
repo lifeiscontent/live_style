@@ -114,8 +114,14 @@ defmodule LiveStyle.Compiler.Class do
   # legacy contextual styles and are rejected.
 
   defp process_declarations(declarations, opts) do
+    # Sort conditional values once before processing for deterministic iteration
+    alias LiveStyle.Utils
+
+    sorted_declarations =
+      Enum.map(declarations, fn {k, v} -> {k, Utils.sort_conditional_value(v)} end)
+
     transformed_declarations =
-      declarations
+      sorted_declarations
       |> Enum.to_list()
       |> expand_nested_condition_blocks()
 

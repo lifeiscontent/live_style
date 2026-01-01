@@ -476,16 +476,17 @@ defmodule LiveStyle.PropertyTypeTest do
     test "typed variables with conditionals store both type and values" do
       primary = LiveStyle.Vars.lookup!({TypedVarsWithConditions, :primary_color})
       assert primary.type.syntax == "<color>"
-      assert is_map(primary.value)
-      assert primary.value.default == "red"
-      assert primary.value[:"@media (prefers-color-scheme: dark)"] == "white"
-      assert primary.value[:"@media print"] == "black"
+      # Conditional values are stored as sorted lists for deterministic iteration
+      assert is_list(primary.value)
+      assert Keyword.get(primary.value, :default) == "red"
+      assert Keyword.get(primary.value, :"@media (prefers-color-scheme: dark)") == "white"
+      assert Keyword.get(primary.value, :"@media print") == "black"
 
       spacing = LiveStyle.Vars.lookup!({TypedVarsWithConditions, :spacing})
       assert spacing.type.syntax == "<length>"
-      assert is_map(spacing.value)
-      assert spacing.value.default == "8px"
-      assert spacing.value[:"@media (min-width: 768px)"] == "16px"
+      assert is_list(spacing.value)
+      assert Keyword.get(spacing.value, :default) == "8px"
+      assert Keyword.get(spacing.value, :"@media (min-width: 768px)") == "16px"
     end
   end
 

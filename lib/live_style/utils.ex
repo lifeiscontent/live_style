@@ -121,6 +121,44 @@ defmodule LiveStyle.Utils do
     do: do_split_css_value(rest, acc, current <> <<char::utf8>>, depth)
 
   @doc """
+  Recursively sorts conditional map/list keys for deterministic iteration order.
+
+  Conditional values are maps or keyword lists with keys like `:default`, `"@media ..."`, etc.
+  Sorting once at storage time avoids repeated sorting during CSS generation.
+
+  Maps are converted to sorted lists since we only iterate, never lookup by key.
+  Special structures (like fallback values with __fallback__ key) are preserved as-is.
+  """
+  @spec sort_conditional_value(term()) :: term()
+  # Skip special structures that shouldn't be sorted (fallback values, typed vars, etc.)
+  def sort_conditional_value(%{__fallback__: _} = value), do: value
+  def sort_conditional_value(%{__css_type__: _} = value), do: value
+  def sort_conditional_value(%{__type__: _} = value), do: value
+  def sort_conditional_value(%{syntax: _} = value), do: value
+
+  def sort_conditional_value(value) when is_map(value) do
+    # Convert map to sorted list - we only iterate, never lookup by key
+    value
+    |> Enum.sort_by(fn {k, _v} -> to_string(k) end)
+    |> Enum.map(fn {k, v} -> {k, sort_conditional_value(v)} end)
+  end
+
+  def sort_conditional_value(value) when is_list(value) do
+    if Keyword.keyword?(value) or tuple_list?(value) do
+      value
+      |> Enum.sort_by(fn {k, _v} -> to_string(k) end)
+      |> Enum.map(fn {k, v} -> {k, sort_conditional_value(v)} end)
+    else
+      value
+    end
+  end
+
+  def sort_conditional_value(value), do: value
+
+  defp tuple_list?([{_, _} | _]), do: true
+  defp tuple_list?(_), do: false
+
+  @doc """
   Finds the last index in a list where the predicate returns true.
 
   Returns -1 if no element matches.

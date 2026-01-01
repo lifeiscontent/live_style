@@ -68,6 +68,7 @@ defmodule LiveStyle.Compiler.CSS.Themes do
   end
 
   # Recursively collect theme rules, tracking the condition path
+  # Maps are pre-sorted at storage time for deterministic iteration
   defp collect_rules(overrides, conditions_path) do
     Enum.flat_map(overrides, fn {name, value} ->
       collect_value(name, value, conditions_path)
@@ -76,6 +77,7 @@ defmodule LiveStyle.Compiler.CSS.Themes do
 
   defp collect_value(name, value, conditions_path) when is_map(value) do
     # Handle map values with :default and @-rule keys
+    # Maps are pre-sorted at storage time for deterministic iteration
     Enum.flat_map(value, fn
       {key, inner_value} when key in [:default, "default"] ->
         # Default value at this level
@@ -103,7 +105,39 @@ defmodule LiveStyle.Compiler.CSS.Themes do
     [{conditions_path, name, value}]
   end
 
+  # Handle sorted lists (converted from maps at storage time)
+  defp collect_value(name, value, conditions_path) when is_list(value) do
+    if conditional_list?(value) do
+      Enum.flat_map(value, &collect_list_entry(&1, name, conditions_path))
+    else
+      [{conditions_path, name, to_string(value)}]
+    end
+  end
+
   defp collect_value(name, value, conditions_path) do
     [{conditions_path, name, to_string(value)}]
   end
+
+  defp collect_list_entry({key, inner_value}, name, conditions_path)
+       when key in [:default, "default"] do
+    if is_list(inner_value) and conditional_list?(inner_value) do
+      collect_value(name, inner_value, conditions_path)
+    else
+      [{conditions_path, name, to_string(inner_value)}]
+    end
+  end
+
+  defp collect_list_entry({condition, inner_value}, name, conditions_path) do
+    condition_str = to_string(condition)
+
+    if is_list(inner_value) and conditional_list?(inner_value) do
+      collect_value(name, inner_value, conditions_path ++ [condition_str])
+    else
+      [{conditions_path ++ [condition_str], name, to_string(inner_value)}]
+    end
+  end
+
+  # Check if a list is a conditional value list
+  defp conditional_list?([{key, _} | _]) when is_atom(key) or is_binary(key), do: true
+  defp conditional_list?(_), do: false
 end

@@ -318,7 +318,7 @@ defmodule LiveStyle.APIContractTest.Tests do
       # Theme names follow a pattern (may or may not start with x)
       assert is_binary(theme.ident)
       assert String.length(theme.ident) > 0
-      assert is_map(theme.overrides)
+      assert is_list(theme.overrides)
     end
   end
 

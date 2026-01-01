@@ -65,9 +65,12 @@ defmodule LiveStyle.Vars do
     ident = ident(module, name)
     {css_value, type_info} = extract_var_value(value)
 
+    # Sort conditional values once at storage time for deterministic iteration
+    sorted_value = Utils.sort_conditional_value(css_value)
+
     entry = %{
       ident: ident,
-      value: css_value,
+      value: sorted_value,
       type: type_info
     }
 

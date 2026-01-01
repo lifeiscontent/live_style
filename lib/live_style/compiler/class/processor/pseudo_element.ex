@@ -43,6 +43,7 @@ defmodule LiveStyle.Compiler.Class.Processor.PseudoElement do
   end
 
   # Process all properties within a pseudo-element
+  # Values are pre-sorted at entry point for deterministic iteration
   defp process_props(pseudo_str, props_map) do
     Enum.flat_map(props_map, fn {prop, value} ->
       process_prop(pseudo_str, prop, value)

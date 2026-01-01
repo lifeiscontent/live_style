@@ -353,11 +353,11 @@ defmodule LiveStyle.ValidationTest do
       assert LiveStyle.Theme.lookup!({ThemeBaseVars, :override}) != nil
     end
 
-    test "theme has overrides map" do
+    test "theme has overrides list" do
       theme = LiveStyle.Theme.lookup!({ThemeBaseVars, :override})
 
-      assert is_map(theme.overrides)
-      assert map_size(theme.overrides) > 0
+      assert is_list(theme.overrides)
+      assert not Enum.empty?(theme.overrides)
     end
   end
 end

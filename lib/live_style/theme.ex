@@ -83,11 +83,15 @@ defmodule LiveStyle.Theme do
     key = Manifest.simple_key(module, name)
     overrides = Utils.validate_keyword_list!(overrides)
 
-    # Convert override keys to CSS var names
+    # Convert override keys to CSS var names and sort for deterministic iteration
+    # Keep as sorted list - we only iterate, never lookup by key
     css_overrides =
-      Map.new(overrides, fn {var_name, value} ->
-        {var_ident(module, var_name), value}
+      overrides
+      |> Enum.map(fn {var_name, value} ->
+        sorted_value = Utils.sort_conditional_value(value)
+        {var_ident(module, var_name), sorted_value}
       end)
+      |> Enum.sort_by(fn {k, _v} -> k end)
 
     entry = %{
       ident: ident,

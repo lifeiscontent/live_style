@@ -52,6 +52,7 @@ defmodule LiveStyle.Compiler.Class.Conditional do
 
   @doc false
   @spec flatten(term(), String.t() | nil) :: [{String.t() | nil, term()}]
+  # Values are pre-sorted at entry points for deterministic iteration
   def flatten(value_map, parent_selector) when is_map(value_map) do
     Enum.flat_map(value_map, fn {condition, value} ->
       current_selector = combine_selectors(parent_selector, condition)
@@ -61,7 +62,7 @@ defmodule LiveStyle.Compiler.Class.Conditional do
           flatten(value, current_selector)
 
         is_list(value) and conditional?(value) ->
-          flatten(Map.new(value), current_selector)
+          flatten(value, current_selector)
 
         true ->
           [{current_selector, value}]
@@ -69,9 +70,11 @@ defmodule LiveStyle.Compiler.Class.Conditional do
     end)
   end
 
+  # Values are pre-sorted at entry points for deterministic iteration
+  # Handle lists directly without converting to maps
   def flatten(value_list, parent_selector) when is_list(value_list) do
     if conditional?(value_list) do
-      flatten(Map.new(value_list), parent_selector)
+      Enum.flat_map(value_list, &flatten_entry(&1, parent_selector))
     else
       [{parent_selector, value_list}]
     end
@@ -79,6 +82,16 @@ defmodule LiveStyle.Compiler.Class.Conditional do
 
   def flatten(value, parent_selector) do
     [{parent_selector, value}]
+  end
+
+  defp flatten_entry({condition, value}, parent_selector) do
+    current_selector = combine_selectors(parent_selector, condition)
+
+    cond do
+      is_map(value) and conditional?(value) -> flatten(value, current_selector)
+      is_list(value) and conditional?(value) -> flatten(value, current_selector)
+      true -> [{current_selector, value}]
+    end
   end
 
   @doc false

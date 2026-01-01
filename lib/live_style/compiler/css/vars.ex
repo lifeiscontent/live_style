@@ -101,10 +101,22 @@ defmodule LiveStyle.Compiler.CSS.Vars do
 
   # Flatten a variable value into a list of {at_rules, ident, value} tuples
   # Handles nested conditional values
+  # Values are pre-sorted at storage time for deterministic iteration
   defp flatten_var_value(ident, value, at_rules) when is_map(value) do
     Enum.flat_map(value, fn {key, val} ->
       flatten_var_entry(ident, key, val, at_rules)
     end)
+  end
+
+  # Handle sorted lists (converted from maps at storage time)
+  defp flatten_var_value(ident, value, at_rules) when is_list(value) do
+    if conditional_list?(value) do
+      Enum.flat_map(value, fn {key, val} ->
+        flatten_var_entry(ident, key, val, at_rules)
+      end)
+    else
+      [{at_rules, ident, to_string(value)}]
+    end
   end
 
   defp flatten_var_value(ident, value, at_rules) when is_binary(value) do
@@ -114,6 +126,10 @@ defmodule LiveStyle.Compiler.CSS.Vars do
   defp flatten_var_value(ident, value, at_rules) do
     [{at_rules, ident, to_string(value)}]
   end
+
+  # Check if a list is a conditional value list (keyword-like with :default or @-rule keys)
+  defp conditional_list?([{key, _} | _]) when is_atom(key) or is_binary(key), do: true
+  defp conditional_list?(_), do: false
 
   # Handle default key with simple value
   defp flatten_var_entry(ident, key, val, at_rules)
@@ -147,5 +163,24 @@ defmodule LiveStyle.Compiler.CSS.Vars do
     end
   end
 
+  # Handle sorted lists (converted from maps at storage time)
+  defp extract_initial_value(list) when is_list(list) do
+    # Check for :default or "default" key in keyword list
+    default = Keyword.get(list, :default) || get_string_key(list, "default")
+
+    case default do
+      nil -> list |> List.first() |> elem(1) |> extract_initial_value()
+      val when is_binary(val) -> val
+      val -> extract_initial_value(val)
+    end
+  end
+
   defp extract_initial_value(value), do: to_string(value)
+
+  defp get_string_key(list, key) do
+    Enum.find_value(list, fn
+      {^key, val} -> val
+      _ -> nil
+    end)
+  end
 end
