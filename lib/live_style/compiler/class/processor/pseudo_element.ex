@@ -3,10 +3,10 @@ defmodule LiveStyle.Compiler.Class.Processor.PseudoElement do
   Processes pseudo-element CSS declarations into atomic classes.
 
   This module handles declarations for pseudo-elements like `::before` and `::after`.
-  For example: `%{"::after": %{content: "''", display: "block"}}`
+  For example: `["::after": [content: "''", display: "block"]]`
 
   It also handles conditional values within pseudo-elements:
-  `%{"::before": %{color: %{:default => "red", ":hover" => "blue"}}}`
+  `["::before": [color: [default: "red", ":hover": "blue"]]]`
 
   ## Responsibilities
 
@@ -22,30 +22,28 @@ defmodule LiveStyle.Compiler.Class.Processor.PseudoElement do
   @doc """
   Processes a list of pseudo-element declarations into atomic class entries.
 
-  Returns a map where each key is a combination of CSS property and pseudo-element
-  selector, mapping to the class entry.
+  Returns a list of `{key, entry}` tuples where each key is a combination of
+  CSS property and pseudo-element selector.
 
   ## Example
 
-      iex> process([{"::after", %{content: "''", display: "block"}}])
-      %{
-        "content::after" => %{class: "x1234", value: "''", ...},
-        "display::after" => %{class: "x5678", value: "block", ...}
-      }
+      iex> process([{"::after", [content: "''", display: "block"]}])
+      [
+        {"content::after", %{class: "x1234", value: "''", ...}},
+        {"display::after", %{class: "x5678", value: "block", ...}}
+      ]
   """
-  @spec process(list(), keyword()) :: map()
+  @spec process(list(), keyword()) :: list()
   def process(declarations, _opts \\ []) do
-    declarations
-    |> Enum.flat_map(fn {pseudo_element, props_map} ->
-      process_props(to_string(pseudo_element), props_map)
+    Enum.flat_map(declarations, fn {pseudo_element, props} ->
+      process_props(to_string(pseudo_element), props)
     end)
-    |> Map.new()
   end
 
   # Process all properties within a pseudo-element
   # Values are pre-sorted at entry point for deterministic iteration
-  defp process_props(pseudo_str, props_map) do
-    Enum.flat_map(props_map, fn {prop, value} ->
+  defp process_props(pseudo_str, props) do
+    Enum.flat_map(props, fn {prop, value} ->
       process_prop(pseudo_str, prop, value)
     end)
   end
@@ -62,7 +60,7 @@ defmodule LiveStyle.Compiler.Class.Processor.PseudoElement do
   end
 
   # Process a conditional property within a pseudo-element
-  # e.g., "::before": %{color: %{:default => "red", ":hover" => "blue"}}
+  # e.g., "::before": [color: [default: "red", ":hover": "blue"]]
   defp process_conditional_prop(pseudo_str, css_prop, value) do
     value
     |> Conditional.flatten(nil)
@@ -84,6 +82,6 @@ defmodule LiveStyle.Compiler.Class.Processor.PseudoElement do
   # Build a class entry for a pseudo-element property
   defp build_class_entry(css_prop, value, selector) do
     entry = Builder.build(css_prop, value, selector: selector)
-    {"#{css_prop}#{selector}", Map.put(entry, :pseudo_element, selector)}
+    {"#{css_prop}#{selector}", Keyword.put(entry, :pseudo_element, selector)}
   end
 end

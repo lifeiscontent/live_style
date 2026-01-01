@@ -25,7 +25,7 @@ defmodule LiveStyle.Dev.CSS do
   defp extract_ltr_css(nil), do: []
   defp extract_ltr_css(%{atomic_classes: nil}), do: []
 
-  defp extract_ltr_css(%{atomic_classes: atomic_classes}) when is_map(atomic_classes) do
+  defp extract_ltr_css(%{atomic_classes: atomic_classes}) when is_list(atomic_classes) do
     atomic_classes
     |> Enum.sort_by(fn {prop, _} -> prop end)
     |> Enum.flat_map(fn {_prop, meta} -> extract_ltr_from_meta(meta) end)
@@ -34,15 +34,26 @@ defmodule LiveStyle.Dev.CSS do
 
   defp extract_ltr_css(_), do: []
 
-  defp extract_ltr_from_meta(%{ltr: ltr}) when is_binary(ltr), do: [ltr]
+  defp extract_ltr_from_meta(meta) when is_list(meta) do
+    ltr = Keyword.get(meta, :ltr)
+    classes = Keyword.get(meta, :classes)
 
-  defp extract_ltr_from_meta(%{classes: classes}) when is_map(classes) do
-    classes
-    |> Map.values()
-    |> Enum.map(fn
-      %{ltr: ltr} when is_binary(ltr) -> ltr
-      _ -> nil
-    end)
+    cond do
+      is_binary(ltr) ->
+        [ltr]
+
+      is_list(classes) ->
+        Enum.map(classes, fn
+          {_condition, entry} when is_list(entry) ->
+            Keyword.get(entry, :ltr)
+
+          _ ->
+            nil
+        end)
+
+      true ->
+        []
+    end
   end
 
   defp extract_ltr_from_meta(_), do: []

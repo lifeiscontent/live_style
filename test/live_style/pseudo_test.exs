@@ -513,52 +513,70 @@ defmodule LiveStyle.PseudoTest do
   describe "form state pseudo-class priorities" do
     test ":disabled has priority offset 92" do
       rule = Class.lookup!({FormStatePseudoClasses, :disabled})
-      disabled = rule.atomic_classes["color"].classes[":disabled"]
-      assert disabled.ltr =~ ":disabled{color:gray}"
+      disabled = get_class(field(get_atomic(rule.atomic_classes, "color"), :classes), ":disabled")
+      assert field(disabled, :ltr) =~ ":disabled{color:gray}"
       # 3000 (color) + 92 (:disabled) = 3092
-      assert disabled.priority == 3092
+      assert field(disabled, :priority) == 3092
     end
 
     test ":enabled has priority offset 91" do
       rule = Class.lookup!({FormStatePseudoClasses, :enabled})
-      enabled = rule.atomic_classes["opacity"].classes[":enabled"]
+      enabled = get_class(field(get_atomic(rule.atomic_classes, "opacity"), :classes), ":enabled")
       # 3000 (opacity) + 91 (:enabled) = 3091
-      assert enabled.priority == 3091
+      assert field(enabled, :priority) == 3091
     end
 
     test ":checked has priority offset 101" do
       rule = Class.lookup!({FormStatePseudoClasses, :checked})
-      checked = rule.atomic_classes["background-color"].classes[":checked"]
+
+      checked =
+        get_class(
+          field(get_atomic(rule.atomic_classes, "background-color"), :classes),
+          ":checked"
+        )
+
       # 3000 (background-color) + 101 (:checked) = 3101
-      assert checked.priority == 3101
+      assert field(checked, :priority) == 3101
     end
 
     test ":valid has priority offset 103" do
       rule = Class.lookup!({FormStatePseudoClasses, :valid})
-      valid = rule.atomic_classes["border-color"].classes[":valid"]
+
+      valid =
+        get_class(field(get_atomic(rule.atomic_classes, "border-color"), :classes), ":valid")
+
       # 2000 (border-color shorthand) + 103 (:valid) = 2103
-      assert valid.priority == 2103
+      assert field(valid, :priority) == 2103
     end
 
     test ":invalid has priority offset 104" do
       rule = Class.lookup!({FormStatePseudoClasses, :invalid})
-      invalid = rule.atomic_classes["border-color"].classes[":invalid"]
+
+      invalid =
+        get_class(field(get_atomic(rule.atomic_classes, "border-color"), :classes), ":invalid")
+
       # 2000 (border-color shorthand) + 104 (:invalid) = 2104
-      assert invalid.priority == 2104
+      assert field(invalid, :priority) == 2104
     end
 
     test ":required has priority offset 93" do
       rule = Class.lookup!({FormStatePseudoClasses, :required})
-      required = rule.atomic_classes["border-style"].classes[":required"]
+
+      required =
+        get_class(field(get_atomic(rule.atomic_classes, "border-style"), :classes), ":required")
+
       # 2000 (border-style shorthand) + 93 (:required) = 2093
-      assert required.priority == 2093
+      assert field(required, :priority) == 2093
     end
 
     test ":placeholder-shown has priority offset 97" do
       rule = Class.lookup!({FormStatePseudoClasses, :placeholder_shown})
-      ps = rule.atomic_classes["color"].classes[":placeholder-shown"]
+
+      ps =
+        get_class(field(get_atomic(rule.atomic_classes, "color"), :classes), ":placeholder-shown")
+
       # 3000 (color) + 97 (:placeholder-shown) = 3097
-      assert ps.priority == 3097
+      assert field(ps, :priority) == 3097
     end
   end
 
@@ -569,17 +587,26 @@ defmodule LiveStyle.PseudoTest do
   describe "focus variant pseudo-class priorities" do
     test ":focus-visible has priority offset 160" do
       rule = Class.lookup!({FocusPseudoClasses, :focus_visible})
-      fv = rule.atomic_classes["outline"].classes[":focus-visible"]
-      assert fv.ltr =~ ":focus-visible{outline:2px solid blue}"
+
+      fv =
+        get_class(field(get_atomic(rule.atomic_classes, "outline"), :classes), ":focus-visible")
+
+      assert field(fv, :ltr) =~ ":focus-visible{outline:2px solid blue}"
       # 2000 (outline shorthand) + 160 (:focus-visible) = 2160
-      assert fv.priority == 2160
+      assert field(fv, :priority) == 2160
     end
 
     test ":focus-within has priority offset 140" do
       rule = Class.lookup!({FocusPseudoClasses, :focus_within})
-      fw = rule.atomic_classes["border-color"].classes[":focus-within"]
+
+      fw =
+        get_class(
+          field(get_atomic(rule.atomic_classes, "border-color"), :classes),
+          ":focus-within"
+        )
+
       # 2000 (border-color shorthand) + 140 (:focus-within) = 2140
-      assert fw.priority == 2140
+      assert field(fw, :priority) == 2140
     end
   end
 
@@ -590,37 +617,58 @@ defmodule LiveStyle.PseudoTest do
   describe "tree-structural pseudo-class priorities" do
     test ":first-child has priority offset 52" do
       rule = Class.lookup!({TreeStructuralPseudoClasses, :first_child})
-      fc = rule.atomic_classes["margin-top"].classes[":first-child"]
+
+      fc =
+        get_class(field(get_atomic(rule.atomic_classes, "margin-top"), :classes), ":first-child")
+
       # 4000 (margin-top physical) + 52 (:first-child) = 4052
-      assert fc.priority == 4052
+      assert field(fc, :priority) == 4052
     end
 
     test ":last-child has priority offset 54" do
       rule = Class.lookup!({TreeStructuralPseudoClasses, :last_child})
-      lc = rule.atomic_classes["margin-bottom"].classes[":last-child"]
+
+      lc =
+        get_class(
+          field(get_atomic(rule.atomic_classes, "margin-bottom"), :classes),
+          ":last-child"
+        )
+
       # 4000 (margin-bottom physical) + 54 (:last-child) = 4054
-      assert lc.priority == 4054
+      assert field(lc, :priority) == 4054
     end
 
     test ":only-child has priority offset 56" do
       rule = Class.lookup!({TreeStructuralPseudoClasses, :only_child})
-      oc = rule.atomic_classes["margin"].classes[":only-child"]
+      oc = get_class(field(get_atomic(rule.atomic_classes, "margin"), :classes), ":only-child")
       # 1000 (margin shorthand) + 56 (:only-child) = 1056
-      assert oc.priority == 1056
+      assert field(oc, :priority) == 1056
     end
 
     test ":nth-child functional has priority offset 60" do
       rule = Class.lookup!({TreeStructuralPseudoClasses, :nth_child_odd})
-      nth = rule.atomic_classes["background-color"].classes[":nth-child(odd)"]
+
+      nth =
+        get_class(
+          field(get_atomic(rule.atomic_classes, "background-color"), :classes),
+          ":nth-child(odd)"
+        )
+
       # 3000 (background-color) + 60 (:nth-child) = 3060
-      assert nth.priority == 3060
+      assert field(nth, :priority) == 3060
     end
 
     test ":nth-last-child has priority offset 61" do
       rule = Class.lookup!({TreeStructuralPseudoClasses, :nth_last_child})
-      nlc = rule.atomic_classes["opacity"].classes[":nth-last-child(2)"]
+
+      nlc =
+        get_class(
+          field(get_atomic(rule.atomic_classes, "opacity"), :classes),
+          ":nth-last-child(2)"
+        )
+
       # 3000 (opacity) + 61 (:nth-last-child) = 3061
-      assert nlc.priority == 3061
+      assert field(nlc, :priority) == 3061
     end
   end
 
@@ -631,23 +679,26 @@ defmodule LiveStyle.PseudoTest do
   describe "link pseudo-class priorities" do
     test ":link has priority offset 80" do
       rule = Class.lookup!({LinkPseudoClasses, :link})
-      link = rule.atomic_classes["color"].classes[":link"]
+      link = get_class(field(get_atomic(rule.atomic_classes, "color"), :classes), ":link")
       # 3000 (color) + 80 (:link) = 3080
-      assert link.priority == 3080
+      assert field(link, :priority) == 3080
     end
 
     test ":visited has priority offset 85" do
       rule = Class.lookup!({LinkPseudoClasses, :link})
-      visited = rule.atomic_classes["color"].classes[":visited"]
+      visited = get_class(field(get_atomic(rule.atomic_classes, "color"), :classes), ":visited")
       # 3000 (color) + 85 (:visited) = 3085
-      assert visited.priority == 3085
+      assert field(visited, :priority) == 3085
     end
 
     test ":target has priority offset 84" do
       rule = Class.lookup!({LinkPseudoClasses, :target})
-      target = rule.atomic_classes["background-color"].classes[":target"]
+
+      target =
+        get_class(field(get_atomic(rule.atomic_classes, "background-color"), :classes), ":target")
+
       # 3000 (background-color) + 84 (:target) = 3084
-      assert target.priority == 3084
+      assert field(target, :priority) == 3084
     end
   end
 
@@ -658,23 +709,29 @@ defmodule LiveStyle.PseudoTest do
   describe "other pseudo-class priorities" do
     test ":empty has priority offset 70" do
       rule = Class.lookup!({OtherPseudoClasses, :empty})
-      empty = rule.atomic_classes["display"].classes[":empty"]
+      empty = get_class(field(get_atomic(rule.atomic_classes, "display"), :classes), ":empty")
       # 3000 (display) + 70 (:empty) = 3070
-      assert empty.priority == 3070
+      assert field(empty, :priority) == 3070
     end
 
     test ":autofill has priority offset 110" do
       rule = Class.lookup!({OtherPseudoClasses, :autofill})
-      autofill = rule.atomic_classes["background-color"].classes[":autofill"]
+
+      autofill =
+        get_class(
+          field(get_atomic(rule.atomic_classes, "background-color"), :classes),
+          ":autofill"
+        )
+
       # 3000 (background-color) + 110 (:autofill) = 3110
-      assert autofill.priority == 3110
+      assert field(autofill, :priority) == 3110
     end
 
     test ":fullscreen has priority offset 122" do
       rule = Class.lookup!({OtherPseudoClasses, :fullscreen})
-      fs = rule.atomic_classes["width"].classes[":fullscreen"]
+      fs = get_class(field(get_atomic(rule.atomic_classes, "width"), :classes), ":fullscreen")
       # 4000 (width physical) + 122 (:fullscreen) = 4122
-      assert fs.priority == 4122
+      assert field(fs, :priority) == 4122
     end
   end
 
@@ -685,30 +742,48 @@ defmodule LiveStyle.PseudoTest do
   describe "functional pseudo-class priorities" do
     test ":not() has priority offset 40" do
       rule = Class.lookup!({FunctionalPseudoClasses, :not_disabled})
-      not_dis = rule.atomic_classes["opacity"].classes[":not(:disabled)"]
+
+      not_dis =
+        get_class(field(get_atomic(rule.atomic_classes, "opacity"), :classes), ":not(:disabled)")
+
       # 3000 (opacity) + 40 (:not) = 3040
-      assert not_dis.priority == 3040
+      assert field(not_dis, :priority) == 3040
     end
 
     test ":is() has priority offset 40" do
       rule = Class.lookup!({FunctionalPseudoClasses, :is_hover_focus})
-      is_hf = rule.atomic_classes["color"].classes[":is(:hover, :focus)"]
+
+      is_hf =
+        get_class(
+          field(get_atomic(rule.atomic_classes, "color"), :classes),
+          ":is(:hover, :focus)"
+        )
+
       # 3000 (color) + 40 (:is) = 3040
-      assert is_hf.priority == 3040
+      assert field(is_hf, :priority) == 3040
     end
 
     test ":where() has priority offset 40" do
       rule = Class.lookup!({FunctionalPseudoClasses, :where_hover})
-      where_h = rule.atomic_classes["color"].classes[":where(:hover)"]
+
+      where_h =
+        get_class(field(get_atomic(rule.atomic_classes, "color"), :classes), ":where(:hover)")
+
       # 3000 (color) + 40 (:where) = 3040
-      assert where_h.priority == 3040
+      assert field(where_h, :priority) == 3040
     end
 
     test ":has() has priority offset 45" do
       rule = Class.lookup!({FunctionalPseudoClasses, :has_focus})
-      has_f = rule.atomic_classes["border-color"].classes[":has(:focus)"]
+
+      has_f =
+        get_class(
+          field(get_atomic(rule.atomic_classes, "border-color"), :classes),
+          ":has(:focus)"
+        )
+
       # 2000 (border-color shorthand) + 45 (:has) = 2045
-      assert has_f.priority == 2045
+      assert field(has_f, :priority) == 2045
     end
   end
 
@@ -719,53 +794,53 @@ defmodule LiveStyle.PseudoTest do
   describe "pseudo-element priorities" do
     test "::marker has base priority 8000" do
       rule = Class.lookup!({MarkerStyles, :marker})
-      color_meta = rule.atomic_classes["color::marker"]
-      assert color_meta.ltr =~ "::marker{color:red}"
-      assert color_meta.priority == 8000
+      color_meta = get_atomic(rule.atomic_classes, "color::marker")
+      assert field(color_meta, :ltr) =~ "::marker{color:red}"
+      assert field(color_meta, :priority) == 8000
     end
 
     test "::selection has base priority 8000" do
       rule = Class.lookup!({SelectionStyles, :selection})
-      bg_meta = rule.atomic_classes["background-color::selection"]
-      assert bg_meta.ltr =~ "::selection{background-color:yellow}"
-      assert bg_meta.priority == 8000
+      bg_meta = get_atomic(rule.atomic_classes, "background-color::selection")
+      assert field(bg_meta, :ltr) =~ "::selection{background-color:yellow}"
+      assert field(bg_meta, :priority) == 8000
     end
 
     test "::backdrop has base priority 8000" do
       rule = Class.lookup!({BackdropStyles, :backdrop})
-      bg_meta = rule.atomic_classes["background-color::backdrop"]
-      assert bg_meta.ltr =~ "::backdrop{background-color:rgba(0,0,0,.7)}"
-      assert bg_meta.priority == 8000
+      bg_meta = get_atomic(rule.atomic_classes, "background-color::backdrop")
+      assert field(bg_meta, :ltr) =~ "::backdrop{background-color:rgba(0,0,0,.7)}"
+      assert field(bg_meta, :priority) == 8000
     end
 
     test "::first-letter has base priority 8000" do
       rule = Class.lookup!({FirstLetterLineStyles, :first_letter})
-      font_size = rule.atomic_classes["font-size::first-letter"]
-      assert font_size.ltr =~ "::first-letter{font-size:2em}"
-      assert font_size.priority == 8000
+      font_size = get_atomic(rule.atomic_classes, "font-size::first-letter")
+      assert field(font_size, :ltr) =~ "::first-letter{font-size:2em}"
+      assert field(font_size, :priority) == 8000
     end
 
     test "::first-line shorthand has priority 7000 (2000 + 5000)" do
       rule = Class.lookup!({FirstLetterLineStyles, :first_line})
-      text_dec = rule.atomic_classes["text-decoration::first-line"]
-      assert text_dec.ltr =~ "::first-line{text-decoration:underline}"
+      text_dec = get_atomic(rule.atomic_classes, "text-decoration::first-line")
+      assert field(text_dec, :ltr) =~ "::first-line{text-decoration:underline}"
       # text-decoration is a shorthand (priority 2000), so 2000 + 5000 = 7000
-      assert text_dec.priority == 7000
+      assert field(text_dec, :priority) == 7000
     end
 
     test "::-webkit-scrollbar has priority 9000" do
       rule = Class.lookup!({WebkitScrollbarStyles, :scrollbar})
-      width_meta = rule.atomic_classes["width::-webkit-scrollbar"]
-      assert width_meta.ltr =~ "::-webkit-scrollbar{width:8px}"
-      assert width_meta.priority == 9000
+      width_meta = get_atomic(rule.atomic_classes, "width::-webkit-scrollbar")
+      assert field(width_meta, :ltr) =~ "::-webkit-scrollbar{width:8px}"
+      assert field(width_meta, :priority) == 9000
     end
 
     test "::selection:hover has combined priority 8130" do
       rule = Class.lookup!({SelectionStyles, :selection_hover})
-      hover_meta = rule.atomic_classes["background-color::selection:hover"]
-      assert hover_meta.ltr =~ "::selection:hover{background-color:darkblue}"
+      hover_meta = get_atomic(rule.atomic_classes, "background-color::selection:hover")
+      assert field(hover_meta, :ltr) =~ "::selection:hover{background-color:darkblue}"
       # Priority: 8000 (::selection) + 130 (:hover) = 8130
-      assert hover_meta.priority == 8130
+      assert field(hover_meta, :priority) == 8130
     end
   end
 

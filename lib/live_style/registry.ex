@@ -78,7 +78,7 @@ defmodule LiveStyle.Registry do
 
       def ref({module, name}) do
         entry = lookup!({module, name})
-        Map.fetch!(entry, unquote(ref_field))
+        entry[unquote(ref_field)] || raise KeyError, key: unquote(ref_field), term: entry
       end
 
       @doc false

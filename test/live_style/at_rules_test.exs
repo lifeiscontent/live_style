@@ -126,41 +126,42 @@ defmodule LiveStyle.AtRulesTest do
 
     # Basic @starting-style for entry animations
     class(:fade_in,
-      opacity: %{
-        :default => "1",
-        "@starting-style" => "0"
-      }
+      opacity: [
+        default: "1",
+        "@starting-style": "0"
+      ]
     )
 
     # @starting-style with transform
     class(:scale_in,
-      transform: %{
-        :default => "scale(1)",
-        "@starting-style" => "scale(0.9)"
-      }
+      transform: [
+        default: "scale(1)",
+        "@starting-style": "scale(0.9)"
+      ]
     )
 
     # Multiple properties with @starting-style
     class(:slide_in,
-      opacity: %{
-        :default => "1",
-        "@starting-style" => "0"
-      },
-      transform: %{
-        :default => "translateY(0)",
-        "@starting-style" => "translateY(-20px)"
-      }
+      opacity: [
+        default: "1",
+        "@starting-style": "0"
+      ],
+      transform: [
+        default: "translateY(0)",
+        "@starting-style": "translateY(-20px)"
+      ]
     )
 
     # @starting-style with nested pseudo-class (StyleX pattern)
     class(:hover_fade,
-      opacity: %{
-        :default => "1",
-        "@starting-style" => %{
-          :default => "0",
-          ":hover" => "0.5"
-        }
-      }
+      opacity: [
+        {:default, "1"},
+        {"@starting-style",
+         [
+           {:default, "0"},
+           ":hover": "0.5"
+         ]}
+      ]
     )
   end
 
@@ -196,13 +197,14 @@ defmodule LiveStyle.AtRulesTest do
     # Nested at-rules: @supports wrapping @media
     # StyleX test: "tokens object with nested @-rules"
     vars(
-      color: %{
-        default: "blue",
-        "@media (prefers-color-scheme: dark)": %{
-          default: "lightblue",
-          "@supports (color: oklab(0 0 0))": "oklab(0.7 -0.3 -0.4)"
-        }
-      }
+      color: [
+        {:default, "blue"},
+        {"@media (prefers-color-scheme: dark)",
+         [
+           {:default, "lightblue"},
+           "@supports (color: oklab(0 0 0))": "oklab(0.7 -0.3 -0.4)"
+         ]}
+      ]
     )
   end
 

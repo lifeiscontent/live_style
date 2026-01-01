@@ -88,14 +88,15 @@ defmodule LiveStyle.Manifest do
   Checks if the manifest version is current.
   """
   @spec current?(t()) :: boolean()
-  def current?(manifest), do: Map.get(manifest, :version) == @current_version
+  def current?(%{version: version}), do: version == @current_version
+  def current?(_), do: false
 
   @spec ensure_keys(term()) :: t()
   def ensure_keys(manifest) when is_map(manifest) do
     # If manifest version doesn't match current, discard old data and return fresh
     # This handles format changes that would otherwise cause runtime errors
     if current?(manifest) do
-      Map.merge(empty(), manifest)
+      struct_merge(empty(), manifest)
     else
       empty()
     end
@@ -119,7 +120,13 @@ defmodule LiveStyle.Manifest do
       has_entries?(manifest, :themes)
   end
 
-  defp has_entries?(manifest, key), do: map_size(Map.get(manifest, key, %{})) > 0
+  defp has_entries?(manifest, key), do: map_size(manifest[key] || %{}) > 0
+
+  defp struct_merge(base, updates) when is_map(base) and is_map(updates) do
+    Enum.reduce(updates, base, fn {k, v}, acc ->
+      if is_map_key(acc, k), do: %{acc | k => v}, else: acc
+    end)
+  end
 
   # Entry helpers
   def put_var(manifest, key, entry), do: put_in(manifest, [:vars, key], entry)

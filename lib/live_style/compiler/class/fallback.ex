@@ -8,7 +8,7 @@ defmodule LiveStyle.Compiler.Class.Fallback do
   alias LiveStyle.{CSSValue, Hash}
 
   @doc false
-  @spec process_array(String.t(), list()) :: {String.t(), map()}
+  @spec process_array(String.t(), list()) :: {String.t(), keyword()}
   def process_array(css_prop, values) do
     # StyleX validation: array values can only contain strings or numbers
     validate_array_values!(values)
@@ -34,7 +34,7 @@ defmodule LiveStyle.Compiler.Class.Fallback do
   end
 
   @doc false
-  @spec process_fallback(String.t(), list()) :: {String.t(), map()}
+  @spec process_fallback(String.t(), list()) :: {String.t(), keyword()}
   def process_fallback(css_prop, values) do
     normalized_values =
       values
@@ -64,28 +64,28 @@ defmodule LiveStyle.Compiler.Class.Fallback do
           String.t() | nil,
           non_neg_integer()
         ) ::
-          {String.t(), map()}
+          {String.t(), keyword()}
   defp build_result(css_prop, class_name, [single], ltr_css, rtl_css, priority) do
-    result = %{
+    result = [
       class: class_name,
       value: single,
       ltr: ltr_css,
       rtl: rtl_css,
       priority: priority
-    }
+    ]
 
     {css_prop, result}
   end
 
   defp build_result(css_prop, class_name, [first | _] = multiple, ltr_css, rtl_css, priority) do
-    result = %{
+    result = [
       class: class_name,
       value: first,
       ltr: ltr_css,
       rtl: rtl_css,
       priority: priority,
       fallback_values: multiple
-    }
+    ]
 
     {css_prop, result}
   end

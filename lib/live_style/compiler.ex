@@ -44,7 +44,7 @@ defmodule LiveStyle.Compiler do
   @spec get_css(module(), atom()) :: LiveStyle.Attrs.t()
   def get_css(module, ref) when is_atom(module) and is_atom(ref) do
     class_strings = module.__live_style__(:class_strings)
-    %LiveStyle.Attrs{class: Map.get(class_strings, ref, ""), style: nil}
+    %LiveStyle.Attrs{class: Keyword.get(class_strings, ref, ""), style: nil}
   end
 
   @doc """
@@ -70,7 +70,7 @@ defmodule LiveStyle.Compiler do
   @spec get_css_class(module(), atom()) :: String.t()
   def get_css_class(module, ref) when is_atom(module) and is_atom(ref) do
     class_strings = module.__live_style__(:class_strings)
-    Map.get(class_strings, ref, "")
+    Keyword.get(class_strings, ref, "")
   end
 
   @doc """

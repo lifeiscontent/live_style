@@ -119,14 +119,4 @@ defmodule LiveStyle.Selector.PrefixerTest do
       assert ":placeholder-shown" in selectors
     end
   end
-
-  describe "expansions/0" do
-    test "returns the full expansions map" do
-      expansions = Prefixer.expansions()
-
-      assert is_map(expansions)
-      assert Map.has_key?(expansions, "::thumb")
-      assert Map.has_key?(expansions, "::placeholder")
-    end
-  end
 end

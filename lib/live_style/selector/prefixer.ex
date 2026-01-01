@@ -40,7 +40,7 @@ defmodule LiveStyle.Selector.Prefixer do
   @selector_expansions Parser.selector_expansions()
 
   # Pre-compile the list of selectors we handle for fast checking
-  @handled_selectors Map.keys(@selector_expansions)
+  @handled_selectors for({k, _} <- @selector_expansions, do: k)
 
   # Pre-compile a regex for fast matching
   @selector_pattern @handled_selectors
@@ -53,14 +53,6 @@ defmodule LiveStyle.Selector.Prefixer do
   end
 
   defp do_variants_for(_), do: nil
-
-  @doc """
-  Returns the map of selector expansions.
-
-  Useful for introspection and testing.
-  """
-  @spec expansions() :: %{String.t() => [String.t()]}
-  def expansions, do: @selector_expansions
 
   @doc """
   Returns the list of selectors that will be expanded.

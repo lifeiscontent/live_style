@@ -64,7 +64,7 @@ defmodule LiveStyle.PropertyMetadata.Parser do
 
   @doc """
   Parses property priorities from data file.
-  Returns a map of CSS property names to category atoms.
+  Returns a list of {property, category} tuples.
 
   Category names use kebab-case in the data file and are converted
   to snake_case atoms during parsing.
@@ -77,12 +77,11 @@ defmodule LiveStyle.PropertyMetadata.Parser do
       # Convert kebab-case category to snake_case atom
       {String.trim(property), css_to_atom(String.trim(category))}
     end)
-    |> Map.new()
   end
 
   @doc """
   Parses pseudo-class priorities from data file.
-  Returns a map of pseudo-class selectors to priority numbers.
+  Returns a list of {selector, priority} tuples.
   """
   def pseudo_priorities do
     "pseudo_priorities.txt"
@@ -91,7 +90,6 @@ defmodule LiveStyle.PropertyMetadata.Parser do
       [pseudo, priority] = String.split(line, ";", parts: 2)
       {String.trim(pseudo), String.to_integer(String.trim(priority))}
     end)
-    |> Map.new()
   end
 
   @doc """
@@ -118,54 +116,50 @@ defmodule LiveStyle.PropertyMetadata.Parser do
 
   @doc """
   Parses logical properties mappings from data file.
-  Returns maps for LTR and RTL transformations.
+  Returns lists of tuples for LTR and RTL transformations.
   """
   def logical_properties do
     "logical_properties.txt"
     |> read_data_lines()
-    |> Enum.reduce({%{}, %{}}, &parse_logical_property_line/2)
+    |> Enum.reduce({[], []}, &parse_logical_line/2)
   end
 
-  defp parse_logical_property_line(line, {ltr_acc, rtl_acc}) do
+  defp parse_logical_line(line, {ltr_acc, rtl_acc}) do
     case String.split(line, ";", parts: 3) do
       [logical, ltr, rtl] ->
-        build_logical_property_maps(logical, ltr, rtl, ltr_acc, rtl_acc)
+        logical = String.trim(logical)
+        ltr_val = String.trim(ltr)
+        rtl_val = String.trim(rtl)
+
+        ltr_acc = prepend_non_empty(ltr_acc, logical, ltr_val)
+        rtl_acc = prepend_non_empty(rtl_acc, logical, rtl_val)
+
+        {ltr_acc, rtl_acc}
 
       _ ->
         {ltr_acc, rtl_acc}
     end
   end
 
-  defp build_logical_property_maps(logical, ltr, rtl, ltr_acc, rtl_acc) do
-    logical = String.trim(logical)
-    ltr_val = String.trim(ltr)
-    rtl_val = String.trim(rtl)
-
-    ltr_acc = add_non_empty(ltr_acc, logical, ltr_val)
-    rtl_acc = add_non_empty(rtl_acc, logical, rtl_val)
-
-    {ltr_acc, rtl_acc}
-  end
-
-  defp add_non_empty(acc, _key, ""), do: acc
-  defp add_non_empty(acc, key, val), do: Map.put(acc, key, val)
+  defp prepend_non_empty(acc, _key, ""), do: acc
+  defp prepend_non_empty(acc, key, val), do: [{key, val} | acc]
 
   @doc """
   Parses logical values mappings from data file.
-  Returns maps for LTR and RTL value transformations.
+  Returns lists of tuples for LTR and RTL value transformations.
   """
   def logical_values do
     "logical_values.txt"
     |> read_data_lines()
-    |> Enum.reduce({%{}, %{}}, fn line, {ltr_acc, rtl_acc} ->
+    |> Enum.reduce({[], []}, fn line, {ltr_acc, rtl_acc} ->
       case String.split(line, ";", parts: 3) do
         [logical, ltr, rtl] ->
           logical = String.trim(logical)
           ltr_val = String.trim(ltr)
           rtl_val = String.trim(rtl)
 
-          ltr_acc = Map.put(ltr_acc, logical, ltr_val)
-          rtl_acc = Map.put(rtl_acc, logical, rtl_val)
+          ltr_acc = [{logical, ltr_val} | ltr_acc]
+          rtl_acc = [{logical, rtl_val} | rtl_acc]
 
           {ltr_acc, rtl_acc}
 
@@ -177,7 +171,7 @@ defmodule LiveStyle.PropertyMetadata.Parser do
 
   @doc """
   Parses shorthand expansions from data file.
-  Returns a map of CSS property names to expansion function atoms.
+  Returns a list of {property, expansion_fn} tuples.
 
   The data file contains pure CSS property relationships:
   - `property` - has its own expansion function
@@ -202,7 +196,6 @@ defmodule LiveStyle.PropertyMetadata.Parser do
           {prop, to_expand_fn(prop)}
       end
     end)
-    |> Map.new()
   end
 
   # Derives the expansion function name from a property name
@@ -217,14 +210,12 @@ defmodule LiveStyle.PropertyMetadata.Parser do
   Returns a MapSet of property names disallowed in strict mode.
   """
   def disallowed_shorthands do
-    disallowed_shorthands_with_messages()
-    |> Map.keys()
-    |> MapSet.new()
+    for({k, _} <- disallowed_shorthands_with_messages(), into: MapSet.new(), do: k)
   end
 
   @doc """
   Parses disallowed shorthands with their error messages from data file.
-  Returns a map of property names to error messages.
+  Returns a list of {property, message} tuples.
   """
   def disallowed_shorthands_with_messages do
     "disallowed_shorthands.txt"
@@ -240,7 +231,6 @@ defmodule LiveStyle.PropertyMetadata.Parser do
           {prop, "'#{prop}' is not supported. Use longhand properties instead."}
       end
     end)
-    |> Map.new()
   end
 
   @doc """
@@ -293,12 +283,11 @@ defmodule LiveStyle.PropertyMetadata.Parser do
 
       {css_prop, props}
     end)
-    |> Map.new()
   end
 
   @doc """
   Parses longhand expansion definitions from data file.
-  Returns a map of CSS property names to {pattern, [longhand_atoms]} tuples.
+  Returns a list of {property, {pattern, longhands}} tuples.
 
   Format: property ; pattern ; longhand-1, longhand-2, ...
 
@@ -321,12 +310,11 @@ defmodule LiveStyle.PropertyMetadata.Parser do
 
       {property, {pattern, longhand_strings}}
     end)
-    |> Map.new()
   end
 
   @doc """
   Parses selector expansions from data file.
-  Returns a map of standard selectors to their vendor-prefixed variants.
+  Returns a list of {selector, variants} tuples.
 
   Format: standard-selector ; variant-1 ; variant-2 ; ...
 
@@ -343,6 +331,5 @@ defmodule LiveStyle.PropertyMetadata.Parser do
 
       {selector, variants}
     end)
-    |> Map.new()
   end
 end

@@ -38,7 +38,8 @@ defmodule LiveStyle.Pseudo.Sort do
       [":hover", "::before", ":active"]
   """
   @spec sort(list(String.t())) :: list(String.t())
-  def sort(pseudos) when length(pseudos) < 2, do: pseudos
+  def sort([]), do: []
+  def sort([single]), do: [single]
 
   def sort(pseudos) do
     # StyleX's algorithm: pseudo-elements act as separators

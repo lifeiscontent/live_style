@@ -1,6 +1,6 @@
 defmodule LiveStyle.Runtime.RefResolver do
   @moduledoc """
-  Resolves style references to property class maps.
+  Resolves style references to property class lists.
 
   This module handles the lookup of style references across different formats:
   - Atom refs (local to module)
@@ -16,15 +16,15 @@ defmodule LiveStyle.Runtime.RefResolver do
   ## Return Values
 
   All resolve functions return a tagged tuple:
-  - `{:static, prop_classes}` - Static class map
-  - `{:dynamic, class_string, var_map}` - Dynamic with CSS variables
+  - `{:static, prop_classes}` - Static class list
+  - `{:dynamic, class_string, var_list}` - Dynamic with CSS variables
   - `:skip` - Reference should be skipped
   """
 
-  @type prop_classes :: %{atom() => String.t() | :__unset__}
+  @type prop_classes :: [{atom(), String.t() | :__unset__}]
   @type resolve_result ::
           {:static, prop_classes()}
-          | {:dynamic, String.t(), map()}
+          | {:dynamic, String.t(), list()}
           | :skip
 
   @doc """
@@ -40,18 +40,18 @@ defmodule LiveStyle.Runtime.RefResolver do
 
   A tagged tuple indicating the type of resolution result.
   """
-  @spec resolve(module(), term(), map()) :: resolve_result()
-  def resolve(_module, ref, property_classes_map) when is_atom(ref) do
-    prop_classes = Map.get(property_classes_map, ref, %{})
+  @spec resolve(module(), term(), keyword()) :: resolve_result()
+  def resolve(_module, ref, property_classes) when is_atom(ref) do
+    prop_classes = Keyword.get(property_classes, ref, [])
     {:static, prop_classes}
   end
 
-  def resolve(_module, {other_module, name}, _property_classes_map)
+  def resolve(_module, {other_module, name}, _property_classes)
       when is_atom(other_module) and is_atom(name) do
     case Atom.to_string(other_module) do
       <<"Elixir.", _::binary>> ->
         other_prop_classes = other_module.__live_style__(:property_classes)
-        prop_classes = Map.get(other_prop_classes, name, %{})
+        prop_classes = Keyword.get(other_prop_classes, name, [])
         {:static, prop_classes}
 
       _ ->
@@ -59,18 +59,18 @@ defmodule LiveStyle.Runtime.RefResolver do
     end
   end
 
-  def resolve(module, {name, args}, _property_classes_map) when is_atom(name) do
+  def resolve(module, {name, args}, _property_classes) when is_atom(name) do
     dynamic_names = module.__live_style__(:dynamic_names)
 
     if name in dynamic_names do
       fn_name = :"__dynamic_#{name}__"
-      {class_string, var_map} = apply(module, fn_name, [args])
-      {:dynamic, class_string, var_map || %{}}
+      {class_string, var_list} = apply(module, fn_name, [args])
+      {:dynamic, class_string, var_list || []}
     else
-      prop_classes = module.__live_style__(:property_classes) |> Map.get(name, %{})
+      prop_classes = module.__live_style__(:property_classes) |> Keyword.get(name, [])
       {:static, prop_classes}
     end
   end
 
-  def resolve(_module, _ref, _property_classes_map), do: :skip
+  def resolve(_module, _ref, _property_classes), do: :skip
 end

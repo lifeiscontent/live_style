@@ -30,20 +30,22 @@ defmodule LiveStyle.Compiler.CSS.PriorityLayersTest do
   # Tests - Default behavior (layers disabled)
   # ============================================================================
 
-  test "does not use @layer blocks" do
-    css = LiveStyle.Compiler.generate_css()
-    refute css =~ "@layer "
-  end
+  describe "default behavior (layers disabled)" do
+    test "does not use @layer blocks" do
+      css = LiveStyle.Compiler.generate_css()
+      refute css =~ "@layer "
+    end
 
-  test "uses :not(#\\#) hack for specificity bumping on conditional selectors" do
-    css = LiveStyle.Compiler.generate_css()
-    assert css =~ ":not(#\\#)"
-  end
+    test "uses :not(#\\#) hack for specificity bumping on conditional selectors" do
+      css = LiveStyle.Compiler.generate_css()
+      assert css =~ ":not(#\\#)"
+    end
 
-  test "rules from test modules are included in CSS" do
-    css = LiveStyle.Compiler.generate_css()
-    assert css =~ "color:red"
-    assert css =~ "background-color:blue"
-    assert css =~ "margin:10px"
+    test "rules from test modules are included in CSS" do
+      css = LiveStyle.Compiler.generate_css()
+      assert css =~ "color:red"
+      assert css =~ "background-color:blue"
+      assert css =~ "margin:10px"
+    end
   end
 end

@@ -2,24 +2,20 @@ defmodule LiveStyle.Compiler.Class.Conditional do
   @moduledoc false
   # Internal module for conditional value detection and flattening.
   #
-  # A value is "conditional" if it represents a map of selectors to values,
-  # like `%{:default => "red", ":hover" => "blue"}`.
+  # A value is "conditional" if it represents a list of selector-value pairs,
+  # like `[{:default, "red"}, {":hover", "blue"}]`.
   #
   # Detection rules:
   # 1. Has `:default` or `"default"` key → conditional
   # 2. All keys are selector strings (start with ":" or "@") → conditional
   # 3. Otherwise → not conditional
+  #
+  # Note: All conditional values should be sorted lists at this point.
+  # Maps are converted to sorted lists at storage time.
 
   @doc false
   @spec conditional?(term()) :: boolean()
-  def conditional?(value) when is_map(value) do
-    keys = Map.keys(value)
-    has_default?(keys) or all_selector_keys?(keys)
-  end
-
   def conditional?(value) when is_list(value) do
-    # Handle both proper keyword lists and lists with mixed atom/string keys
-    # (MediaQueryTransform can produce lists with string keys)
     case extract_keys(value) do
       {:ok, keys} -> has_default?(keys) or all_selector_keys?(keys)
       :error -> false
@@ -52,26 +48,7 @@ defmodule LiveStyle.Compiler.Class.Conditional do
 
   @doc false
   @spec flatten(term(), String.t() | nil) :: [{String.t() | nil, term()}]
-  # Values are pre-sorted at entry points for deterministic iteration
-  def flatten(value_map, parent_selector) when is_map(value_map) do
-    Enum.flat_map(value_map, fn {condition, value} ->
-      current_selector = combine_selectors(parent_selector, condition)
-
-      cond do
-        is_map(value) and conditional?(value) ->
-          flatten(value, current_selector)
-
-        is_list(value) and conditional?(value) ->
-          flatten(value, current_selector)
-
-        true ->
-          [{current_selector, value}]
-      end
-    end)
-  end
-
-  # Values are pre-sorted at entry points for deterministic iteration
-  # Handle lists directly without converting to maps
+  # Conditional values are sorted lists at this point
   def flatten(value_list, parent_selector) when is_list(value_list) do
     if conditional?(value_list) do
       Enum.flat_map(value_list, &flatten_entry(&1, parent_selector))
@@ -87,10 +64,10 @@ defmodule LiveStyle.Compiler.Class.Conditional do
   defp flatten_entry({condition, value}, parent_selector) do
     current_selector = combine_selectors(parent_selector, condition)
 
-    cond do
-      is_map(value) and conditional?(value) -> flatten(value, current_selector)
-      is_list(value) and conditional?(value) -> flatten(value, current_selector)
-      true -> [{current_selector, value}]
+    if is_list(value) and conditional?(value) do
+      flatten(value, current_selector)
+    else
+      [{current_selector, value}]
     end
   end
 

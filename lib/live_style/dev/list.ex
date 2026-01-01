@@ -9,7 +9,7 @@ defmodule LiveStyle.Dev.List do
 
     class_strings = module.__live_style__(:class_strings)
     dynamic_names = module.__live_style__(:dynamic_names)
-    static_names = Map.keys(class_strings)
+    static_names = Keyword.keys(class_strings)
 
     case filter do
       :all -> Enum.sort(static_names ++ dynamic_names)

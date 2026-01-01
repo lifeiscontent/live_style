@@ -19,17 +19,25 @@ defmodule LiveStyle.Compiler.CSS.AtomicRules.Collector do
   end
 
   # Extract class tuples from atomic_classes entries
-  defp extract_class_tuples({_property, %{unset: true}}), do: []
+  defp extract_class_tuples({property, data}) when is_list(data) do
+    cond do
+      Keyword.get(data, :unset) == true ->
+        []
 
-  defp extract_class_tuples({property, %{class: class_name, value: value} = data})
-       when not is_map_key(data, :classes) do
-    [build_class_tuple(property, class_name, value, data)]
-  end
+      Keyword.has_key?(data, :classes) ->
+        classes = Keyword.get(data, :classes)
 
-  defp extract_class_tuples({property, %{classes: classes}}) do
-    Enum.map(classes, fn {_condition, %{class: class_name, value: value} = data} ->
-      build_class_tuple(property, class_name, value, data)
-    end)
+        Enum.map(classes, fn {_condition, entry} ->
+          class_name = Keyword.get(entry, :class)
+          value = Keyword.get(entry, :value)
+          build_class_tuple(property, class_name, value, entry)
+        end)
+
+      true ->
+        class_name = Keyword.get(data, :class)
+        value = Keyword.get(data, :value)
+        [build_class_tuple(property, class_name, value, data)]
+    end
   end
 
   defp build_class_tuple(property, class_name, value, data) do
@@ -37,11 +45,11 @@ defmodule LiveStyle.Compiler.CSS.AtomicRules.Collector do
       class_name,
       base_property(property),
       value,
-      Map.get(data, :selector_suffix),
-      Map.get(data, :pseudo_element),
-      Map.get(data, :fallback_values),
-      Map.get(data, :at_rule),
-      Map.get(data, :priority, 3000)
+      Keyword.get(data, :selector_suffix),
+      Keyword.get(data, :pseudo_element),
+      Keyword.get(data, :fallback_values),
+      Keyword.get(data, :at_rule),
+      Keyword.get(data, :priority, 3000)
     }
   end
 

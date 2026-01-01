@@ -198,17 +198,17 @@ defmodule LiveStyle.APIContractTest.WhenModule do
 
   # ancestor takes a pseudo selector like :hover, not a class
   class(:with_ancestor,
-    color: %{
-      :default => "black",
-      When.ancestor(":hover") => "blue"
-    }
+    color: [
+      {:default, "black"},
+      {When.ancestor(":hover"), "blue"}
+    ]
   )
 
   class(:with_descendant,
-    color: %{
-      :default => "gray",
-      When.descendant(":focus") => "blue"
-    }
+    color: [
+      {:default, "gray"},
+      {When.descendant(":focus"), "blue"}
+    ]
   )
 end
 
@@ -279,19 +279,19 @@ defmodule LiveStyle.APIContractTest.Tests do
 
       assert rule != nil
       assert rule.class_string != ""
-      assert is_map(rule.atomic_classes)
-      assert Map.has_key?(rule.atomic_classes, "display")
-      assert Map.has_key?(rule.atomic_classes, "padding")
+      assert is_list(rule.atomic_classes)
+      assert get_atomic(rule.atomic_classes, "display") != nil
+      assert get_atomic(rule.atomic_classes, "padding") != nil
     end
 
     test "conditional rules generate multiple classes per property" do
       rule = Class.lookup!({StylesModule, :link})
 
-      # color should have classes map with :default, :hover, etc.
-      color_classes = rule.atomic_classes["color"].classes
-      assert Map.has_key?(color_classes, :default)
-      assert Map.has_key?(color_classes, ":hover")
-      assert Map.has_key?(color_classes, ":focus")
+      # color should have classes list with :default, :hover, etc.
+      color_classes = field(get_atomic(rule.atomic_classes, "color"), :classes)
+      assert get_class(color_classes, :default) != nil
+      assert get_class(color_classes, ":hover") != nil
+      assert get_class(color_classes, ":focus") != nil
     end
 
     test "dynamic rules are marked as dynamic" do
@@ -303,10 +303,10 @@ defmodule LiveStyle.APIContractTest.Tests do
     test "array fallbacks generate multiple declarations" do
       rule = Class.lookup!({StylesModule, :sticky})
 
-      position = rule.atomic_classes["position"]
+      position = get_atomic(rule.atomic_classes, "position")
       # Should have multiple values in LTR
-      assert position.ltr =~ "position:sticky"
-      assert position.ltr =~ "position:fixed"
+      assert field(position, :ltr) =~ "position:sticky"
+      assert field(position, :ltr) =~ "position:fixed"
     end
   end
 
@@ -345,9 +345,9 @@ defmodule LiveStyle.APIContractTest.Tests do
       rule = Class.lookup!({IncludeModule, :extended})
 
       # Should have display from base
-      assert Map.has_key?(rule.atomic_classes, "display")
+      assert get_atomic(rule.atomic_classes, "display") != nil
       # Should have its own property
-      assert Map.has_key?(rule.atomic_classes, "justify-content")
+      assert get_atomic(rule.atomic_classes, "justify-content") != nil
     end
   end
 
@@ -426,8 +426,8 @@ defmodule LiveStyle.APIContractTest.Tests do
     test "has expected fields" do
       attrs = %LiveStyle.Attrs{class: "test", style: nil}
 
-      assert Map.has_key?(attrs, :class)
-      assert Map.has_key?(attrs, :style)
+      assert is_map_key(attrs, :class)
+      assert is_map_key(attrs, :style)
     end
 
     test "can access fields via struct syntax" do
@@ -444,7 +444,7 @@ defmodule LiveStyle.APIContractTest.Tests do
 
       assert rule != nil
       # The rule should have a color class
-      assert Map.has_key?(rule.atomic_classes, "color")
+      assert get_atomic(rule.atomic_classes, "color") != nil
     end
 
     test "descendant/2 is available and generates correct selector" do
@@ -571,16 +571,16 @@ defmodule LiveStyle.APIContractTest.Tests do
       rule = Class.lookup!({StylesModule, :themed})
 
       # color should reference the var from TokensModule
-      color = rule.atomic_classes["color"]
-      assert color.ltr =~ "var(--"
+      color = get_atomic(rule.atomic_classes, "color")
+      assert field(color, :ltr) =~ "var(--"
     end
 
     test "keyframes can reference keyframes from other modules" do
       rule = Class.lookup!({StylesModule, :themed})
 
       # animation-name should reference keyframes from TokensModule
-      animation = rule.atomic_classes["animation-name"]
-      assert animation.ltr =~ ~r/animation-name:x[a-z0-9]+-B/
+      animation = get_atomic(rule.atomic_classes, "animation-name")
+      assert field(animation, :ltr) =~ ~r/animation-name:x[a-z0-9]+-B/
     end
   end
 
@@ -590,8 +590,7 @@ defmodule LiveStyle.APIContractTest.Tests do
 
       # All class names should start with 'x'
       Enum.each(rule.atomic_classes, fn {_prop, meta} ->
-        class =
-          meta.class || (meta.classes && meta.classes[:default] && meta.classes[:default].class)
+        class = field(meta, :class) || get_default_class(field(meta, :classes))
 
         if class,
           do: assert(String.starts_with?(class, "x"), "Class #{class} should start with 'x'")
@@ -601,21 +600,21 @@ defmodule LiveStyle.APIContractTest.Tests do
     test "LTR output follows .classname{property:value} format" do
       rule = Class.lookup!({StylesModule, :button})
 
-      display = rule.atomic_classes["display"]
-      assert display.ltr =~ ~r/^\.[a-z0-9]+\{display:[^}]+\}$/
+      display = get_atomic(rule.atomic_classes, "display")
+      assert field(display, :ltr) =~ ~r/^\.[a-z0-9]+\{display:[^}]+\}$/
     end
 
     test "priorities follow StyleX convention" do
       rule = Class.lookup!({StylesModule, :button})
 
       # Regular properties should have priority 3000
-      display = rule.atomic_classes["display"]
-      assert display.priority == 3000
+      display = get_atomic(rule.atomic_classes, "display")
+      assert field(display, :priority) == 3000
 
       # Custom properties should have priority 1
       custom_rule = Class.lookup!({StylesModule, :custom_props})
-      custom_prop = custom_rule.atomic_classes["--my-color"]
-      assert custom_prop.priority == 1
+      custom_prop = get_atomic(custom_rule.atomic_classes, "--my-color")
+      assert field(custom_prop, :priority) == 1
     end
   end
 
@@ -633,6 +632,15 @@ defmodule LiveStyle.APIContractTest.Tests do
       assert is_binary(class)
       # Should contain classes from both rules
       assert String.contains?(class, " ") or String.length(class) > 10
+    end
+  end
+
+  defp get_default_class(nil), do: nil
+
+  defp get_default_class(classes) do
+    case classes[:default] do
+      nil -> nil
+      entry -> entry.class
     end
   end
 end

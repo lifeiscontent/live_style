@@ -27,10 +27,10 @@ defmodule LiveStyle.WhenTest do
     alias LiveStyle.When
 
     class(:card,
-      background_color: %{
-        :default => "blue",
-        When.ancestor(":hover") => "red"
-      }
+      background_color: [
+        {:default, "blue"},
+        {When.ancestor(":hover"), "red"}
+      ]
     )
   end
 
@@ -39,10 +39,10 @@ defmodule LiveStyle.WhenTest do
     alias LiveStyle.When
 
     class(:label,
-      color: %{
-        :default => "black",
-        When.sibling_before(":focus") => "blue"
-      }
+      color: [
+        {:default, "black"},
+        {When.sibling_before(":focus"), "blue"}
+      ]
     )
   end
 
@@ -51,10 +51,10 @@ defmodule LiveStyle.WhenTest do
     alias LiveStyle.When
 
     class(:hint,
-      visibility: %{
-        :default => "hidden",
-        When.sibling_after(":focus") => "visible"
-      }
+      visibility: [
+        {:default, "hidden"},
+        {When.sibling_after(":focus"), "visible"}
+      ]
     )
   end
 
@@ -63,10 +63,10 @@ defmodule LiveStyle.WhenTest do
     alias LiveStyle.When
 
     class(:tab,
-      opacity: %{
-        :default => "1",
-        When.any_sibling(":hover") => "0.7"
-      }
+      opacity: [
+        {:default, "1"},
+        {When.any_sibling(":hover"), "0.7"}
+      ]
     )
   end
 
@@ -75,10 +75,10 @@ defmodule LiveStyle.WhenTest do
     alias LiveStyle.When
 
     class(:container,
-      border_color: %{
-        :default => "gray",
-        When.descendant(":focus") => "blue"
-      }
+      border_color: [
+        {:default, "gray"},
+        {When.descendant(":focus"), "blue"}
+      ]
     )
   end
 
@@ -89,10 +89,10 @@ defmodule LiveStyle.WhenTest do
     @card_marker Marker.ref(:card)
 
     class(:child,
-      transform: %{
-        :default => "translateX(0)",
-        When.ancestor(":hover", @card_marker) => "translateX(10px)"
-      }
+      transform: [
+        {:default, "translateX(0)"},
+        {When.ancestor(":hover", @card_marker), "translateX(10px)"}
+      ]
     )
   end
 
@@ -101,12 +101,12 @@ defmodule LiveStyle.WhenTest do
     alias LiveStyle.When
 
     class(:item,
-      background_color: %{
-        :default => "white",
-        When.ancestor(":hover") => "lightblue",
-        When.sibling_before(":focus") => "lightgreen",
-        ":hover" => "gray"
-      }
+      background_color: [
+        {:default, "white"},
+        {When.ancestor(":hover"), "lightblue"},
+        {When.sibling_before(":focus"), "lightgreen"},
+        {":hover", "gray"}
+      ]
     )
   end
 
@@ -115,14 +115,15 @@ defmodule LiveStyle.WhenTest do
     alias LiveStyle.When
 
     class(:responsive_card,
-      background_color: %{
-        :default => "blue",
-        When.ancestor(":hover") => "red",
-        "@media (min-width: 768px)" => %{
-          :default => "green",
-          When.ancestor(":hover") => "yellow"
-        }
-      }
+      background_color: [
+        {:default, "blue"},
+        {When.ancestor(":hover"), "red"},
+        {"@media (min-width: 768px)",
+         [
+           {:default, "green"},
+           {When.ancestor(":hover"), "yellow"}
+         ]}
+      ]
     )
   end
 
@@ -408,7 +409,7 @@ defmodule LiveStyle.WhenTest do
       assert rule.class_string != ""
 
       # Check that we have both a default and conditional class
-      assert map_size(rule.atomic_classes) > 0
+      assert rule.atomic_classes != []
     end
 
     test "sibling_before generates correct CSS in rules" do

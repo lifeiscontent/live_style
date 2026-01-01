@@ -112,17 +112,17 @@ defmodule LiveStyle.CSSTest do
     use LiveStyle
 
     class(:link,
-      color: %{
-        :default => "blue",
-        ":hover" => "red",
-        ":focus" => "green"
-      }
+      color: [
+        default: "blue",
+        ":hover": "red",
+        ":focus": "green"
+      ]
     )
 
     class(:override_hover,
-      color: %{
-        ":hover" => "purple"
-      }
+      color: [
+        ":hover": "purple"
+      ]
     )
   end
 
@@ -134,17 +134,17 @@ defmodule LiveStyle.CSSTest do
     use LiveStyle
 
     class(:responsive,
-      background_color: %{
-        :default => "red",
-        "@media (min-width: 1000px)" => "blue",
-        "@media (min-width: 2000px)" => "purple"
-      }
+      background_color: [
+        default: "red",
+        "@media (min-width: 1000px)": "blue",
+        "@media (min-width: 2000px)": "purple"
+      ]
     )
 
     class(:override_large,
-      background_color: %{
-        "@media (min-width: 1000px)" => "green"
-      }
+      background_color: [
+        "@media (min-width: 1000px)": "green"
+      ]
     )
   end
 
@@ -202,21 +202,21 @@ defmodule LiveStyle.CSSTest do
       rule = Class.lookup!({LiveStyle.CSSTest.BasicStyles, :red})
 
       # Check the atomic_class metadata
-      color = rule.atomic_classes["color"]
-      assert color.ltr =~ ~r/\.x[a-z0-9]+\{color:red\}$/
-      assert color.rtl == nil
-      assert color.priority == 3000
+      color = get_atomic(rule.atomic_classes, "color")
+      assert field(color, :ltr) =~ ~r/\.x[a-z0-9]+\{color:red\}$/
+      assert field(color, :rtl) == nil
+      assert field(color, :priority) == 3000
 
       # The class returned by class should match the metadata
       class = Compiler.get_css_class(BasicStyles, [:red])
-      assert class == color.class
+      assert class == field(color, :class)
     end
 
     test "Attrs struct has expected fields" do
       attrs = Compiler.get_css(BasicStyles, [:red])
 
       assert %LiveStyle.Attrs{} = attrs
-      assert Map.has_key?(attrs, :class)
+      assert is_map_key(attrs, :class)
 
       # For static styles, style should be nil or empty
       assert attrs.style == nil or attrs.style == %{}
@@ -238,9 +238,9 @@ defmodule LiveStyle.CSSTest do
       classes = String.split(class, " ")
 
       # Blue should be present (last)
-      assert blue_rule.atomic_classes["color"].class in classes
+      assert field(get_atomic(blue_rule.atomic_classes, "color"), :class) in classes
       # Red should NOT be present (overridden)
-      refute red_rule.atomic_classes["color"].class in classes
+      refute field(get_atomic(red_rule.atomic_classes, "color"), :class) in classes
     end
 
     test "reversed order gives different result" do
@@ -253,9 +253,9 @@ defmodule LiveStyle.CSSTest do
       classes = String.split(class, " ")
 
       # Red should be present (last)
-      assert red_rule.atomic_classes["color"].class in classes
+      assert field(get_atomic(red_rule.atomic_classes, "color"), :class) in classes
       # Blue should NOT be present (overridden)
-      refute blue_rule.atomic_classes["color"].class in classes
+      refute field(get_atomic(blue_rule.atomic_classes, "color"), :class) in classes
     end
 
     test "three-way collision - only last survives" do
@@ -266,7 +266,7 @@ defmodule LiveStyle.CSSTest do
       classes = String.split(class, " ")
 
       # Only green should be present
-      assert green_rule.atomic_classes["color"].class in classes
+      assert field(get_atomic(green_rule.atomic_classes, "color"), :class) in classes
       assert length(classes) == 1
     end
 
@@ -289,14 +289,16 @@ defmodule LiveStyle.CSSTest do
       classes = String.split(class, " ")
 
       # Should have secondary's color class (red) and primary's background class
-      primary_bg_class = primary_rule.atomic_classes["background-color"].class
-      secondary_color_class = secondary_rule.atomic_classes["color"].class
+      primary_bg_class =
+        field(get_atomic(primary_rule.atomic_classes, "background-color"), :class)
+
+      secondary_color_class = field(get_atomic(secondary_rule.atomic_classes, "color"), :class)
 
       assert secondary_color_class in classes
       assert primary_bg_class in classes
 
       # Should NOT have primary's color class (blue) - it was overridden
-      primary_color_class = primary_rule.atomic_classes["color"].class
+      primary_color_class = field(get_atomic(primary_rule.atomic_classes, "color"), :class)
       refute primary_color_class in classes
     end
 
@@ -310,11 +312,13 @@ defmodule LiveStyle.CSSTest do
       classes = String.split(class, " ")
 
       # Color should be warning's orange (last)
-      warning_color_class = warning_rule.atomic_classes["color"].class
+      warning_color_class = field(get_atomic(warning_rule.atomic_classes, "color"), :class)
       assert warning_color_class in classes
 
       # Background should be warning's yellow (last)
-      warning_bg_class = warning_rule.atomic_classes["background-color"].class
+      warning_bg_class =
+        field(get_atomic(warning_rule.atomic_classes, "background-color"), :class)
+
       assert warning_bg_class in classes
     end
   end
@@ -349,7 +353,7 @@ defmodule LiveStyle.CSSTest do
         |> Enum.reject(&(&1 == ""))
 
       # Color should be present (added back after revert)
-      assert colored_rule.atomic_classes["color"].class in classes
+      assert field(get_atomic(colored_rule.atomic_classes, "color"), :class) in classes
     end
 
     test "selective null removes only that property" do
@@ -365,7 +369,7 @@ defmodule LiveStyle.CSSTest do
         |> Enum.reject(&(&1 == ""))
 
       # Color should remain
-      assert styled_rule.atomic_classes["color"].class in classes
+      assert field(get_atomic(styled_rule.atomic_classes, "color"), :class) in classes
       # Should only be one class (color)
       assert length(classes) == 1
     end
@@ -425,8 +429,8 @@ defmodule LiveStyle.CSSTest do
       assert length(classes) >= 2
 
       # margin_bottom from override should be present (100px wins over 15px)
-      if override_rule.atomic_classes["margin-bottom"] do
-        assert override_rule.atomic_classes["margin-bottom"].class in classes
+      if get_atomic(override_rule.atomic_classes, "margin-bottom") do
+        assert field(get_atomic(override_rule.atomic_classes, "margin-bottom"), :class) in classes
       end
     end
 
@@ -509,7 +513,12 @@ defmodule LiveStyle.CSSTest do
         |> Enum.reject(&(&1 == ""))
 
       # Should have override_hover's hover class
-      hover_class = override_rule.atomic_classes["color"].classes[":hover"].class
+      hover_class =
+        field(
+          get_class(field(get_atomic(override_rule.atomic_classes, "color"), :classes), ":hover"),
+          :class
+        )
+
       assert hover_class in classes
     end
   end
@@ -542,8 +551,10 @@ defmodule LiveStyle.CSSTest do
         |> Enum.reject(&(&1 == ""))
 
       # Should include the override's class for the 1000px breakpoint
-      media_classes = override_rule.atomic_classes["background-color"].classes
-      media_class = media_classes["@media (min-width: 1000px)"].class
+      media_classes =
+        field(get_atomic(override_rule.atomic_classes, "background-color"), :classes)
+
+      media_class = field(get_class(media_classes, "@media (min-width: 1000px)"), :class)
       assert media_class in classes
     end
   end
@@ -570,7 +581,7 @@ defmodule LiveStyle.CSSTest do
       opacity_result = DynamicStyles.__dynamic_dynamic_opacity__("0.5")
 
       # Both should produce results with class and var info
-      # Dynamic results are tuples: {class, style_map}
+      # Dynamic results are tuples: {class, var_list}
       assert is_tuple(bg_result)
       assert is_tuple(opacity_result)
 
@@ -578,9 +589,9 @@ defmodule LiveStyle.CSSTest do
       {opacity_class, opacity_vars} = opacity_result
 
       assert is_binary(bg_class)
-      assert is_map(bg_vars)
+      assert is_list(bg_vars)
       assert is_binary(opacity_class)
-      assert is_map(opacity_vars)
+      assert is_list(opacity_vars)
     end
   end
 

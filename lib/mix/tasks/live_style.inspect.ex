@@ -72,7 +72,7 @@ defmodule Mix.Tasks.LiveStyle.Inspect do
       LiveStyle.Dev.pp(module, class_name)
     end)
 
-    if length(class_atoms) > 1 do
+    if match?([_, _ | _], class_atoms) do
       diff = LiveStyle.Dev.diff(module, class_atoms)
       Mix.shell().info("")
       Mix.shell().info("  #{IO.ANSI.bright()}Merged result:#{IO.ANSI.reset()}")

@@ -68,13 +68,22 @@ defmodule LiveStyle.Vars do
     # Sort conditional values once at storage time for deterministic iteration
     sorted_value = Utils.sort_conditional_value(css_value)
 
+    # Also sort initial value in type_info if present
+    sorted_type_info = sort_type_info_initial(type_info)
+
     entry = %{
       ident: ident,
       value: sorted_value,
-      type: type_info
+      type: sorted_type_info
     }
 
     store_entry(key, entry)
+  end
+
+  defp sort_type_info_initial(nil), do: nil
+
+  defp sort_type_info_initial(%{initial: initial} = type_info) do
+    %{type_info | initial: Utils.sort_conditional_value(initial)}
   end
 
   @doc """
@@ -109,13 +118,13 @@ defmodule LiveStyle.Vars do
   # LiveStyle.TypedProperty format: %{syntax: "<angle>", initial: "0deg", inherits: true}
   defp extract_var_value(%{syntax: syntax, initial: initial} = typed)
        when is_binary(syntax) do
-    inherits = Map.get(typed, :inherits, true)
+    inherits = if is_map_key(typed, :inherits), do: typed.inherits, else: true
     {initial, %{syntax: syntax, initial: initial, inherits: inherits}}
   end
 
   # LiveStyle.PropertyType module format: %{__type__: :typed_var, syntax: "<angle>", value: "0deg"}
   defp extract_var_value(%{__type__: :typed_var, syntax: syntax, value: value} = typed) do
-    inherits = Map.get(typed, :inherits, true)
+    inherits = if is_map_key(typed, :inherits), do: typed.inherits, else: true
     {value, %{syntax: syntax, initial: value, inherits: inherits}}
   end
 
@@ -123,9 +132,8 @@ defmodule LiveStyle.Vars do
     {value, nil}
   end
 
-  defp extract_var_value(value)
-       when is_map(value) and not is_map_key(value, :__css_type__) and
-              not is_map_key(value, :__type__) and not is_map_key(value, :syntax) do
+  # Conditional values as keyword lists
+  defp extract_var_value(value) when is_list(value) do
     {value, nil}
   end
 

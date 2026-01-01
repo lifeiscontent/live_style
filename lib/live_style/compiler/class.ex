@@ -110,8 +110,7 @@ defmodule LiveStyle.Compiler.Class do
   #
   # Conditional selectors like pseudo-classes and at-rules must be nested inside
   # individual property values (e.g. `color: [default: ..., ":hover": ...]`).
-  # Top-level conditional blocks like `%{"@media (...)" => %{...}}` are considered
-  # legacy contextual styles and are rejected.
+  # Top-level conditional blocks are considered legacy contextual styles and are rejected.
 
   defp process_declarations(declarations, opts) do
     # Sort conditional values once before processing for deterministic iteration
@@ -142,22 +141,25 @@ defmodule LiveStyle.Compiler.Class do
     conditional_atomic = Processor.Conditional.process(conditional_decls, opts)
     pseudo_atomic = Processor.PseudoElement.process(pseudo_decls, opts)
 
-    # Merge all atomic classes
+    # Merge all atomic classes (lists merged with last-wins semantics)
     atomic =
       simple_atomic
-      |> Map.merge(conditional_atomic)
-      |> Map.merge(pseudo_atomic)
+      |> Utils.merge_declarations(conditional_atomic)
+      |> Utils.merge_declarations(pseudo_atomic)
 
     class_string =
       atomic
-      |> Map.values()
-      |> Enum.flat_map(fn
-        %{class: class} -> [class]
-        %{classes: classes} -> Enum.map(Map.values(classes), & &1.class)
-      end)
+      |> Enum.flat_map(&extract_class_names/1)
       |> Enum.join(" ")
 
     {atomic, class_string}
+  end
+
+  defp extract_class_names({_prop, entry}) when is_list(entry) do
+    case Keyword.get(entry, :classes) do
+      nil -> [Keyword.get(entry, :class)]
+      classes -> Enum.map(classes, fn {_cond, e} -> Keyword.get(e, :class) end)
+    end
   end
 
   defp expand_nested_condition_blocks(declarations) do
@@ -171,8 +173,7 @@ defmodule LiveStyle.Compiler.Class do
   end
 
   defp expand_declarations(declarations) do
-    declarations
-    |> Enum.reduce(%{}, fn {prop, value}, acc ->
+    Enum.reduce(declarations, [], fn {prop, value}, acc ->
       prop_str = to_string(prop)
 
       if nested_condition_key?(prop_str) and map_or_kw?(value) do
@@ -181,7 +182,6 @@ defmodule LiveStyle.Compiler.Class do
         merge_property_value(acc, prop, value)
       end
     end)
-    |> Enum.to_list()
   end
 
   defp legacy_condition_error("@" <> _rest) do
@@ -199,7 +199,6 @@ defmodule LiveStyle.Compiler.Class do
   defp nested_condition_key?(<<"@", _rest::binary>>), do: true
   defp nested_condition_key?(_), do: false
 
-  defp map_or_kw?(value) when is_map(value), do: true
   defp map_or_kw?(value) when is_list(value), do: Keyword.keyword?(value)
   defp map_or_kw?(_), do: false
 

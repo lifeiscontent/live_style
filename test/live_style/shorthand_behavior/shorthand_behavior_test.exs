@@ -82,11 +82,12 @@ defmodule LiveStyle.ShorthandBehaviorTest do
       assert "margin-bottom" in props
       assert "margin-left" in props
 
-      # Each property should have both conditions
+      # Each property should have both conditions as a sorted list
       margin_top = Enum.find(result, fn {k, _} -> k == "margin-top" end)
       {_, margin_top_conditions} = margin_top
-      assert Map.has_key?(margin_top_conditions, :default)
-      assert Map.has_key?(margin_top_conditions, "@media (min-width: 768px)")
+      assert is_list(margin_top_conditions)
+      assert List.keyfind(margin_top_conditions, :default, 0) != nil
+      assert List.keyfind(margin_top_conditions, "@media (min-width: 768px)", 0) != nil
     end
   end
 
@@ -133,7 +134,7 @@ defmodule LiveStyle.ShorthandBehaviorTest do
     end
 
     test "forbids disallowed shorthand in conditions" do
-      conditions = %{:default => "1px solid black"}
+      conditions = [default: "1px solid black"]
 
       assert_raise ArgumentError, ~r/'border' is not supported/, fn ->
         ForbidShorthands.expand_shorthand_conditions("border", conditions, @opts)

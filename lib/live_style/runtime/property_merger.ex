@@ -15,16 +15,16 @@ defmodule LiveStyle.Runtime.PropertyMerger do
   3. `:__unset__` explicitly removes a property
   """
 
-  @type prop_classes :: %{atom() => String.t() | :__unset__}
+  @type prop_classes :: [{atom(), String.t() | :__unset__}]
   @type dynamic_key :: {:__dynamic__, integer()}
-  @type accumulator :: %{(atom() | dynamic_key()) => String.t() | :__unset__}
+  @type accumulator :: [{atom() | dynamic_key(), String.t() | :__unset__}]
 
   @doc """
   Merges property classes into an accumulator.
 
   ## Parameters
 
-    * `prop_classes` - Map of property to class string (or :__unset__)
+    * `prop_classes` - List of {property, class_string} tuples (or :__unset__)
     * `acc` - Current accumulator
 
   ## Returns
@@ -32,7 +32,7 @@ defmodule LiveStyle.Runtime.PropertyMerger do
   Updated accumulator with merged classes.
   """
   @spec merge(prop_classes(), accumulator()) :: accumulator()
-  def merge(prop_classes, acc) when is_map(prop_classes) do
+  def merge(prop_classes, acc) when is_list(prop_classes) do
     Enum.reduce(prop_classes, acc, &merge_prop/2)
   end
 
@@ -40,8 +40,8 @@ defmodule LiveStyle.Runtime.PropertyMerger do
   Merges a single property class into the accumulator.
   """
   @spec merge_prop({atom(), String.t() | :__unset__}, accumulator()) :: accumulator()
-  def merge_prop({prop, :__unset__}, acc), do: Map.delete(acc, prop)
-  def merge_prop({prop, class}, acc), do: Map.put(acc, prop, class)
+  def merge_prop({prop, :__unset__}, acc), do: List.keydelete(acc, prop, 0)
+  def merge_prop({prop, class}, acc), do: List.keystore(acc, prop, 0, {prop, class})
 
   @doc """
   Adds a dynamic class to the accumulator with a unique key.
@@ -52,7 +52,7 @@ defmodule LiveStyle.Runtime.PropertyMerger do
   @spec add_dynamic(String.t(), accumulator()) :: accumulator()
   def add_dynamic(class_string, acc) do
     dyn_key = {:__dynamic__, :erlang.unique_integer([:positive])}
-    Map.put(acc, dyn_key, class_string)
+    [{dyn_key, class_string} | acc]
   end
 
   @doc """
@@ -63,7 +63,7 @@ defmodule LiveStyle.Runtime.PropertyMerger do
   @spec to_class_list(accumulator()) :: [String.t()]
   def to_class_list(acc) do
     acc
-    |> Map.values()
+    |> Enum.map(fn {_key, value} -> value end)
     |> Enum.reject(&(&1 == :__unset__ or &1 == nil or &1 == ""))
   end
 end

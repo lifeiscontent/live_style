@@ -187,7 +187,7 @@ defmodule LiveStyle.Config do
       Overrides.get(:class_name_prefix) ||
         Application.get_env(:live_style, :class_name_prefix, @default_class_name_prefix)
 
-    unless is_binary(value) and String.length(value) > 0 do
+    unless is_binary(value) and value != "" do
       raise ArgumentError, """
       Invalid class_name_prefix: #{inspect(value)}
 

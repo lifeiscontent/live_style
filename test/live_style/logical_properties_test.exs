@@ -95,11 +95,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
       rule =
         Class.lookup!({LiveStyle.LogicalPropertiesTest.LogicalValues, :float_start})
 
-      meta = rule.atomic_classes["float"]
-      assert meta.class == "x1kmio9f"
-      assert meta.ltr == ".x1kmio9f{float:left}"
-      assert meta.rtl == "html[dir=\"rtl\"] .x1kmio9f{float:right}"
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "float")
+      assert field(meta, :class) == "x1kmio9f"
+      assert field(meta, :ltr) == ".x1kmio9f{float:left}"
+      assert field(meta, :rtl) == "html[dir=\"rtl\"] .x1kmio9f{float:right}"
+      assert field(meta, :priority) == 3000
     end
 
     test "float: inline-end generates LTR (right) and RTL (left)" do
@@ -107,11 +107,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
       rule =
         Class.lookup!({LiveStyle.LogicalPropertiesTest.LogicalValues, :float_end})
 
-      meta = rule.atomic_classes["float"]
-      assert meta.class == "x1h0q493"
-      assert meta.ltr == ".x1h0q493{float:right}"
-      assert meta.rtl == "html[dir=\"rtl\"] .x1h0q493{float:left}"
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "float")
+      assert field(meta, :class) == "x1h0q493"
+      assert field(meta, :ltr) == ".x1h0q493{float:right}"
+      assert field(meta, :rtl) == "html[dir=\"rtl\"] .x1h0q493{float:left}"
+      assert field(meta, :priority) == 3000
     end
   end
 
@@ -121,11 +121,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
       rule =
         Class.lookup!({LiveStyle.LogicalPropertiesTest.LogicalValues, :clear_start})
 
-      meta = rule.atomic_classes["clear"]
-      assert meta.class == "x18lmvvi"
-      assert meta.ltr == ".x18lmvvi{clear:left}"
-      assert meta.rtl == "html[dir=\"rtl\"] .x18lmvvi{clear:right}"
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "clear")
+      assert field(meta, :class) == "x18lmvvi"
+      assert field(meta, :ltr) == ".x18lmvvi{clear:left}"
+      assert field(meta, :rtl) == "html[dir=\"rtl\"] .x18lmvvi{clear:right}"
+      assert field(meta, :priority) == 3000
     end
 
     test "clear: inline-end generates LTR (right) and RTL (left)" do
@@ -133,11 +133,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
       rule =
         Class.lookup!({LiveStyle.LogicalPropertiesTest.LogicalValues, :clear_end})
 
-      meta = rule.atomic_classes["clear"]
-      assert meta.class == "xof8tvn"
-      assert meta.ltr == ".xof8tvn{clear:right}"
-      assert meta.rtl == "html[dir=\"rtl\"] .xof8tvn{clear:left}"
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "clear")
+      assert field(meta, :class) == "xof8tvn"
+      assert field(meta, :ltr) == ".xof8tvn{clear:right}"
+      assert field(meta, :rtl) == "html[dir=\"rtl\"] .xof8tvn{clear:left}"
+      assert field(meta, :priority) == 3000
     end
   end
 
@@ -147,11 +147,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
       rule =
         Class.lookup!({LiveStyle.LogicalPropertiesTest.LogicalValues, :text_align_start})
 
-      meta = rule.atomic_classes["text-align"]
-      assert meta.class == "x1yc453h"
-      assert meta.ltr == ".x1yc453h{text-align:start}"
-      assert meta.rtl == nil
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "text-align")
+      assert field(meta, :class) == "x1yc453h"
+      assert field(meta, :ltr) == ".x1yc453h{text-align:start}"
+      assert field(meta, :rtl) == nil
+      assert field(meta, :priority) == 3000
     end
 
     test "text-align: end is NOT transformed (browser handles RTL)" do
@@ -159,11 +159,11 @@ defmodule LiveStyle.LogicalPropertiesTest do
       rule =
         Class.lookup!({LiveStyle.LogicalPropertiesTest.LogicalValues, :text_align_end})
 
-      meta = rule.atomic_classes["text-align"]
-      assert meta.class == "xp4054r"
-      assert meta.ltr == ".xp4054r{text-align:end}"
-      assert meta.rtl == nil
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "text-align")
+      assert field(meta, :class) == "xp4054r"
+      assert field(meta, :ltr) == ".xp4054r{text-align:end}"
+      assert field(meta, :rtl) == nil
+      assert field(meta, :priority) == 3000
     end
   end
 
@@ -178,9 +178,9 @@ defmodule LiveStyle.LogicalPropertiesTest do
           {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :border_inline_color}
         )
 
-      meta = rule.atomic_classes["border-inline-color"]
-      assert meta.ltr =~ "border-inline-color:red"
-      assert meta.rtl == nil
+      meta = get_atomic(rule.atomic_classes, "border-inline-color")
+      assert field(meta, :ltr) =~ "border-inline-color:red"
+      assert field(meta, :rtl) == nil
     end
 
     test "border-inline-start-color stays as logical property" do
@@ -190,10 +190,10 @@ defmodule LiveStyle.LogicalPropertiesTest do
           {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :border_inline_start_color}
         )
 
-      meta = rule.atomic_classes["border-inline-start-color"]
-      assert meta.ltr =~ "border-inline-start-color:red"
-      assert meta.rtl == nil
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "border-inline-start-color")
+      assert field(meta, :ltr) =~ "border-inline-start-color:red"
+      assert field(meta, :rtl) == nil
+      assert field(meta, :priority) == 3000
     end
 
     test "border-inline-end-color stays as logical property" do
@@ -203,10 +203,10 @@ defmodule LiveStyle.LogicalPropertiesTest do
           {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :border_inline_end_color}
         )
 
-      meta = rule.atomic_classes["border-inline-end-color"]
-      assert meta.ltr =~ "border-inline-end-color:red"
-      assert meta.rtl == nil
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "border-inline-end-color")
+      assert field(meta, :ltr) =~ "border-inline-end-color:red"
+      assert field(meta, :rtl) == nil
+      assert field(meta, :priority) == 3000
     end
 
     test "margin-inline stays as logical property" do
@@ -214,9 +214,9 @@ defmodule LiveStyle.LogicalPropertiesTest do
       rule =
         Class.lookup!({LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :margin_inline})
 
-      meta = rule.atomic_classes["margin-inline"]
-      assert meta.ltr =~ "margin-inline:10px"
-      assert meta.rtl == nil
+      meta = get_atomic(rule.atomic_classes, "margin-inline")
+      assert field(meta, :ltr) =~ "margin-inline:10px"
+      assert field(meta, :rtl) == nil
     end
 
     test "margin-inline-start stays as logical property" do
@@ -226,10 +226,10 @@ defmodule LiveStyle.LogicalPropertiesTest do
           {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :margin_inline_start}
         )
 
-      meta = rule.atomic_classes["margin-inline-start"]
-      assert meta.ltr =~ "margin-inline-start:10px"
-      assert meta.rtl == nil
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "margin-inline-start")
+      assert field(meta, :ltr) =~ "margin-inline-start:10px"
+      assert field(meta, :rtl) == nil
+      assert field(meta, :priority) == 3000
     end
 
     test "margin-inline-end stays as logical property" do
@@ -239,19 +239,19 @@ defmodule LiveStyle.LogicalPropertiesTest do
           {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :margin_inline_end}
         )
 
-      meta = rule.atomic_classes["margin-inline-end"]
-      assert meta.ltr =~ "margin-inline-end:10px"
-      assert meta.rtl == nil
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "margin-inline-end")
+      assert field(meta, :ltr) =~ "margin-inline-end:10px"
+      assert field(meta, :rtl) == nil
+      assert field(meta, :priority) == 3000
     end
 
     test "padding-inline stays as logical property" do
       rule =
         Class.lookup!({LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :padding_inline})
 
-      meta = rule.atomic_classes["padding-inline"]
-      assert meta.ltr =~ "padding-inline:10px"
-      assert meta.rtl == nil
+      meta = get_atomic(rule.atomic_classes, "padding-inline")
+      assert field(meta, :ltr) =~ "padding-inline:10px"
+      assert field(meta, :rtl) == nil
     end
 
     test "padding-inline-start stays as logical property" do
@@ -260,18 +260,18 @@ defmodule LiveStyle.LogicalPropertiesTest do
           {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :padding_inline_start}
         )
 
-      meta = rule.atomic_classes["padding-inline-start"]
-      assert meta.ltr =~ "padding-inline-start:10px"
-      assert meta.rtl == nil
+      meta = get_atomic(rule.atomic_classes, "padding-inline-start")
+      assert field(meta, :ltr) =~ "padding-inline-start:10px"
+      assert field(meta, :rtl) == nil
     end
 
     test "inset-inline stays as logical property" do
       rule =
         Class.lookup!({LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :inset_inline})
 
-      meta = rule.atomic_classes["inset-inline"]
-      assert meta.ltr =~ "inset-inline:10px"
-      assert meta.rtl == nil
+      meta = get_atomic(rule.atomic_classes, "inset-inline")
+      assert field(meta, :ltr) =~ "inset-inline:10px"
+      assert field(meta, :rtl) == nil
     end
 
     test "inset-inline-start stays as logical property" do
@@ -280,9 +280,9 @@ defmodule LiveStyle.LogicalPropertiesTest do
           {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :inset_inline_start}
         )
 
-      meta = rule.atomic_classes["inset-inline-start"]
-      assert meta.ltr =~ "inset-inline-start:10px"
-      assert meta.rtl == nil
+      meta = get_atomic(rule.atomic_classes, "inset-inline-start")
+      assert field(meta, :ltr) =~ "inset-inline-start:10px"
+      assert field(meta, :rtl) == nil
     end
 
     test "inset-inline-end stays as logical property" do
@@ -291,9 +291,9 @@ defmodule LiveStyle.LogicalPropertiesTest do
           {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :inset_inline_end}
         )
 
-      meta = rule.atomic_classes["inset-inline-end"]
-      assert meta.ltr =~ "inset-inline-end:10px"
-      assert meta.rtl == nil
+      meta = get_atomic(rule.atomic_classes, "inset-inline-end")
+      assert field(meta, :ltr) =~ "inset-inline-end:10px"
+      assert field(meta, :rtl) == nil
     end
   end
 
@@ -303,9 +303,9 @@ defmodule LiveStyle.LogicalPropertiesTest do
       rule =
         Class.lookup!({LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :margin_block})
 
-      meta = rule.atomic_classes["margin-block"]
-      assert meta.ltr =~ "margin-block:10px"
-      assert meta.rtl == nil
+      meta = get_atomic(rule.atomic_classes, "margin-block")
+      assert field(meta, :ltr) =~ "margin-block:10px"
+      assert field(meta, :rtl) == nil
     end
 
     test "margin-block-start becomes margin-top (physical)" do
@@ -315,10 +315,10 @@ defmodule LiveStyle.LogicalPropertiesTest do
           {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :margin_block_start}
         )
 
-      meta = rule.atomic_classes["margin-top"]
-      assert meta.ltr =~ "margin-top:10px"
-      assert meta.rtl == nil
-      assert meta.priority == 4000
+      meta = get_atomic(rule.atomic_classes, "margin-top")
+      assert field(meta, :ltr) =~ "margin-top:10px"
+      assert field(meta, :rtl) == nil
+      assert field(meta, :priority) == 4000
     end
 
     test "margin-block-end becomes margin-bottom (physical)" do
@@ -328,10 +328,10 @@ defmodule LiveStyle.LogicalPropertiesTest do
           {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :margin_block_end}
         )
 
-      meta = rule.atomic_classes["margin-bottom"]
-      assert meta.ltr =~ "margin-bottom:10px"
-      assert meta.rtl == nil
-      assert meta.priority == 4000
+      meta = get_atomic(rule.atomic_classes, "margin-bottom")
+      assert field(meta, :ltr) =~ "margin-bottom:10px"
+      assert field(meta, :rtl) == nil
+      assert field(meta, :priority) == 4000
     end
   end
 
@@ -347,7 +347,7 @@ defmodule LiveStyle.LogicalPropertiesTest do
         Class.lookup!({LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :margin_inline})
 
       # margin-inline is a shorthand -> priority 1000 or 2000
-      assert rule.atomic_classes["margin-inline"].priority in [1000, 2000]
+      assert field(get_atomic(rule.atomic_classes, "margin-inline"), :priority) in [1000, 2000]
     end
 
     test "margin-inline-start has logical longhand priority (3000)" do
@@ -356,7 +356,7 @@ defmodule LiveStyle.LogicalPropertiesTest do
           {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :margin_inline_start}
         )
 
-      assert rule.atomic_classes["margin-inline-start"].priority == 3000
+      assert field(get_atomic(rule.atomic_classes, "margin-inline-start"), :priority) == 3000
     end
 
     test "margin-block-start becomes margin-top with physical priority (4000)" do
@@ -365,7 +365,7 @@ defmodule LiveStyle.LogicalPropertiesTest do
           {LiveStyle.LogicalPropertiesTest.LogicalPropertiesModern, :margin_block_start}
         )
 
-      assert rule.atomic_classes["margin-top"].priority == 4000
+      assert field(get_atomic(rule.atomic_classes, "margin-top"), :priority) == 4000
     end
   end
 end

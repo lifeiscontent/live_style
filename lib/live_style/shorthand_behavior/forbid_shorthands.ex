@@ -50,11 +50,10 @@ defmodule LiveStyle.ShorthandBehavior.ForbidShorthands do
   # Generate forbid checks at compile time
   for property <- @disallowed_shorthands do
     message =
-      Map.get(
-        @disallowed_shorthands_with_messages,
-        property,
-        "'#{property}' is not supported. Use longhand properties instead."
-      )
+      case List.keyfind(@disallowed_shorthands_with_messages, property, 0) do
+        {_, msg} -> msg
+        nil -> "'#{property}' is not supported. Use longhand properties instead."
+      end
 
     defp forbid_if_disallowed!(unquote(property)) do
       raise ArgumentError, unquote(message)

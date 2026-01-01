@@ -68,36 +68,10 @@ defmodule LiveStyle.Compiler.CSS.Themes do
   end
 
   # Recursively collect theme rules, tracking the condition path
-  # Maps are pre-sorted at storage time for deterministic iteration
+  # Conditional values are sorted lists at this point (converted at storage time)
   defp collect_rules(overrides, conditions_path) do
     Enum.flat_map(overrides, fn {name, value} ->
       collect_value(name, value, conditions_path)
-    end)
-  end
-
-  defp collect_value(name, value, conditions_path) when is_map(value) do
-    # Handle map values with :default and @-rule keys
-    # Maps are pre-sorted at storage time for deterministic iteration
-    Enum.flat_map(value, fn
-      {key, inner_value} when key in [:default, "default"] ->
-        # Default value at this level
-        if is_map(inner_value) do
-          # Nested default (unusual but possible)
-          collect_value(name, inner_value, conditions_path)
-        else
-          [{conditions_path, name, to_string(inner_value)}]
-        end
-
-      {condition, inner_value} ->
-        # Conditional value - add to condition path
-        condition_str = to_string(condition)
-
-        if is_map(inner_value) do
-          # Nested conditionals
-          collect_value(name, inner_value, conditions_path ++ [condition_str])
-        else
-          [{conditions_path ++ [condition_str], name, to_string(inner_value)}]
-        end
     end)
   end
 

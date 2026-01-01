@@ -6,7 +6,7 @@ defmodule LiveStyle.Runtime.Dynamic do
   alias LiveStyle.Manifest
 
   @spec process_dynamic_rule(list(), list(), term(), module(), atom(), boolean()) ::
-          {String.t(), map()}
+          {String.t(), list()}
   def process_dynamic_rule(all_props, _param_names, values, module, name, has_computed) do
     key = Manifest.simple_key(module, name)
     manifest = LiveStyle.Storage.read()
@@ -20,23 +20,23 @@ defmodule LiveStyle.Runtime.Dynamic do
     values_list = if is_list(values), do: values, else: [values]
     prefix = Config.class_name_prefix()
 
-    var_map =
+    var_list =
       if has_computed do
         compute_fn_name = :"__compute_#{name}__"
         declarations = apply(module, compute_fn_name, [values_list])
 
-        Map.new(declarations, fn {prop, value} ->
+        Enum.map(declarations, fn {prop, value} ->
           {"--#{prefix}-#{CSSValue.to_css_property(prop)}", format_css_value(value)}
         end)
       else
         all_props
         |> Enum.zip(values_list)
-        |> Map.new(fn {prop, value} ->
+        |> Enum.map(fn {prop, value} ->
           {"--#{prefix}-#{CSSValue.to_css_property(prop)}", format_css_value(value)}
         end)
       end
 
-    {class_string, var_map}
+    {class_string, var_list}
   end
 
   defp format_css_value(value) when is_number(value), do: "#{value}"

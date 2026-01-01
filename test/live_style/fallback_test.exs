@@ -70,26 +70,26 @@ defmodule LiveStyle.FallbackTest do
       # StyleX: position: ['sticky', 'fixed'] -> position:sticky;position:fixed
       rule = Class.lookup!({PlainArrayFallbacks, :no_vars})
 
-      position = rule.atomic_classes["position"]
-      assert position.class == "x1ruww2u"
-      assert position.ltr == ".x1ruww2u{position:sticky;position:fixed}"
-      assert position.priority == 3000
+      position = get_atomic(rule.atomic_classes, "position")
+      assert field(position, :class) == "x1ruww2u"
+      assert field(position, :ltr) == ".x1ruww2u{position:sticky;position:fixed}"
+      assert field(position, :priority) == 3000
     end
 
     test "CSS var first, non-var after - two declarations (not nested)" do
       # StyleX variableFallbacks: ['var(--color)', 'red'] -> color:var(--color);color:red
       rule = Class.lookup!({PlainArrayFallbacks, :var_first})
 
-      color = rule.atomic_classes["color"]
-      assert color.ltr == ".x1nv2f59{color:var(--color);color:red}"
+      color = get_atomic(rule.atomic_classes, "color")
+      assert field(color, :ltr) == ".x1nv2f59{color:var(--color);color:red}"
     end
 
     test "non-var first, CSS var after - nested into var()" do
       # StyleX variableFallbacks: ['red', 'var(--color)'] -> color:var(--color,red)
       rule = Class.lookup!({PlainArrayFallbacks, :var_last})
 
-      color = rule.atomic_classes["color"]
-      assert color.ltr =~ "color:var(--color,red)"
+      color = get_atomic(rule.atomic_classes, "color")
+      assert field(color, :ltr) =~ "color:var(--color,red)"
     end
 
     test "multiple CSS vars - nested together" do
@@ -97,8 +97,8 @@ defmodule LiveStyle.FallbackTest do
       # ['var(--primary)', 'var(--fallback)'] -> var(--primary,var(--fallback))
       rule = Class.lookup!({PlainArrayFallbacks, :multi_vars})
 
-      color = rule.atomic_classes["color"]
-      assert color.ltr =~ "var(--primary,var(--fallback))"
+      color = get_atomic(rule.atomic_classes, "color")
+      assert field(color, :ltr) =~ "var(--primary,var(--fallback))"
     end
 
     test "non-var before multiple CSS vars - nested with fallback" do
@@ -106,8 +106,8 @@ defmodule LiveStyle.FallbackTest do
       # -> color:var(--primary,var(--fallback,blue))
       rule = Class.lookup!({PlainArrayFallbacks, :multi_vars_with_fallback})
 
-      color = rule.atomic_classes["color"]
-      assert color.ltr =~ "var(--primary,var(--fallback,blue))"
+      color = get_atomic(rule.atomic_classes, "color")
+      assert field(color, :ltr) =~ "var(--primary,var(--fallback,blue))"
     end
   end
 
@@ -120,25 +120,25 @@ defmodule LiveStyle.FallbackTest do
       # StyleX firstThatWorks('sticky', 'fixed') -> position:fixed;position:sticky
       rule = Class.lookup!({ExplicitFirstThatWorks, :no_vars})
 
-      position = rule.atomic_classes["position"]
+      position = get_atomic(rule.atomic_classes, "position")
       # Note: different class name due to different hash (reversed order)
-      assert position.ltr =~ "position:fixed;position:sticky"
+      assert field(position, :ltr) =~ "position:fixed;position:sticky"
     end
 
     test "CSS var first, non-var after - nested into var()" do
       # StyleX firstThatWorks('var(--color)', 'red') -> color:var(--color,red)
       rule = Class.lookup!({ExplicitFirstThatWorks, :var_first})
 
-      color = rule.atomic_classes["color"]
-      assert color.ltr =~ "color:var(--color,red)"
+      color = get_atomic(rule.atomic_classes, "color")
+      assert field(color, :ltr) =~ "color:var(--color,red)"
     end
 
     test "non-var first, CSS var after - two declarations (reversed)" do
       # StyleX firstThatWorks('red', 'var(--color)') -> color:var(--color);color:red
       rule = Class.lookup!({ExplicitFirstThatWorks, :var_last})
 
-      color = rule.atomic_classes["color"]
-      assert color.ltr =~ "color:var(--color);color:red"
+      color = get_atomic(rule.atomic_classes, "color")
+      assert field(color, :ltr) =~ "color:var(--color);color:red"
     end
 
     test "multiple CSS vars with fallback - all nested" do
@@ -146,8 +146,8 @@ defmodule LiveStyle.FallbackTest do
       # -> color:var(--primary,var(--secondary,blue))
       rule = Class.lookup!({ExplicitFirstThatWorks, :multi_vars_with_fallback})
 
-      color = rule.atomic_classes["color"]
-      assert color.ltr =~ "var(--primary,var(--secondary,blue))"
+      color = get_atomic(rule.atomic_classes, "color")
+      assert field(color, :ltr) =~ "var(--primary,var(--secondary,blue))"
     end
   end
 
@@ -187,32 +187,32 @@ defmodule LiveStyle.FallbackTest do
       # StyleX format: color:var(--color);color:red (two declarations, var first)
       rule = Class.lookup!({StyleXParityFirstThatWorks, :value_then_var})
 
-      color = rule.atomic_classes["color"]
-      assert color.ltr =~ "color:var(--color);color:red"
+      color = get_atomic(rule.atomic_classes, "color")
+      assert field(color, :ltr) =~ "color:var(--color);color:red"
     end
 
     test "firstThatWorks('var(--color)', 'red') produces nested var()" do
       # StyleX format: color:var(--color,red) (nested)
       rule = Class.lookup!({StyleXParityFirstThatWorks, :var_then_value})
 
-      color = rule.atomic_classes["color"]
-      assert color.ltr =~ "color:var(--color,red)"
+      color = get_atomic(rule.atomic_classes, "color")
+      assert field(color, :ltr) =~ "color:var(--color,red)"
     end
 
     test "firstThatWorks('var(--color)', 'var(--otherColor)') produces nested vars" do
       # StyleX format: color:var(--color,var(--otherColor)) (nested)
       rule = Class.lookup!({StyleXParityFirstThatWorks, :var_then_var})
 
-      color = rule.atomic_classes["color"]
-      assert color.ltr =~ "color:var(--color,var(--otherColor))"
+      color = get_atomic(rule.atomic_classes, "color")
+      assert field(color, :ltr) =~ "color:var(--color,var(--otherColor))"
     end
 
     test "firstThatWorks with three vars produces deeply nested vars" do
       # StyleX format: color:var(--color,var(--secondColor,var(--thirdColor)))
       rule = Class.lookup!({StyleXParityFirstThatWorks, :three_vars})
 
-      color = rule.atomic_classes["color"]
-      assert color.ltr =~ "color:var(--color,var(--secondColor,var(--thirdColor)))"
+      color = get_atomic(rule.atomic_classes, "color")
+      assert field(color, :ltr) =~ "color:var(--color,var(--secondColor,var(--thirdColor)))"
     end
   end
 end

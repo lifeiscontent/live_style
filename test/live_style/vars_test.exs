@@ -43,10 +43,10 @@ defmodule LiveStyle.VarsTest do
       use LiveStyle
 
       vars(
-        background: %{
+        background: [
           default: "white",
           "@media (prefers-color-scheme: dark)": "black"
-        }
+        ]
       )
     end
 
@@ -72,13 +72,14 @@ defmodule LiveStyle.VarsTest do
       use LiveStyle
 
       vars(
-        color: %{
-          default: "blue",
-          "@media (prefers-color-scheme: dark)": %{
-            default: "lightblue",
-            "@supports (color: oklab(0 0 0))": "oklab(0.7 -0.3 -0.4)"
-          }
-        }
+        color: [
+          {:default, "blue"},
+          {"@media (prefers-color-scheme: dark)",
+           [
+             {:default, "lightblue"},
+             "@supports (color: oklab(0 0 0))": "oklab(0.7 -0.3 -0.4)"
+           ]}
+        ]
       )
     end
 
@@ -216,11 +217,11 @@ defmodule LiveStyle.VarsTest do
 
       vars(
         primary:
-          color(%{
+          color(
             default: "red",
             "@media (prefers-color-scheme: dark)": "white",
             "@media print": "black"
-          }),
+          ),
         angle_var: angle("0deg"),
         duration_var: time("200ms")
       )

@@ -200,7 +200,7 @@ defmodule Mix.Tasks.LiveStyle.Audit do
 
   defp output_text(unused, definitions) do
     total_count = length(definitions)
-    unused_count = unused |> Map.values() |> List.flatten() |> length()
+    unused_count = unused |> Enum.flat_map(fn {_, items} -> items end) |> length()
 
     if unused_count == 0 do
       Mix.shell().info("All #{total_count} class definitions appear to be used.")

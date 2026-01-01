@@ -109,22 +109,21 @@ defmodule LiveStyle.RTL do
   # Shared helper for flipping background-position logical values
   @logical_position_values ["start", "end", "inline-start", "inline-end"]
 
-  defp flip_background_position(value, mapping) do
+  defp flip_background_position(value, flip_word_fn) do
     value
     |> String.split(" ")
-    |> Enum.map_join(" ", fn word -> Map.get(mapping, word, word) end)
+    |> Enum.map_join(" ", flip_word_fn)
   end
 
   # Transform background-position logical values to physical for LTR
-  @ltr_position_mapping %{
-    "start" => "left",
-    "inline-start" => "left",
-    "end" => "right",
-    "inline-end" => "right"
-  }
+  defp flip_word_ltr("start"), do: "left"
+  defp flip_word_ltr("inline-start"), do: "left"
+  defp flip_word_ltr("end"), do: "right"
+  defp flip_word_ltr("inline-end"), do: "right"
+  defp flip_word_ltr(word), do: word
 
   defp flip_background_position_ltr(value) do
-    flip_background_position(value, @ltr_position_mapping)
+    flip_background_position(value, &flip_word_ltr/1)
   end
 
   # Check if value needs RTL transformation
@@ -141,19 +140,18 @@ defmodule LiveStyle.RTL do
 
   defp transform_value_rtl(_property, value), do: value
 
-  # Flip background-position logical values for RTL
-  @rtl_position_mapping %{
-    "start" => "right",
-    "inline-start" => "right",
-    "end" => "left",
-    "inline-end" => "left"
-  }
+  # Transform background-position logical values to physical for RTL
+  defp flip_word_rtl("start"), do: "right"
+  defp flip_word_rtl("inline-start"), do: "right"
+  defp flip_word_rtl("end"), do: "left"
+  defp flip_word_rtl("inline-end"), do: "left"
+  defp flip_word_rtl(word), do: word
 
   defp flip_background_position_rtl(value) do
     words = String.split(value, " ")
 
     if Enum.any?(words, &(&1 in @logical_position_values)) do
-      flipped = flip_background_position(value, @rtl_position_mapping)
+      flipped = flip_background_position(value, &flip_word_rtl/1)
       {"background-position", flipped}
     else
       nil

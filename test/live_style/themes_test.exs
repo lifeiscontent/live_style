@@ -43,28 +43,28 @@ defmodule LiveStyle.ThemesTest do
     use LiveStyle
 
     vars(
-      color: %{
-        :default => "blue",
-        "@media (prefers-color-scheme: dark)" => "lightblue",
-        "@media print" => "white"
-      },
-      other_color: %{
-        :default => "grey",
-        "@media (prefers-color-scheme: dark)" => "rgba(0, 0, 0, 0.8)"
-      },
+      color: [
+        default: "blue",
+        "@media (prefers-color-scheme: dark)": "lightblue",
+        "@media print": "white"
+      ],
+      other_color: [
+        default: "grey",
+        "@media (prefers-color-scheme: dark)": "rgba(0, 0, 0, 0.8)"
+      ],
       radius: "10px"
     )
 
     theme(:green_theme,
-      color: %{
-        :default => "green",
-        "@media (prefers-color-scheme: dark)" => "lightgreen",
-        "@media print" => "transparent"
-      },
-      other_color: %{
-        :default => "antiquewhite",
-        "@media (prefers-color-scheme: dark)" => "floralwhite"
-      },
+      color: [
+        default: "green",
+        "@media (prefers-color-scheme: dark)": "lightgreen",
+        "@media print": "transparent"
+      ],
+      other_color: [
+        default: "antiquewhite",
+        "@media (prefers-color-scheme: dark)": "floralwhite"
+      ],
       radius: "6px"
     )
   end
@@ -82,17 +82,18 @@ defmodule LiveStyle.ThemesTest do
     )
 
     theme(:nested,
-      color: %{
-        :default => "green",
-        "@media (prefers-color-scheme: dark)" => "lightgreen"
-      },
-      other_color: %{
-        :default => "antiquewhite",
-        "@media (prefers-color-scheme: dark)" => %{
-          :default => "floralwhite",
-          "@supports (color: oklab(0 0 0))" => "oklab(0.7 -0.3 -0.4)"
-        }
-      }
+      color: [
+        default: "green",
+        "@media (prefers-color-scheme: dark)": "lightgreen"
+      ],
+      other_color: [
+        {:default, "antiquewhite"},
+        {"@media (prefers-color-scheme: dark)",
+         [
+           {:default, "floralwhite"},
+           "@supports (color: oklab(0 0 0))": "oklab(0.7 -0.3 -0.4)"
+         ]}
+      ]
     )
   end
 

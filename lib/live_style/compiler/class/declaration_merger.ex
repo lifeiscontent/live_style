@@ -4,13 +4,13 @@ defmodule LiveStyle.Compiler.Class.DeclarationMerger do
 
   This module handles the merging of property values following StyleX semantics:
   - Simple values override previous values
-  - Conditional values (maps with `:default`, pseudo-classes, media queries) merge
+  - Conditional values (lists with `:default`, pseudo-classes, media queries) merge
   - Mixed simple/conditional values integrate properly
 
   ## Merge Semantics
 
   1. **Simple + Simple**: Last value wins
-  2. **Conditional + Conditional**: Maps are merged (keys combined)
+  2. **Conditional + Conditional**: Lists are merged (keys combined)
   3. **Simple + Conditional**: Simple becomes the `:default` of existing conditions
   4. **Conditional + Simple**: New simple overwrites `:default`, conditions preserved
   """
@@ -22,7 +22,7 @@ defmodule LiveStyle.Compiler.Class.DeclarationMerger do
 
   ## Parameters
 
-    * `acc` - Current accumulator map
+    * `acc` - Current accumulator list of {prop, value} tuples
     * `prop` - Property name (atom)
     * `value` - New value to merge
 
@@ -30,42 +30,75 @@ defmodule LiveStyle.Compiler.Class.DeclarationMerger do
 
   Updated accumulator with merged property.
   """
-  @spec merge(map(), atom(), term()) :: map()
+  @spec merge(list(), atom(), term()) :: list()
   def merge(acc, prop, value) do
-    existing = Map.get(acc, prop)
+    existing = get_prop(acc, prop)
 
     cond do
       existing == nil ->
-        Map.put(acc, prop, value)
+        put_prop(acc, prop, value)
 
       Conditional.conditional?(existing) and Conditional.conditional?(value) ->
-        # Both conditional: merge the maps
-        Map.put(
-          acc,
-          prop,
-          Map.merge(
-            to_map(existing),
-            to_map(value)
-          )
-        )
+        # Both conditional: merge lists and sort
+        merged = merge_lists(to_list(existing), to_list(value))
+        put_prop(acc, prop, sort_list(merged))
 
       Conditional.conditional?(existing) ->
         # Existing conditional, new simple: simple becomes :default
-        existing_map = to_map(existing)
-        Map.put(acc, prop, Map.put(existing_map, :default, value))
+        merged = put_key(to_list(existing), :default, value)
+        put_prop(acc, prop, sort_list(merged))
 
       Conditional.conditional?(value) ->
         # Existing simple, new conditional: existing becomes :default if not set
-        new_map = to_map(value)
-        Map.put(acc, prop, Map.put_new(new_map, :default, existing))
+        merged = put_new_key(to_list(value), :default, existing)
+        put_prop(acc, prop, sort_list(merged))
 
       true ->
         # Both simple: last wins
-        Map.put(acc, prop, value)
+        put_prop(acc, prop, value)
     end
   end
 
-  # Convert conditional values (keyword lists or maps) to maps for merging
-  defp to_map(value) when is_list(value), do: Enum.into(value, %{})
-  defp to_map(value) when is_map(value), do: value
+  defp get_prop(acc, prop) do
+    case List.keyfind(acc, prop, 0) do
+      {^prop, value} -> value
+      nil -> nil
+    end
+  end
+
+  defp put_prop(acc, prop, value) do
+    List.keystore(acc, prop, 0, {prop, value})
+  end
+
+  # Conditional values should already be lists
+  defp to_list(value) when is_list(value), do: value
+
+  # Merge two lists, later values override earlier ones
+  defp merge_lists(list1, list2) do
+    # Start with list1, then apply all updates from list2
+    Enum.reduce(list2, list1, fn {key, value}, acc ->
+      put_key(acc, key, value)
+    end)
+  end
+
+  # Put a key in a list (replaces existing or appends)
+  defp put_key(list, key, value) do
+    case List.keyfind(list, key, 0) do
+      nil -> [{key, value} | list]
+      _ -> List.keyreplace(list, key, 0, {key, value})
+    end
+  end
+
+  # Put a key only if it doesn't exist
+  defp put_new_key(list, key, value) do
+    case List.keyfind(list, key, 0) do
+      nil -> [{key, value} | list]
+      _ -> list
+    end
+  end
+
+  # Sort list by key for deterministic iteration
+  defp sort_list(list) do
+    Enum.sort_by(list, fn {k, _v} -> to_string(k) end)
+  end
 end

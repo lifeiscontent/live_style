@@ -34,40 +34,29 @@ defmodule LiveStyle.MediaQuery.Transform do
   @max_width_regex ~r/@media\s*\(max-width:\s*(\d+(?:\.\d+)?)(px|em|rem)\)/
 
   @doc """
-  Transform a conditional value map to implement "last media query wins" semantics.
+  Transform a conditional value to implement "last media query wins" semantics.
 
-  Takes a map like:
-    %{
-      :default => "red",
-      "@media (min-width: 1000px)" => "blue",
-      "@media (min-width: 2000px)" => "purple"
-    }
+  Takes a list like:
+    [{:default, "red"}, {"@media (min-width: 1000px)", "blue"}, {"@media (min-width: 2000px)", "purple"}]
 
-  And returns:
-    %{
-      :default => "red",
-      "@media (min-width: 1000px) and (max-width: 1999.99px)" => "blue",
-      "@media (min-width: 2000px)" => "purple"
-    }
+  And returns a sorted list:
+    [{:default, "red"}, {"@media (min-width: 1000px) and (max-width: 1999.99px)", "blue"}, {"@media (min-width: 2000px)", "purple"}]
   """
-  def transform(value_map) when is_map(value_map) do
-    # Extract media query keys
-    media_keys = for key <- Map.keys(value_map), media_query_key?(key), do: to_string(key)
-
-    # If less than 2 media queries, no transformation needed
-    if length(media_keys) < 2 do
-      value_map
-    else
-      transform_media_queries(value_map, media_keys)
-    end
-  end
-
   def transform(value_list) when is_list(value_list) do
-    # Convert to map, transform, convert back
-    value_list
-    |> Map.new()
-    |> transform()
-    |> Enum.to_list()
+    # Extract media query keys
+    media_keys =
+      value_list
+      |> Enum.filter(fn {key, _} -> media_query_key?(key) end)
+      |> Enum.map(fn {key, _} -> to_string(key) end)
+
+    # If 2+ media queries, transform them; otherwise just sort
+    if match?([_, _ | _], media_keys) do
+      value_list
+      |> transform_media_queries(media_keys)
+      |> sort_list()
+    else
+      sort_list(value_list)
+    end
   end
 
   def transform(other), do: other
@@ -81,7 +70,7 @@ defmodule LiveStyle.MediaQuery.Transform do
 
   defp media_query_key?(_), do: false
 
-  defp transform_media_queries(value_map, media_keys) do
+  defp transform_media_queries(value_list, media_keys) do
     # Parse all media queries
     parsed =
       media_keys
@@ -101,8 +90,8 @@ defmodule LiveStyle.MediaQuery.Transform do
     # Build transformations
     transformations = build_transformations(width_queries)
 
-    # Apply transformations to the value map
-    Enum.reduce(transformations, value_map, fn {old_key, new_key}, acc ->
+    # Apply transformations to the value list
+    Enum.reduce(transformations, value_list, fn {old_key, new_key}, acc ->
       apply_transformation(acc, old_key, new_key)
     end)
   end
@@ -110,15 +99,22 @@ defmodule LiveStyle.MediaQuery.Transform do
   defp apply_transformation(acc, old_key, old_key), do: acc
 
   defp apply_transformation(acc, old_key, new_key) do
-    # Try string key first, then atom key (without creating new atoms)
-    case Map.pop(acc, old_key) do
+    # Try string key first, then atom key
+    case find_and_remove(acc, old_key) do
       {nil, _} -> try_atom_key(acc, old_key, new_key)
-      {value, rest} -> Map.put(rest, new_key, value)
+      {value, rest} -> [{new_key, value} | rest]
+    end
+  end
+
+  # Find a key in a list and remove it
+  defp find_and_remove(list, key) do
+    case List.keyfind(list, key, 0) do
+      nil -> {nil, list}
+      {^key, value} -> {value, List.keydelete(list, key, 0)}
     end
   end
 
   # Try to find atom key without creating new atoms
-  # Use String.to_existing_atom to avoid atom table exhaustion
   defp try_atom_key(acc, old_key, new_key) do
     case safe_to_existing_atom(old_key) do
       nil -> acc
@@ -127,9 +123,9 @@ defmodule LiveStyle.MediaQuery.Transform do
   end
 
   defp replace_if_exists(acc, old_key, new_key) do
-    case Map.pop(acc, old_key) do
+    case find_and_remove(acc, old_key) do
       {nil, _} -> acc
-      {value, rest} -> Map.put(rest, new_key, value)
+      {value, rest} -> [{new_key, value} | rest]
     end
   end
 
@@ -189,7 +185,8 @@ defmodule LiveStyle.MediaQuery.Transform do
   # For min-width queries, add max-width upper bounds
   # @media (min-width: 1000px) becomes @media (min-width: 1000px) and (max-width: 1999.99px)
   # when there's also @media (min-width: 2000px)
-  defp build_min_width_transformations(queries) when length(queries) < 2, do: []
+  defp build_min_width_transformations([]), do: []
+  defp build_min_width_transformations([_]), do: []
 
   defp build_min_width_transformations(queries) do
     # Sort by value ascending
@@ -217,7 +214,8 @@ defmodule LiveStyle.MediaQuery.Transform do
   # For max-width queries, add min-width lower bounds
   # @media (max-width: 900px) becomes @media (min-width: 500.01px) and (max-width: 900px)
   # when there's also @media (max-width: 500px)
-  defp build_max_width_transformations(queries) when length(queries) < 2, do: []
+  defp build_max_width_transformations([]), do: []
+  defp build_max_width_transformations([_]), do: []
 
   defp build_max_width_transformations(queries) do
     # Sort by value descending (largest first)
@@ -251,5 +249,9 @@ defmodule LiveStyle.MediaQuery.Transform do
     formatted
     |> String.trim_trailing("0")
     |> String.trim_trailing(".")
+  end
+
+  defp sort_list(list) do
+    Enum.sort_by(list, fn {k, _v} -> to_string(k) end)
   end
 end

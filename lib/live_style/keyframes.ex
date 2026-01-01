@@ -185,7 +185,7 @@ defmodule LiveStyle.Keyframes do
 
   # Generate CSS for a single frame's properties
   # Preserves insertion order like StyleX (JavaScript Object.entries)
-  defp generate_frame_props_css(props) when is_map(props) or is_list(props) do
+  defp generate_frame_props_css(props) when is_list(props) do
     props
     |> Enum.map_join("", fn {prop, value} ->
       css_prop = CSSValue.to_css_property(prop)

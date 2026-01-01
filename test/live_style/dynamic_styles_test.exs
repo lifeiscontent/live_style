@@ -232,10 +232,10 @@ defmodule LiveStyle.DynamicStylesTest do
       rule = Class.lookup!({BasicDynamic, :opacity})
 
       # Check that opacity class uses var(--x-opacity)
-      opacity_class = rule.atomic_classes["opacity"]
+      opacity_class = get_atomic(rule.atomic_classes, "opacity")
       # Dynamic rules store var reference in :value and :var keys
-      assert opacity_class.value =~ "var(--x-opacity)"
-      assert opacity_class.var == "--x-opacity"
+      assert field(opacity_class, :value) =~ "var(--x-opacity)"
+      assert field(opacity_class, :var) == "--x-opacity"
     end
 
     test "different dynamic rules have different class names" do
@@ -263,14 +263,14 @@ defmodule LiveStyle.DynamicStylesTest do
     test "multi-param dynamic rule generates multiple CSS variable references" do
       rule = Class.lookup!({MultiParamDynamic, :size})
 
-      width_class = rule.atomic_classes["width"]
-      height_class = rule.atomic_classes["height"]
+      width_class = get_atomic(rule.atomic_classes, "width")
+      height_class = get_atomic(rule.atomic_classes, "height")
 
       # Dynamic rules store var reference in :value and :var keys
-      assert width_class.value =~ "var(--x-width)"
-      assert width_class.var == "--x-width"
-      assert height_class.value =~ "var(--x-height)"
-      assert height_class.var == "--x-height"
+      assert field(width_class, :value) =~ "var(--x-width)"
+      assert field(width_class, :var) == "--x-width"
+      assert field(height_class, :value) =~ "var(--x-height)"
+      assert field(height_class, :var) == "--x-height"
     end
 
     test "three-param dynamic rule works correctly" do
@@ -308,15 +308,15 @@ defmodule LiveStyle.DynamicStylesTest do
       # StyleX uses --x-propertyName format for dynamic values
       rule = Class.lookup!({BasicDynamic, :opacity})
 
-      opacity_class = rule.atomic_classes["opacity"]
-      assert opacity_class.var =~ "--x-opacity"
+      opacity_class = get_atomic(rule.atomic_classes, "opacity")
+      assert field(opacity_class, :var) =~ "--x-opacity"
     end
 
     test "CSS variable names convert property names correctly" do
       rule = Class.lookup!({BasicDynamic, :background})
 
-      bg_class = rule.atomic_classes["background-color"]
-      assert bg_class.var =~ "--x-background-color"
+      bg_class = get_atomic(rule.atomic_classes, "background-color")
+      assert field(bg_class, :var) =~ "--x-background-color"
     end
   end
 
@@ -325,27 +325,27 @@ defmodule LiveStyle.DynamicStylesTest do
       rule = Class.lookup!({EdgeCases, :transform})
 
       assert rule.dynamic == true
-      transform_class = rule.atomic_classes["transform"]
-      assert transform_class.value =~ "var(--x-transform)"
-      assert transform_class.var == "--x-transform"
+      transform_class = get_atomic(rule.atomic_classes, "transform")
+      assert field(transform_class, :value) =~ "var(--x-transform)"
+      assert field(transform_class, :var) == "--x-transform"
     end
 
     test "dynamic shorthand property works" do
       rule = Class.lookup!({EdgeCases, :margin})
 
       assert rule.dynamic == true
-      margin_class = rule.atomic_classes["margin"]
-      assert margin_class.value =~ "var(--x-margin)"
-      assert margin_class.var == "--x-margin"
+      margin_class = get_atomic(rule.atomic_classes, "margin")
+      assert field(margin_class, :value) =~ "var(--x-margin)"
+      assert field(margin_class, :var) == "--x-margin"
     end
 
     test "dynamic custom property works" do
       rule = Class.lookup!({EdgeCases, :custom})
 
       assert rule.dynamic == true
-      custom_class = rule.atomic_classes["--custom-var"]
+      custom_class = get_atomic(rule.atomic_classes, "--custom-var")
       # Custom properties get --x- prefix like other properties
-      assert custom_class.value =~ "var(--x---custom-var)"
+      assert field(custom_class, :value) =~ "var(--x---custom-var)"
     end
   end
 
@@ -353,26 +353,26 @@ defmodule LiveStyle.DynamicStylesTest do
     test "dynamic styles have class names" do
       rule = Class.lookup!({BasicDynamic, :opacity})
 
-      opacity_class = rule.atomic_classes["opacity"]
-      assert is_binary(opacity_class.class)
-      assert opacity_class.class =~ ~r/^x[a-z0-9]+$/
+      opacity_class = get_atomic(rule.atomic_classes, "opacity")
+      assert is_binary(field(opacity_class, :class))
+      assert field(opacity_class, :class) =~ ~r/^x[a-z0-9]+$/
     end
 
     test "dynamic width/height have class names" do
       rule = Class.lookup!({MultiParamDynamic, :size})
 
-      width_class = rule.atomic_classes["width"]
-      height_class = rule.atomic_classes["height"]
+      width_class = get_atomic(rule.atomic_classes, "width")
+      height_class = get_atomic(rule.atomic_classes, "height")
 
-      assert is_binary(width_class.class)
-      assert is_binary(height_class.class)
+      assert is_binary(field(width_class, :class))
+      assert is_binary(field(height_class, :class))
     end
 
     test "dynamic shorthand has class name" do
       rule = Class.lookup!({EdgeCases, :margin})
 
-      margin_class = rule.atomic_classes["margin"]
-      assert is_binary(margin_class.class)
+      margin_class = get_atomic(rule.atomic_classes, "margin")
+      assert is_binary(field(margin_class, :class))
     end
   end
 

@@ -82,10 +82,13 @@ defmodule LiveStyle.ShorthandBehavior.FlattenShorthands do
     defp get_expansion(unquote(css_prop)), do: {unquote(pattern), unquote(longhands)}
   end
 
+  # Pre-compute set of properties with expansions for O(1) lookup
+  @expansion_properties for({k, _} <- @expand_to_longhands_expansions, into: MapSet.new(), do: k)
+
   # Check shorthand_properties for properties that should be expanded but don't have
   # a specific pattern (pass through as single longhand)
   for {property, _expansion_fn} <- @shorthand_properties do
-    unless Map.has_key?(@expand_to_longhands_expansions, property) do
+    unless MapSet.member?(@expansion_properties, property) do
       defp get_expansion(unquote(property)), do: :passthrough
     end
   end
@@ -237,17 +240,28 @@ defmodule LiveStyle.ShorthandBehavior.FlattenShorthands do
   defp do_expand_conditions(expansion, css_property, conditions) do
     conditions
     |> Enum.flat_map(&expand_condition_to_props(expansion, css_property, &1))
-    |> Enum.group_by(fn {prop, _} -> prop end, fn {_, cond_map} -> cond_map end)
-    |> Enum.map(&merge_condition_maps/1)
+    |> Enum.group_by(fn {prop, _} -> prop end, fn {_, cond_entry} -> cond_entry end)
+    |> Enum.map(&merge_condition_entries/1)
   end
 
   defp expand_condition_to_props(expansion, css_property, {condition, value}) do
     expanded = apply_expansion(expansion, css_property, value)
-    Enum.map(expanded, fn {prop, val} -> {prop, %{condition => val}} end)
+    Enum.map(expanded, fn {prop, val} -> {prop, {condition, val}} end)
   end
 
-  defp merge_condition_maps({prop, cond_maps}) do
-    merged = Enum.reduce(cond_maps, %{}, &Map.merge(&2, &1))
+  # Merge condition entries and return as sorted list for deterministic iteration
+  defp merge_condition_entries({prop, cond_entries}) do
+    merged =
+      cond_entries
+      |> Enum.reduce([], fn {condition, val}, acc ->
+        # Replace existing or prepend
+        case List.keyfind(acc, condition, 0) do
+          nil -> [{condition, val} | acc]
+          _ -> List.keyreplace(acc, condition, 0, {condition, val})
+        end
+      end)
+      |> Enum.sort_by(fn {k, _v} -> to_string(k) end)
+
     {prop, merged}
   end
 end

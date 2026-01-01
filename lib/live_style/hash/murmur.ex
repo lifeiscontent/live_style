@@ -69,9 +69,7 @@ defmodule LiveStyle.Hash.Murmur do
   end
 
   # Process 4-byte chunks
-  defp process_chunks(bytes, h) when length(bytes) >= 4 do
-    [b0, b1, b2, b3 | rest] = bytes
-
+  defp process_chunks([b0, b1, b2, b3 | rest], h) do
     k =
       band(b0, 0xFF)
       |> bor(bsl(band(b1, 0xFF), 8))

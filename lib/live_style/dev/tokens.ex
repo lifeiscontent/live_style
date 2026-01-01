@@ -29,8 +29,7 @@ defmodule LiveStyle.Dev.Tokens do
         :theme -> :themes
       end
 
-    manifest
-    |> Map.get(manifest_key, %{})
+    (manifest[manifest_key] || %{})
     |> Enum.filter(fn {key, _data} -> String.starts_with?(key, module_prefix) end)
     |> Enum.map(fn {key, _data} -> parse_token_key(key, module_prefix) end)
     |> Enum.reject(&is_nil/1)

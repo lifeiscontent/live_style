@@ -6,10 +6,10 @@ defmodule LiveStyle.Compiler.Class.Builder do
   alias LiveStyle.{CSSValue, Hash}
 
   @doc """
-  Builds a class entry map for an atomic CSS class.
+  Builds a class entry for an atomic CSS class.
 
   Takes the CSS property, value, and optional selector/at-rule parameters,
-  and returns a map with all the metadata needed for the class.
+  and returns a keyword list with all the metadata needed for the class.
 
   ## Parameters
 
@@ -21,14 +21,14 @@ defmodule LiveStyle.Compiler.Class.Builder do
 
   ## Returns
 
-  A map containing:
+  A keyword list containing:
     * `:class` - The generated class name
     * `:value` - The CSS value string
     * `:ltr` - LTR CSS metadata
     * `:rtl` - RTL CSS metadata
     * `:priority` - Priority for ordering
   """
-  @spec build(String.t(), any(), keyword()) :: map()
+  @spec build(String.t(), any(), keyword()) :: keyword()
   def build(css_prop, value, opts \\ []) do
     selector = Keyword.get(opts, :selector)
     at_rule = Keyword.get(opts, :at_rule)
@@ -41,12 +41,12 @@ defmodule LiveStyle.Compiler.Class.Builder do
 
     priority = Priority.calculate(css_prop, selector, at_rule)
 
-    %{
+    [
       class: class_name,
       value: css_value,
       ltr: ltr_css,
       rtl: rtl_css,
       priority: priority
-    }
+    ]
   end
 end

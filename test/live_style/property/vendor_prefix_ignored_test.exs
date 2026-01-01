@@ -27,7 +27,7 @@ defmodule LiveStyle.Property.VendorPrefixIgnoredTest do
           Code.compile_quoted(
             quote do
               defmodule VendorPrefixIgnoredWarningTest do
-                use LiveStyle
+                use LiveStyle, vendor_prefix_level: :ignore
 
                 class(:with_vendor_prefix, [{:"-webkit-mask-image", "none"}])
               end

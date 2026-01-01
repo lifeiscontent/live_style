@@ -7,7 +7,7 @@ defmodule LiveStyle.Property do
 
   All property data is loaded from external files at compile time via
   `LiveStyle.PropertyMetadata`, enabling:
-  - O(1) pattern-matched lookups instead of Map.get
+  - O(1) pattern-matched lookups instead of runtime lookups
   - Automatic recompilation when data files change
   - Single source of truth for property metadata
 

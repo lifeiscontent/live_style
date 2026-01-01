@@ -13,7 +13,7 @@ defmodule LiveStyle.Runtime.Attrs do
       refs
       |> List.flatten()
       |> Enum.reject(&(&1 == nil or &1 == false or &1 == ""))
-      |> Enum.reduce({%{}, [], []}, fn ref, {props_acc, vars_acc, extra_acc} ->
+      |> Enum.reduce({[], [], []}, fn ref, {props_acc, vars_acc, extra_acc} ->
         case ref do
           %Marker{class: class} ->
             {props_acc, vars_acc, [class | extra_acc]}
@@ -51,11 +51,10 @@ defmodule LiveStyle.Runtime.Attrs do
       nil -> nil
       styles when is_binary(styles) -> styles
       styles when is_list(styles) -> format_extra_styles(styles)
-      styles when is_map(styles) -> format_extra_styles(styles)
     end
   end
 
-  defp format_extra_styles(styles) when is_list(styles) or is_map(styles) do
+  defp format_extra_styles(styles) when is_list(styles) do
     Enum.map_join(styles, "; ", fn {key, value} ->
       css_prop = format_style_key(key)
       "#{css_prop}: #{value}"
@@ -71,7 +70,7 @@ defmodule LiveStyle.Runtime.Attrs do
   defp build_style_string(var_styles, nil) do
     var_styles
     |> Enum.reverse()
-    |> Enum.reduce(%{}, &Map.merge(&2, &1))
+    |> Enum.reduce([], &merge_var_list/2)
     |> Enum.map_join("; ", fn {var_name, value} -> "#{var_name}: #{value}" end)
   end
 
@@ -79,7 +78,7 @@ defmodule LiveStyle.Runtime.Attrs do
     var_string =
       var_styles
       |> Enum.reverse()
-      |> Enum.reduce(%{}, &Map.merge(&2, &1))
+      |> Enum.reduce([], &merge_var_list/2)
       |> Enum.map_join("; ", fn {var_name, value} -> "#{var_name}: #{value}" end)
 
     if var_string == "" do
@@ -87,6 +86,12 @@ defmodule LiveStyle.Runtime.Attrs do
     else
       "#{var_string}; #{extra}"
     end
+  end
+
+  defp merge_var_list(new_vars, acc) when is_list(new_vars) do
+    Enum.reduce(new_vars, acc, fn {key, value}, inner_acc ->
+      List.keystore(inner_acc, key, 0, {key, value})
+    end)
   end
 
   defp merge_resolved_ref({:static, prop_classes}, props_acc, vars_acc) do

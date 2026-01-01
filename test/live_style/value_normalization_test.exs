@@ -194,11 +194,11 @@ defmodule LiveStyle.ValueNormalizationTest do
           {LiveStyle.ValueNormalizationTest.WhitespaceNormalization, :transform_spaces}
         )
 
-      meta = rule.atomic_classes["transform"]
-      assert meta.class == "x18qx21s"
-      assert meta.ltr == ".x18qx21s{transform:rotate(10deg) translate3d(0,0,0)}"
-      assert meta.rtl == nil
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "transform")
+      assert field(meta, :class) == "x18qx21s"
+      assert field(meta, :ltr) == ".x18qx21s{transform:rotate(10deg) translate3d(0,0,0)}"
+      assert field(meta, :rtl) == nil
+      assert field(meta, :priority) == 3000
     end
 
     test "normalizes whitespace in rgba values" do
@@ -206,11 +206,11 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.WhitespaceNormalization, :rgba_spaces})
 
-      meta = rule.atomic_classes["color"]
-      assert meta.class == "xe1l9yr"
-      assert meta.ltr == ".xe1l9yr{color:rgba(1,222,33,.5)}"
-      assert meta.rtl == nil
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "color")
+      assert field(meta, :class) == "xe1l9yr"
+      assert field(meta, :ltr) == ".xe1l9yr{color:rgba(1,222,33,.5)}"
+      assert field(meta, :rtl) == nil
+      assert field(meta, :priority) == 3000
     end
   end
 
@@ -221,16 +221,16 @@ defmodule LiveStyle.ValueNormalizationTest do
         Class.lookup!({LiveStyle.ValueNormalizationTest.ZeroValues, :zero_px})
 
       # margin: 0 (units removed)
-      margin_meta = rule.atomic_classes["margin"]
-      assert margin_meta.class == "x1ghz6dp"
-      assert margin_meta.ltr == ".x1ghz6dp{margin:0}"
-      assert margin_meta.priority == 1000
+      margin_meta = get_atomic(rule.atomic_classes, "margin")
+      assert field(margin_meta, :class) == "x1ghz6dp"
+      assert field(margin_meta, :ltr) == ".x1ghz6dp{margin:0}"
+      assert field(margin_meta, :priority) == 1000
 
       # margin-left: 1px (units preserved for non-zero)
-      margin_left_meta = rule.atomic_classes["margin-left"]
-      assert margin_left_meta.class == "xgsvwom"
-      assert margin_left_meta.ltr == ".xgsvwom{margin-left:1px}"
-      assert margin_left_meta.priority == 4000
+      margin_left_meta = get_atomic(rule.atomic_classes, "margin-left")
+      assert field(margin_left_meta, :class) == "xgsvwom"
+      assert field(margin_left_meta, :ltr) == ".xgsvwom{margin-left:1px}"
+      assert field(margin_left_meta, :priority) == 4000
     end
 
     test "converts 0ms timing to 0s" do
@@ -238,10 +238,10 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.ZeroValues, :zero_timing})
 
-      meta = rule.atomic_classes["transition-duration"]
-      assert meta.class == "x1mq3mr6"
-      assert meta.ltr == ".x1mq3mr6{transition-duration:0s}"
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "transition-duration")
+      assert field(meta, :class) == "x1mq3mr6"
+      assert field(meta, :ltr) == ".x1mq3mr6{transition-duration:0s}"
+      assert field(meta, :priority) == 3000
     end
 
     test "converts 0rad to 0deg" do
@@ -249,10 +249,10 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.ZeroValues, :zero_angle_rad})
 
-      meta = rule.atomic_classes["transform"]
-      assert meta.class == "x1jpfit1"
-      assert meta.ltr == ".x1jpfit1{transform:0deg}"
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "transform")
+      assert field(meta, :class) == "x1jpfit1"
+      assert field(meta, :ltr) == ".x1jpfit1{transform:0deg}"
+      assert field(meta, :priority) == 3000
     end
 
     test "converts 0turn to 0deg" do
@@ -260,10 +260,10 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.ZeroValues, :zero_angle_turn})
 
-      meta = rule.atomic_classes["transform"]
-      assert meta.class == "x1jpfit1"
-      assert meta.ltr == ".x1jpfit1{transform:0deg}"
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "transform")
+      assert field(meta, :class) == "x1jpfit1"
+      assert field(meta, :ltr) == ".x1jpfit1{transform:0deg}"
+      assert field(meta, :priority) == 3000
     end
 
     test "converts 0grad to 0deg" do
@@ -271,10 +271,10 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.ZeroValues, :zero_angle_grad})
 
-      meta = rule.atomic_classes["transform"]
-      assert meta.class == "x1jpfit1"
-      assert meta.ltr == ".x1jpfit1{transform:0deg}"
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "transform")
+      assert field(meta, :class) == "x1jpfit1"
+      assert field(meta, :ltr) == ".x1jpfit1{transform:0deg}"
+      assert field(meta, :priority) == 3000
     end
 
     test "integer 0 normalizes to 0 without unit suffix" do
@@ -284,16 +284,16 @@ defmodule LiveStyle.ValueNormalizationTest do
         Class.lookup!({LiveStyle.ValueNormalizationTest.ZeroValues, :zero_integer})
 
       # margin: 0 -> "0" (not "0px")
-      margin_meta = rule.atomic_classes["margin"]
-      assert margin_meta.class == "x1ghz6dp"
-      assert margin_meta.ltr == ".x1ghz6dp{margin:0}"
-      assert margin_meta.priority == 1000
+      margin_meta = get_atomic(rule.atomic_classes, "margin")
+      assert field(margin_meta, :class) == "x1ghz6dp"
+      assert field(margin_meta, :ltr) == ".x1ghz6dp{margin:0}"
+      assert field(margin_meta, :priority) == 1000
 
       # padding: 0 -> "0" (not "0px")
-      padding_meta = rule.atomic_classes["padding"]
-      assert padding_meta.class == "x1717udv"
-      assert padding_meta.ltr == ".x1717udv{padding:0}"
-      assert padding_meta.priority == 1000
+      padding_meta = get_atomic(rule.atomic_classes, "padding")
+      assert field(padding_meta, :class) == "x1717udv"
+      assert field(padding_meta, :ltr) == ".x1717udv{padding:0}"
+      assert field(padding_meta, :priority) == 1000
     end
   end
 
@@ -303,34 +303,34 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.CalcValues, :calc_spaces})
 
-      meta = rule.atomic_classes["width"]
-      assert meta.class == "x1hauit9"
-      assert meta.ltr == ".x1hauit9{width:calc((100% + 3% - 100px) / 7)}"
-      assert meta.priority == 4000
+      meta = get_atomic(rule.atomic_classes, "width")
+      assert field(meta, :class) == "x1hauit9"
+      assert field(meta, :ltr) == ".x1hauit9{width:calc((100% + 3% - 100px) / 7)}"
+      assert field(meta, :priority) == 4000
     end
 
     test "nested calc() functions are preserved" do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.CalcValues, :nested_calc})
 
-      meta = rule.atomic_classes["width"]
-      assert meta.ltr =~ "calc(100% - calc(20px + 10px))"
+      meta = get_atomic(rule.atomic_classes, "width")
+      assert field(meta, :ltr) =~ "calc(100% - calc(20px + 10px))"
     end
 
     test "deeply nested calc() functions are preserved" do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.CalcValues, :deeply_nested_calc})
 
-      meta = rule.atomic_classes["height"]
-      assert meta.ltr =~ "calc(50vh - calc(100% / calc(3 + 1)))"
+      meta = get_atomic(rule.atomic_classes, "height")
+      assert field(meta, :ltr) =~ "calc(50vh - calc(100% / calc(3 + 1)))"
     end
 
     test "calc() inside clamp() is preserved" do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.CalcValues, :clamp_with_calc})
 
-      meta = rule.atomic_classes["padding"]
-      assert meta.ltr =~ "clamp(10px,calc(1rem + 2vw),30px)"
+      meta = get_atomic(rule.atomic_classes, "padding")
+      assert field(meta, :ltr) =~ "clamp(10px,calc(1rem + 2vw),30px)"
     end
   end
 
@@ -340,10 +340,10 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.LeadingZeros, :decimal})
 
-      meta = rule.atomic_classes["transition-duration"]
-      assert meta.class == "xpvlhck"
-      assert meta.ltr == ".xpvlhck{transition-duration:.01s}"
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "transition-duration")
+      assert field(meta, :class) == "xpvlhck"
+      assert field(meta, :ltr) == ".xpvlhck{transition-duration:.01s}"
+      assert field(meta, :priority) == 3000
     end
 
     test "cubic-bezier values strip leading zeros" do
@@ -351,10 +351,13 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.LeadingZeros, :cubic_bezier})
 
-      meta = rule.atomic_classes["transition-timing-function"]
-      assert meta.class == "xxziih7"
-      assert meta.ltr == ".xxziih7{transition-timing-function:cubic-bezier(.08,.52,.52,1)}"
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "transition-timing-function")
+      assert field(meta, :class) == "xxziih7"
+
+      assert field(meta, :ltr) ==
+               ".xxziih7{transition-timing-function:cubic-bezier(.08,.52,.52,1)}"
+
+      assert field(meta, :priority) == 3000
     end
   end
 
@@ -364,10 +367,10 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.TimingValues, :ms_large})
 
-      meta = rule.atomic_classes["transition-duration"]
-      assert meta.class == "xsa3hc2"
-      assert meta.ltr == ".xsa3hc2{transition-duration:1.234s}"
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "transition-duration")
+      assert field(meta, :class) == "xsa3hc2"
+      assert field(meta, :ltr) == ".xsa3hc2{transition-duration:1.234s}"
+      assert field(meta, :priority) == 3000
     end
 
     test "converts 10ms to .01s" do
@@ -375,10 +378,10 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.TimingValues, :ms_medium})
 
-      meta = rule.atomic_classes["transition-duration"]
-      assert meta.class == "xpvlhck"
-      assert meta.ltr == ".xpvlhck{transition-duration:.01s}"
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "transition-duration")
+      assert field(meta, :class) == "xpvlhck"
+      assert field(meta, :ltr) == ".xpvlhck{transition-duration:.01s}"
+      assert field(meta, :priority) == 3000
     end
 
     test "keeps 1ms as is (below 10ms threshold)" do
@@ -386,10 +389,10 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.TimingValues, :ms_small})
 
-      meta = rule.atomic_classes["transition-duration"]
-      assert meta.class == "xjd9b36"
-      assert meta.ltr == ".xjd9b36{transition-duration:1ms}"
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "transition-duration")
+      assert field(meta, :class) == "xjd9b36"
+      assert field(meta, :ltr) == ".xjd9b36{transition-duration:1ms}"
+      assert field(meta, :priority) == 3000
     end
 
     test "converts 500ms to .5s" do
@@ -397,10 +400,10 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.TimingValues, :ms_500})
 
-      meta = rule.atomic_classes["transition-duration"]
-      assert meta.class == "x1wsgiic"
-      assert meta.ltr == ".x1wsgiic{transition-duration:.5s}"
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "transition-duration")
+      assert field(meta, :class) == "x1wsgiic"
+      assert field(meta, :ltr) == ".x1wsgiic{transition-duration:.5s}"
+      assert field(meta, :priority) == 3000
     end
   end
 
@@ -410,10 +413,10 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.UnitlessValues, :with_units})
 
-      meta = rule.atomic_classes["height"]
-      assert meta.class == "x1egiwwb"
-      assert meta.ltr == ".x1egiwwb{height:500px}"
-      assert meta.priority == 4000
+      meta = get_atomic(rule.atomic_classes, "height")
+      assert field(meta, :class) == "x1egiwwb"
+      assert field(meta, :ltr) == ".x1egiwwb{height:500px}"
+      assert field(meta, :priority) == 4000
     end
 
     test "adds px to margin numeric value" do
@@ -421,10 +424,10 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.UnitlessValues, :with_units})
 
-      meta = rule.atomic_classes["margin"]
-      assert meta.class == "x1oin6zd"
-      assert meta.ltr == ".x1oin6zd{margin:10px}"
-      assert meta.priority == 1000
+      meta = get_atomic(rule.atomic_classes, "margin")
+      assert field(meta, :class) == "x1oin6zd"
+      assert field(meta, :ltr) == ".x1oin6zd{margin:10px}"
+      assert field(meta, :priority) == 1000
     end
 
     test "adds px to width numeric value" do
@@ -432,10 +435,10 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.UnitlessValues, :with_units})
 
-      meta = rule.atomic_classes["width"]
-      assert meta.class == "xvue9z"
-      assert meta.ltr == ".xvue9z{width:500px}"
-      assert meta.priority == 4000
+      meta = get_atomic(rule.atomic_classes, "width")
+      assert field(meta, :class) == "xvue9z"
+      assert field(meta, :ltr) == ".xvue9z{width:500px}"
+      assert field(meta, :priority) == 4000
     end
 
     test "does not add units to font-weight" do
@@ -443,10 +446,10 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.UnitlessValues, :unitless})
 
-      meta = rule.atomic_classes["font-weight"]
-      assert meta.class == "xk50ysn"
-      assert meta.ltr == ".xk50ysn{font-weight:500}"
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "font-weight")
+      assert field(meta, :class) == "xk50ysn"
+      assert field(meta, :ltr) == ".xk50ysn{font-weight:500}"
+      assert field(meta, :priority) == 3000
     end
 
     test "does not add units to line-height" do
@@ -454,10 +457,10 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.UnitlessValues, :unitless})
 
-      meta = rule.atomic_classes["line-height"]
-      assert meta.class == "x1evy7pa"
-      assert meta.ltr == ".x1evy7pa{line-height:1.5}"
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "line-height")
+      assert field(meta, :class) == "x1evy7pa"
+      assert field(meta, :ltr) == ".x1evy7pa{line-height:1.5}"
+      assert field(meta, :priority) == 3000
     end
 
     test "strips leading zero from opacity and does not add units" do
@@ -466,10 +469,10 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.UnitlessValues, :unitless})
 
-      meta = rule.atomic_classes["opacity"]
+      meta = get_atomic(rule.atomic_classes, "opacity")
       # Opacity 0.5 should become .5 (leading zero stripped)
-      assert meta.ltr =~ ~r/opacity:\.5\}/
-      assert meta.priority == 3000
+      assert field(meta, :ltr) =~ ~r/opacity:\.5\}/
+      assert field(meta, :priority) == 3000
     end
 
     test "does not add units to zoom" do
@@ -477,10 +480,10 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.UnitlessValues, :unitless})
 
-      meta = rule.atomic_classes["zoom"]
-      assert meta.class == "xy2o3ld"
-      assert meta.ltr == ".xy2o3ld{zoom:2}"
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "zoom")
+      assert field(meta, :class) == "xy2o3ld"
+      assert field(meta, :ltr) == ".xy2o3ld{zoom:2}"
+      assert field(meta, :priority) == 3000
     end
   end
 
@@ -490,10 +493,10 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.NumberRounding, :rounded})
 
-      meta = rule.atomic_classes["height"]
-      assert meta.class == "x1vvwc6p"
-      assert meta.ltr == ".x1vvwc6p{height:33.3333px}"
-      assert meta.priority == 4000
+      meta = get_atomic(rule.atomic_classes, "height")
+      assert field(meta, :class) == "x1vvwc6p"
+      assert field(meta, :ltr) == ".x1vvwc6p{height:33.3333px}"
+      assert field(meta, :priority) == 4000
     end
   end
 
@@ -503,10 +506,10 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.ContentProperty, :empty})
 
-      meta = rule.atomic_classes["content"]
-      assert meta.class == "x14axycx"
-      assert meta.ltr == ".x14axycx{content:\"\"}"
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "content")
+      assert field(meta, :class) == "x14axycx"
+      assert field(meta, :ltr) == ".x14axycx{content:\"\"}"
+      assert field(meta, :priority) == 3000
     end
 
     test "wraps text content in quotes" do
@@ -514,10 +517,10 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.ContentProperty, :with_text})
 
-      meta = rule.atomic_classes["content"]
-      assert meta.class == "x1r2f195"
-      assert meta.ltr == ".x1r2f195{content:\"hello\"}"
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "content")
+      assert field(meta, :class) == "x1r2f195"
+      assert field(meta, :ltr) == ".x1r2f195{content:\"hello\"}"
+      assert field(meta, :priority) == 3000
     end
 
     test "does not wrap attr() function in quotes" do
@@ -525,66 +528,66 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.ContentProperty, :with_attr})
 
-      meta = rule.atomic_classes["content"]
-      assert meta.class == "xli7a2p"
-      assert meta.ltr == ".xli7a2p{content:attr(data-count)}"
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "content")
+      assert field(meta, :class) == "xli7a2p"
+      assert field(meta, :ltr) == ".xli7a2p{content:attr(data-count)}"
+      assert field(meta, :priority) == 3000
     end
 
     test "does not wrap open-quote keyword in quotes" do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.ContentProperty, :open_quote})
 
-      meta = rule.atomic_classes["content"]
-      assert meta.ltr =~ ~r/content:open-quote\}/
+      meta = get_atomic(rule.atomic_classes, "content")
+      assert field(meta, :ltr) =~ ~r/content:open-quote\}/
     end
 
     test "does not wrap close-quote keyword in quotes" do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.ContentProperty, :close_quote})
 
-      meta = rule.atomic_classes["content"]
-      assert meta.ltr =~ ~r/content:close-quote\}/
+      meta = get_atomic(rule.atomic_classes, "content")
+      assert field(meta, :ltr) =~ ~r/content:close-quote\}/
     end
 
     test "does not wrap no-open-quote keyword in quotes" do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.ContentProperty, :no_open_quote})
 
-      meta = rule.atomic_classes["content"]
-      assert meta.ltr =~ ~r/content:no-open-quote\}/
+      meta = get_atomic(rule.atomic_classes, "content")
+      assert field(meta, :ltr) =~ ~r/content:no-open-quote\}/
     end
 
     test "does not wrap no-close-quote keyword in quotes" do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.ContentProperty, :no_close_quote})
 
-      meta = rule.atomic_classes["content"]
-      assert meta.ltr =~ ~r/content:no-close-quote\}/
+      meta = get_atomic(rule.atomic_classes, "content")
+      assert field(meta, :ltr) =~ ~r/content:no-close-quote\}/
     end
 
     test "does not wrap counter() function in quotes" do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.ContentProperty, :counter_fn})
 
-      meta = rule.atomic_classes["content"]
-      assert meta.ltr =~ ~r/content:counter\(section\)\}/
+      meta = get_atomic(rule.atomic_classes, "content")
+      assert field(meta, :ltr) =~ ~r/content:counter\(section\)\}/
     end
 
     test "does not wrap counters() function in quotes" do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.ContentProperty, :counters_fn})
 
-      meta = rule.atomic_classes["content"]
-      assert meta.ltr =~ ~r/content:counters\(section/
+      meta = get_atomic(rule.atomic_classes, "content")
+      assert field(meta, :ltr) =~ ~r/content:counters\(section/
     end
 
     test "does not wrap var() function in quotes" do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.ContentProperty, :var_fn})
 
-      meta = rule.atomic_classes["content"]
-      assert meta.ltr =~ ~r/content:var\(--my-content\)\}/
+      meta = get_atomic(rule.atomic_classes, "content")
+      assert field(meta, :ltr) =~ ~r/content:var\(--my-content\)\}/
     end
   end
 
@@ -593,24 +596,24 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.HyphenateCharacter, :auto})
 
-      meta = rule.atomic_classes["hyphenate-character"]
-      assert meta.ltr =~ ~r/hyphenate-character:auto\}/
+      meta = get_atomic(rule.atomic_classes, "hyphenate-character")
+      assert field(meta, :ltr) =~ ~r/hyphenate-character:auto\}/
     end
 
     test "dash character is quoted" do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.HyphenateCharacter, :dash})
 
-      meta = rule.atomic_classes["hyphenate-character"]
-      assert meta.ltr =~ ~r/hyphenate-character:"-"\}/
+      meta = get_atomic(rule.atomic_classes, "hyphenate-character")
+      assert field(meta, :ltr) =~ ~r/hyphenate-character:"-"\}/
     end
 
     test "custom character is quoted" do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.HyphenateCharacter, :custom})
 
-      meta = rule.atomic_classes["hyphenate-character"]
-      assert meta.ltr =~ ~r/hyphenate-character:"="\}/
+      meta = get_atomic(rule.atomic_classes, "hyphenate-character")
+      assert field(meta, :ltr) =~ ~r/hyphenate-character:"="\}/
     end
   end
 
@@ -620,20 +623,20 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.QuotesProperty, :empty_single})
 
-      meta = rule.atomic_classes["quotes"]
-      assert meta.class == "x169joja"
-      assert meta.ltr == ".x169joja{quotes:\"\"}"
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "quotes")
+      assert field(meta, :class) == "x169joja"
+      assert field(meta, :ltr) == ".x169joja{quotes:\"\"}"
+      assert field(meta, :priority) == 3000
     end
 
     test "double-quoted empty string stays as double quotes" do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.QuotesProperty, :empty_double})
 
-      meta = rule.atomic_classes["quotes"]
-      assert meta.class == "x169joja"
-      assert meta.ltr == ".x169joja{quotes:\"\"}"
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "quotes")
+      assert field(meta, :class) == "x169joja"
+      assert field(meta, :ltr) == ".x169joja{quotes:\"\"}"
+      assert field(meta, :priority) == 3000
     end
   end
 
@@ -642,33 +645,33 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.TransitionPropertyValues, :atom_single})
 
-      meta = rule.atomic_classes["transition-property"]
-      assert meta.ltr =~ ~r/transition-property:background-color\}/
+      meta = get_atomic(rule.atomic_classes, "transition-property")
+      assert field(meta, :ltr) =~ ~r/transition-property:background-color\}/
     end
 
     test "preserves simple atom values" do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.TransitionPropertyValues, :atom_opacity})
 
-      meta = rule.atomic_classes["transition-property"]
-      assert meta.ltr =~ ~r/transition-property:opacity\}/
+      meta = get_atomic(rule.atomic_classes, "transition-property")
+      assert field(meta, :ltr) =~ ~r/transition-property:opacity\}/
     end
 
     test "converts string snake_case to dash-case" do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.TransitionPropertyValues, :string_snake})
 
-      meta = rule.atomic_classes["transition-property"]
-      assert meta.ltr =~ ~r/transition-property:background-color\}/
+      meta = get_atomic(rule.atomic_classes, "transition-property")
+      assert field(meta, :ltr) =~ ~r/transition-property:background-color\}/
     end
 
     test "converts multiple comma-separated snake_case values" do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.TransitionPropertyValues, :string_multi})
 
-      meta = rule.atomic_classes["transition-property"]
+      meta = get_atomic(rule.atomic_classes, "transition-property")
       # Should be "opacity,background-color,border-radius"
-      assert meta.ltr =~ ~r/transition-property:opacity,background-color,border-radius\}/
+      assert field(meta, :ltr) =~ ~r/transition-property:opacity,background-color,border-radius\}/
     end
 
     test "preserves custom properties (does not convert underscores)" do
@@ -677,9 +680,9 @@ defmodule LiveStyle.ValueNormalizationTest do
           {LiveStyle.ValueNormalizationTest.TransitionPropertyValues, :string_custom_prop}
         )
 
-      meta = rule.atomic_classes["transition-property"]
+      meta = get_atomic(rule.atomic_classes, "transition-property")
       # Custom props starting with -- should preserve underscores
-      assert meta.ltr =~ ~r/transition-property:--my_custom_prop\}/
+      assert field(meta, :ltr) =~ ~r/transition-property:--my_custom_prop\}/
     end
   end
 
@@ -690,10 +693,10 @@ defmodule LiveStyle.ValueNormalizationTest do
       rule =
         Class.lookup!({LiveStyle.ValueNormalizationTest.ImportantValues, :important})
 
-      meta = rule.atomic_classes["color"]
-      assert meta.class == "xzw3067"
-      assert meta.ltr == ".xzw3067{color:red!important}"
-      assert meta.priority == 3000
+      meta = get_atomic(rule.atomic_classes, "color")
+      assert field(meta, :class) == "xzw3067"
+      assert field(meta, :ltr) == ".xzw3067{color:red!important}"
+      assert field(meta, :priority) == 3000
     end
   end
 end

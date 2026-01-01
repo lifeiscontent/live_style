@@ -47,13 +47,13 @@ defmodule LiveStyle.Runtime do
 
   Dynamic rules generate:
   1. Static CSS classes that reference CSS variables (var(--x-...))
-  2. At runtime, we return the class + a map of CSS variables to set
+  2. At runtime, we return the class + a list of CSS variable tuples to set
 
   This follows the StyleX pattern where static CSS uses var() references
   and runtime just sets the variable values via inline style.
   """
   @spec process_dynamic_rule(list(), list(), term(), module(), atom(), boolean()) ::
-          {String.t(), map()}
+          {String.t(), list()}
   defdelegate process_dynamic_rule(all_props, param_names, values, module, name, has_computed),
     to: Dynamic
 end

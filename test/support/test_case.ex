@@ -46,6 +46,7 @@ defmodule LiveStyle.TestCase do
 
     quote do
       use ExUnit.Case, async: unquote(async)
+      import LiveStyle.TestCase, only: [get_atomic: 2, get_class: 2, field: 2]
 
       # Store config options in module attribute for runtime access
       # This allows functions to be preserved properly
@@ -56,6 +57,49 @@ defmodule LiveStyle.TestCase do
       end
     end
   end
+
+  @doc """
+  Gets an atomic class entry by property name from the atomic_classes list.
+
+  ## Examples
+
+      rule = Class.lookup!({MyModule, :button})
+      color_entry = get_atomic(rule.atomic_classes, "color")
+  """
+  def get_atomic(atomic_classes, key) when is_list(atomic_classes) do
+    case List.keyfind(atomic_classes, key, 0) do
+      {^key, value} -> value
+      nil -> nil
+    end
+  end
+
+  @doc """
+  Gets a class entry by condition key from a classes list.
+
+  ## Examples
+
+      color = get_atomic(rule.atomic_classes, "color")
+      hover_entry = get_class(field(color, :classes), ":hover")
+  """
+  def get_class(classes, key) when is_list(classes) do
+    case List.keyfind(classes, key, 0) do
+      {^key, value} -> value
+      nil -> nil
+    end
+  end
+
+  @doc """
+  Gets a field from a keyword list entry.
+
+  ## Examples
+
+      entry = get_atomic(rule.atomic_classes, "color")
+      field(entry, :class)  # => "x1234"
+      field(entry, :value)  # => "red"
+      field(entry, :ltr)    # => ".x1234{color:red}"
+  """
+  def field(entry, key) when is_list(entry), do: Keyword.get(entry, key)
+  def field(nil, _key), do: nil
 
   @doc false
   def setup_test(config_opts) do

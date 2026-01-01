@@ -34,9 +34,9 @@ defmodule LiveStyle.PropertyTypeTest do
     end
 
     test "works with conditional values" do
-      result = PropertyType.angle(%{default: "0deg", "@media (min-width: 768px)": "45deg"})
+      result = PropertyType.angle(default: "0deg", "@media (min-width: 768px)": "45deg")
       assert result.syntax == "<angle>"
-      assert result.value.default == "0deg"
+      assert result.value[:default] == "0deg"
       assert result.value[:"@media (min-width: 768px)"] == "45deg"
     end
   end
@@ -58,14 +58,14 @@ defmodule LiveStyle.PropertyTypeTest do
 
     test "works with conditional values" do
       result =
-        PropertyType.color(%{
+        PropertyType.color(
           default: "red",
           "@media (prefers-color-scheme: dark)": "white",
           "@media print": "black"
-        })
+        )
 
       assert result.syntax == "<color>"
-      assert result.value.default == "red"
+      assert result.value[:default] == "red"
       assert result.value[:"@media (prefers-color-scheme: dark)"] == "white"
       assert result.value[:"@media print"] == "black"
     end
@@ -120,7 +120,7 @@ defmodule LiveStyle.PropertyTypeTest do
     end
 
     test "converts integer to string" do
-      # StyleX behavior: Integer.create(1) -> obj.value === "1"
+      # StyleX behavior: Integer.create(1) -> field(obj, :value) === "1"
       assert PropertyType.integer(1).value == "1"
       assert PropertyType.integer(0).value == "0"
       assert PropertyType.integer(-5).value == "-5"
@@ -144,9 +144,9 @@ defmodule LiveStyle.PropertyTypeTest do
     end
 
     test "works with conditional values" do
-      result = PropertyType.length(%{default: "8px", "@media (min-width: 768px)": "16px"})
+      result = PropertyType.length(default: "8px", "@media (min-width: 768px)": "16px")
       assert result.syntax == "<length>"
-      assert result.value.default == "8px"
+      assert result.value[:default] == "8px"
       assert result.value[:"@media (min-width: 768px)"] == "16px"
     end
   end
@@ -196,7 +196,7 @@ defmodule LiveStyle.PropertyTypeTest do
     end
 
     test "converts number to string" do
-      # StyleX behavior: Num.create(1) -> obj.value === "1"
+      # StyleX behavior: Num.create(1) -> field(obj, :value) === "1"
       assert PropertyType.number(1).value == "1"
       assert PropertyType.number(0.5).value == "0.5"
       assert PropertyType.number(0).value == "0"
@@ -288,7 +288,7 @@ defmodule LiveStyle.PropertyTypeTest do
     end
 
     test "extracts default from conditional value" do
-      typed = PropertyType.color(%{default: "red", "@media print": "black"})
+      typed = PropertyType.color(default: "red", "@media print": "black")
       assert PropertyType.initial_value(typed) == "red"
     end
 
@@ -309,9 +309,9 @@ defmodule LiveStyle.PropertyTypeTest do
       assert PropertyType.unwrap_value(PropertyType.length("10px")) == "10px"
     end
 
-    test "returns map for conditional values" do
-      typed = PropertyType.color(%{default: "red", "@media print": "black"})
-      assert PropertyType.unwrap_value(typed) == %{default: "red", "@media print": "black"}
+    test "returns keyword list for conditional values" do
+      typed = PropertyType.color(default: "red", "@media print": "black")
+      assert PropertyType.unwrap_value(typed) == [default: "red", "@media print": "black"]
     end
   end
 
@@ -392,16 +392,16 @@ defmodule LiveStyle.PropertyTypeTest do
     # StyleX test: "stylex.types used in tokens object"
     vars(
       primary_color:
-        color(%{
+        color(
           default: "red",
           "@media (prefers-color-scheme: dark)": "white",
           "@media print": "black"
-        }),
+        ),
       spacing:
-        PropertyType.length(%{
+        PropertyType.length(
           default: "8px",
           "@media (min-width: 768px)": "16px"
-        })
+        )
     )
   end
 

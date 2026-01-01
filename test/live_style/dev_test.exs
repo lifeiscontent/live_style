@@ -87,15 +87,17 @@ defmodule LiveStyle.DevTest do
       assert is_binary(info.class)
       assert is_binary(info.css)
       assert info.dynamic? == false
-      assert is_map(info.properties)
+      assert is_list(info.properties)
     end
 
     test "properties contain expected values" do
       info = Dev.class_info(TestComponent, :button)
 
-      assert Map.has_key?(info.properties, "display")
-      assert info.properties["display"].value == "flex"
-      assert is_binary(info.properties["display"].class)
+      display = List.keyfind(info.properties, "display", 0)
+      assert display != nil
+      {_, display_meta} = display
+      assert display_meta.value == "flex"
+      assert is_binary(display_meta.class)
     end
 
     test "returns error for unknown class" do

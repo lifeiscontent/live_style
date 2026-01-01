@@ -672,7 +672,7 @@ defmodule LiveStyle do
   defmacro css(name) when is_atom(name) do
     quote do
       %LiveStyle.Attrs{
-        class: Map.get(__MODULE__.__live_style__(:class_strings), unquote(name), ""),
+        class: Keyword.get(__MODULE__.__live_style__(:class_strings), unquote(name), ""),
         style: nil
       }
     end
@@ -806,9 +806,9 @@ defmodule LiveStyle do
       class :multi_theme,
         color: fallback(["var(--primary)", "var(--fallback)", "black"])
   """
-  @spec fallback(list()) :: map()
+  @spec fallback(list()) :: {:__fallback__, list()}
   def fallback(values) when is_list(values) do
-    %{__fallback__: true, values: values}
+    {:__fallback__, values}
   end
 
   @doc """
@@ -890,6 +890,7 @@ defmodule LiveStyle do
         <td {css(:cell)}>...</td>
       </tr>
   """
+  @spec marker(atom() | {module(), atom()}) :: LiveStyle.Marker.t()
   def marker(name) when is_atom(name) do
     LiveStyle.Marker.ref(name)
   end

@@ -41,7 +41,7 @@ defmodule LiveStyle.Compiler.CSS.Vars do
     |> Enum.map_join("\n", fn {_key, entry} ->
       %{ident: ident, type: type_info} = entry
       %{syntax: syntax, initial: initial} = type_info
-      inherits = Map.get(type_info, :inherits, true)
+      inherits = if is_map_key(type_info, :inherits), do: type_info.inherits, else: true
 
       # Extract default value for @property initial-value
       initial_value = extract_initial_value(initial)
@@ -101,14 +101,7 @@ defmodule LiveStyle.Compiler.CSS.Vars do
 
   # Flatten a variable value into a list of {at_rules, ident, value} tuples
   # Handles nested conditional values
-  # Values are pre-sorted at storage time for deterministic iteration
-  defp flatten_var_value(ident, value, at_rules) when is_map(value) do
-    Enum.flat_map(value, fn {key, val} ->
-      flatten_var_entry(ident, key, val, at_rules)
-    end)
-  end
-
-  # Handle sorted lists (converted from maps at storage time)
+  # Conditional values are sorted lists at this point (converted at storage time)
   defp flatten_var_value(ident, value, at_rules) when is_list(value) do
     if conditional_list?(value) do
       Enum.flat_map(value, fn {key, val} ->
@@ -152,18 +145,7 @@ defmodule LiveStyle.Compiler.CSS.Vars do
   defp extract_initial_value(value) when is_binary(value), do: value
   defp extract_initial_value(value) when is_number(value), do: to_string(value)
 
-  defp extract_initial_value(%{} = map) do
-    # Check for :default or "default" key
-    default = Map.get(map, :default) || Map.get(map, "default")
-
-    case default do
-      nil -> map |> Map.values() |> List.first() |> to_string()
-      val when is_binary(val) -> val
-      val -> to_string(val)
-    end
-  end
-
-  # Handle sorted lists (converted from maps at storage time)
+  # Conditional values are sorted lists at this point (converted at storage time)
   defp extract_initial_value(list) when is_list(list) do
     # Check for :default or "default" key in keyword list
     default = Keyword.get(list, :default) || get_string_key(list, "default")

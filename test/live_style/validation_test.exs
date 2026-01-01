@@ -114,10 +114,10 @@ defmodule LiveStyle.ValidationTest do
 
       vars(
         simple: "10px",
-        conditional: %{
-          :default => "blue",
-          "@media (prefers-color-scheme: dark)" => "lightblue"
-        }
+        conditional: [
+          default: "blue",
+          "@media (prefers-color-scheme: dark)": "lightblue"
+        ]
       )
     end
 

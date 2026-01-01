@@ -9,11 +9,11 @@ defmodule LiveStyle.Config.Shorthand do
 
   @default_shorthand_behavior LiveStyle.ShorthandBehavior.AcceptShorthands
 
-  @atom_to_behavior_module %{
+  @atom_to_behavior_module [
     accept_shorthands: LiveStyle.ShorthandBehavior.AcceptShorthands,
     flatten_shorthands: LiveStyle.ShorthandBehavior.FlattenShorthands,
     forbid_shorthands: LiveStyle.ShorthandBehavior.ForbidShorthands
-  }
+  ]
 
   @doc """
   Returns the configured shorthand expansion behavior and options.
@@ -53,8 +53,9 @@ defmodule LiveStyle.Config.Shorthand do
     end
   end
 
-  defp normalize_shorthand_behavior(atom) when is_map_key(@atom_to_behavior_module, atom) do
-    {:ok, {Map.fetch!(@atom_to_behavior_module, atom), []}}
+  defp normalize_shorthand_behavior(atom)
+       when atom in [:accept_shorthands, :flatten_shorthands, :forbid_shorthands] do
+    {:ok, {Keyword.fetch!(@atom_to_behavior_module, atom), []}}
   end
 
   defp normalize_shorthand_behavior({module, opts}) when is_atom(module) and is_list(opts) do

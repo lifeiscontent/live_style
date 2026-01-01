@@ -5,7 +5,7 @@ defmodule LiveStyle.Compiler.BeforeCompile do
   alias LiveStyle.Manifest
 
   @doc """
-  Builds class string and property class maps for static classes.
+  Builds class string and property class keyword lists for static classes.
 
   ## Parameters
 
@@ -15,11 +15,11 @@ defmodule LiveStyle.Compiler.BeforeCompile do
 
   ## Returns
 
-  A tuple of `{class_strings_map, property_classes_map}`.
+  A tuple of `{class_strings_list, property_classes_list}`.
   """
-  @spec build_static_class_maps(list(), module(), Manifest.t()) :: {map(), map()}
+  @spec build_static_class_maps(list(), module(), Manifest.t()) :: {keyword(), keyword()}
   def build_static_class_maps(static_classes, module, manifest) do
-    Enum.reduce(static_classes, {%{}, %{}}, fn {name, _decl}, {cs_acc, pc_acc} ->
+    Enum.reduce(static_classes, {[], []}, fn {name, _decl}, {cs_acc, pc_acc} ->
       build_static_class_map(name, module, manifest, cs_acc, pc_acc)
     end)
   end
@@ -30,39 +30,44 @@ defmodule LiveStyle.Compiler.BeforeCompile do
     case Manifest.get_class(manifest, key) do
       %{class_string: cs, atomic_classes: atomic_classes} ->
         prop_classes = build_prop_classes(atomic_classes)
-        {Map.put(cs_acc, name, cs), Map.put(pc_acc, name, prop_classes)}
+        {[{name, cs} | cs_acc], [{name, prop_classes} | pc_acc]}
 
       nil ->
-        {Map.put(cs_acc, name, ""), Map.put(pc_acc, name, %{})}
+        {[{name, ""} | cs_acc], [{name, []} | pc_acc]}
     end
   end
 
   defp build_prop_classes(atomic_classes) do
-    atomic_classes
-    |> Enum.flat_map(&build_prop_class_entry/1)
-    |> Map.new()
+    Enum.flat_map(atomic_classes, &build_prop_class_entry/1)
   end
 
-  defp build_prop_class_entry({prop, %{class: nil, unset: true}}) do
-    [{prop, :__unset__}]
-  end
+  defp build_prop_class_entry({prop, entry}) when is_list(entry) do
+    cond do
+      Keyword.get(entry, :unset) == true and Keyword.get(entry, :class) == nil ->
+        [{prop, :__unset__}]
 
-  defp build_prop_class_entry({prop, %{class: class}}) when class != nil do
-    [{prop, class}]
-  end
+      Keyword.has_key?(entry, :classes) ->
+        classes = Keyword.get(entry, :classes)
+        Enum.flat_map(classes, fn e -> build_conditional_entry(prop, e) end)
 
-  defp build_prop_class_entry({prop, %{classes: classes}}) do
-    Enum.flat_map(classes, fn entry -> build_conditional_entry(prop, entry) end)
+      Keyword.get(entry, :class) != nil ->
+        [{prop, Keyword.get(entry, :class)}]
+
+      true ->
+        []
+    end
   end
 
   defp build_prop_class_entry(_), do: []
 
-  defp build_conditional_entry(prop, {condition, %{class: nil}}) do
-    [{"#{prop}::#{condition}", :__unset__}]
-  end
+  defp build_conditional_entry(prop, {condition, entry}) when is_list(entry) do
+    class = Keyword.get(entry, :class)
 
-  defp build_conditional_entry(prop, {condition, %{class: class}}) when class != nil do
-    [{"#{prop}::#{condition}", class}]
+    if class == nil do
+      [{"#{prop}::#{condition}", :__unset__}]
+    else
+      [{"#{prop}::#{condition}", class}]
+    end
   end
 
   defp build_conditional_entry(_prop, _), do: []

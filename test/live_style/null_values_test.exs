@@ -84,12 +84,13 @@ defmodule LiveStyle.NullValuesTest do
         nil ->
           assert true
 
-        %{} = classes when map_size(classes) == 0 ->
+        [] ->
           assert true
 
-        %{"color" => color_meta} ->
+        atomic_classes when is_list(atomic_classes) ->
+          color_meta = get_atomic(atomic_classes, "color")
           # StyleX behavior: className is null for null values
-          assert color_meta.class == nil or color_meta == nil
+          assert color_meta == nil or field(color_meta, :class) == nil
       end
     end
 
@@ -106,13 +107,13 @@ defmodule LiveStyle.NullValuesTest do
         Class.lookup!({LiveStyle.NullValuesTest.NullStaticStyles, :partial_nil})
 
       # color: blue should generate a class
-      assert rule.atomic_classes["color"] != nil
-      assert rule.atomic_classes["color"].class != nil
+      assert get_atomic(rule.atomic_classes, "color") != nil
+      assert field(get_atomic(rule.atomic_classes, "color"), :class) != nil
 
       # background-color: nil should not generate a class
       # Either the key is missing or the value is nil
-      bg_meta = Map.get(rule.atomic_classes, "background-color")
-      assert bg_meta == nil or bg_meta.class == nil
+      bg_meta = get_atomic(rule.atomic_classes, "background-color")
+      assert bg_meta == nil or field(bg_meta, :class) == nil
     end
 
     test "nil value does not produce CSS output" do
@@ -153,7 +154,7 @@ defmodule LiveStyle.NullValuesTest do
 
       # Verify it's the red color class
       rule = Class.lookup!({LiveStyle.NullValuesTest.NullStaticStyles, :red})
-      red_class = rule.atomic_classes["color"].class
+      red_class = field(get_atomic(rule.atomic_classes, "color"), :class)
       assert attrs.class =~ red_class
     end
 
@@ -169,7 +170,7 @@ defmodule LiveStyle.NullValuesTest do
       blue_rule =
         Class.lookup!({LiveStyle.NullValuesTest.NullStaticStyles, :partial_nil})
 
-      blue_class = blue_rule.atomic_classes["color"].class
+      blue_class = field(get_atomic(blue_rule.atomic_classes, "color"), :class)
 
       assert attrs.class =~ blue_class
     end
@@ -187,13 +188,16 @@ defmodule LiveStyle.NullValuesTest do
         Class.lookup!({LiveStyle.NullValuesTest.NullConditionalStyles, :default_with_nil_hover})
 
       # Should have a default class
-      classes = rule.atomic_classes["color"].classes
-      assert Map.has_key?(classes, :default)
-      assert classes[:default].class != nil
+      classes = field(get_atomic(rule.atomic_classes, "color"), :classes)
+      default_entry = List.keyfind(classes, :default, 0)
+      assert default_entry != nil
+      {_, default} = default_entry
+      assert field(default, :class) != nil
 
       # :hover might exist but with nil class, or not exist at all
-      hover = Map.get(classes, ":hover")
-      assert hover == nil or hover.class == nil
+      hover_entry = List.keyfind(classes, ":hover", 0)
+      hover = if hover_entry, do: elem(hover_entry, 1), else: nil
+      assert hover == nil or field(hover, :class) == nil
     end
 
     test "nil default with conditional value" do
@@ -202,15 +206,18 @@ defmodule LiveStyle.NullValuesTest do
       rule =
         Class.lookup!({LiveStyle.NullValuesTest.NullConditionalStyles, :nil_default_with_hover})
 
-      classes = rule.atomic_classes["color"].classes
+      classes = field(get_atomic(rule.atomic_classes, "color"), :classes)
 
       # Default should be nil or missing
-      default = Map.get(classes, :default)
-      assert default == nil or default.class == nil
+      default_entry = List.keyfind(classes, :default, 0)
+      default = if default_entry, do: elem(default_entry, 1), else: nil
+      assert default == nil or field(default, :class) == nil
 
       # :hover should have a class
-      assert Map.has_key?(classes, ":hover")
-      assert classes[":hover"].class != nil
+      hover_entry = List.keyfind(classes, ":hover", 0)
+      assert hover_entry != nil
+      {_, hover} = hover_entry
+      assert field(hover, :class) != nil
     end
   end
 end

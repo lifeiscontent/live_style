@@ -45,11 +45,11 @@ defmodule LiveStyle.ConstsTest do
       )
 
       class(:responsive,
-        color: %{
-          :default => "red",
-          const(:breakpoint_sm) => "blue",
-          const(:breakpoint_lg) => "green"
-        }
+        color: [
+          {:default, "red"},
+          {const(:breakpoint_sm), "blue"},
+          {const(:breakpoint_lg), "green"}
+        ]
       )
     end
 

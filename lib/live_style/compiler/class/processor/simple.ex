@@ -3,7 +3,7 @@ defmodule LiveStyle.Compiler.Class.Processor.Simple do
   Processes simple (non-conditional) CSS declarations into atomic classes.
 
   This module handles the expansion and processing of straightforward CSS property
-  declarations like `%{display: "flex", padding: "8px"}`, converting them into
+  declarations like `[display: "flex", padding: "8px"]`, converting them into
   atomic CSS classes with proper hashing and metadata.
 
   ## Responsibilities
@@ -19,11 +19,12 @@ defmodule LiveStyle.Compiler.Class.Processor.Simple do
   alias LiveStyle.CSSValue
   alias LiveStyle.Property.Validation
   alias LiveStyle.ShorthandBehavior
+  alias LiveStyle.Utils
 
   @doc """
   Processes a list of simple (non-conditional) declarations into atomic class entries.
 
-  Returns a map of CSS property names to class entry maps containing:
+  Returns a list of `{css_prop, entry}` tuples containing:
   - `:class` - The generated class name
   - `:value` - The CSS value
   - `:ltr` - LTR CSS metadata
@@ -38,12 +39,12 @@ defmodule LiveStyle.Compiler.Class.Processor.Simple do
   ## Example
 
       iex> process([{:display, "flex"}, {:padding, "8px"}])
-      %{
-        "display" => %{class: "x1234", value: "flex", ...},
-        "padding" => %{class: "x5678", value: "8px", ...}
-      }
+      [
+        {"display", %{class: "x1234", value: "flex", ...}},
+        {"padding", %{class: "x5678", value: "8px", ...}}
+      ]
   """
-  @spec process(list(), keyword()) :: map()
+  @spec process(list(), keyword()) :: list()
   def process(declarations, opts \\ []) do
     # Convert keys to CSS strings at boundary, validate, then expand shorthand properties
     expanded =
@@ -64,29 +65,27 @@ defmodule LiveStyle.Compiler.Class.Processor.Simple do
     # Process non-nil declarations
     non_nil_atomic = process_non_nil_declarations(non_nil_decls)
 
-    # Merge nil_atomic (properties to unset) with non_nil_atomic
-    # nil_atomic has priority as it represents explicit unsetting
-    Map.merge(non_nil_atomic, nil_atomic)
+    # Merge: non_nil first, then nil_atomic overrides (represents explicit unsetting)
+    Utils.merge_declarations(non_nil_atomic, nil_atomic)
   end
 
   # Process nil declarations - store special marker for style merging
   defp process_nil_declarations(nil_decls) do
     # Store a special marker indicating these properties should be unset
-    Map.new(nil_decls, fn {css_prop, _value} ->
-      {css_prop, %{class: nil, unset: true}}
+    Enum.map(nil_decls, fn {css_prop, _value} ->
+      {css_prop, [class: nil, unset: true]}
     end)
   end
 
   # Process non-nil declarations
   defp process_non_nil_declarations(declarations) do
-    declarations
-    |> Enum.map(fn {css_prop, value} ->
+    Enum.map(declarations, fn {css_prop, value} ->
       # Handle fallback values (from css_fallback macro or plain lists)
       # StyleX treats arrays as fallback values: position: ['sticky', 'fixed']
       cond do
-        match?(%{__fallback__: true, values: _}, value) ->
+        match?({:__fallback__, _}, value) ->
           # Explicit fallback() - applies reversal for non-var values
-          %{__fallback__: true, values: values} = value
+          {:__fallback__, values} = value
           process_fallback(css_prop, values)
 
         is_list(value) and is_plain_fallback_list?(value) ->
@@ -98,7 +97,6 @@ defmodule LiveStyle.Compiler.Class.Processor.Simple do
           process_simple_value(css_prop, value)
       end
     end)
-    |> Map.new()
   end
 
   # Process a simple CSS value (non-fallback, non-nil)
@@ -107,7 +105,7 @@ defmodule LiveStyle.Compiler.Class.Processor.Simple do
   end
 
   # Check if a list is a plain fallback list (not a conditional value list)
-  # Conditional values can be maps or keyword lists (e.g. %{":hover" => "blue"} or [":hover": "blue"]).
+  # Conditional values are keyword lists (e.g. [":hover": "blue", default: "red"]).
   defp is_plain_fallback_list?(list) when is_list(list) do
     not Conditional.conditional?(list)
   end

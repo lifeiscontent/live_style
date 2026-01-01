@@ -4,13 +4,13 @@ defmodule LiveStyle.Compiler.Class.Processor.Conditional do
 
   This module handles declarations with conditional values like pseudo-classes,
   media queries, and other at-rules. For example:
-  `%{color: %{:default => "red", ":hover" => "blue", "@media (min-width: 768px)" => "green"}}`
+  `[color: [default: "red", ":hover": "blue", "@media (min-width: 768px)": "green"]]`
 
   ## Responsibilities
 
   - Expanding shorthand properties for conditional values
   - Applying StyleX's "last media query wins" transformation
-  - Flattening nested conditional maps
+  - Flattening nested conditional lists
   - Generating atomic class entries for each condition
   """
 
@@ -22,42 +22,41 @@ defmodule LiveStyle.Compiler.Class.Processor.Conditional do
   @doc """
   Processes a list of conditional declarations into atomic class entries.
 
-  Returns a map where each CSS property maps to a `%{classes: ...}` entry
-  containing the class entries for each condition.
+  Returns a list of `{css_prop, %{classes: [...]}}` tuples containing
+  the class entries for each condition.
 
   ## Example
 
-      iex> process([{:color, %{:default => "red", ":hover" => "blue"}}])
-      %{
-        "color" => %{
-          classes: %{
-            :default => %{class: "x1234", value: "red", ...},
-            ":hover" => %{class: "x5678", value: "blue", ...}
-          }
-        }
-      }
+      iex> process([{:color, [default: "red", ":hover": "blue"]}])
+      [
+        {"color", %{
+          classes: [
+            {:default, %{class: "x1234", value: "red", ...}},
+            {":hover", %{class: "x5678", value: "blue", ...}}
+          ]
+        }}
+      ]
   """
-  @spec process(list(), keyword()) :: map()
+  @spec process(list(), keyword()) :: list()
   def process(declarations, _opts \\ []) do
     declarations
-    |> Enum.flat_map(fn {prop, value_map} ->
+    |> Enum.flat_map(fn {prop, conditions} ->
       # Convert key to CSS string at boundary
       css_prop = CSSValue.to_css_property(prop)
 
       # Use style resolution for conditional properties
-      ShorthandBehavior.expand_shorthand_conditions(css_prop, value_map)
+      ShorthandBehavior.expand_shorthand_conditions(css_prop, conditions)
     end)
     |> Enum.flat_map(&process_expanded/1)
-    |> Map.new()
   end
 
   # Process an expanded conditional declaration
-  defp process_expanded({css_prop, value_map}) do
+  defp process_expanded({css_prop, conditions}) do
     # Apply StyleX's "last media query wins" transformation
-    transformed_value_map = MediaQueryTransform.transform(value_map)
+    transformed = MediaQueryTransform.transform(conditions)
 
-    # Flatten nested conditional maps into a list of {selector, value} tuples
-    flattened = Conditional.flatten(transformed_value_map, nil)
+    # Flatten nested conditional lists into a list of {selector, value} tuples
+    flattened = Conditional.flatten(transformed, nil)
 
     # Process each flattened condition
     classes =
@@ -66,15 +65,14 @@ defmodule LiveStyle.Compiler.Class.Processor.Conditional do
       |> Enum.map(fn {selector, css_value} ->
         build_class_entry(css_prop, selector, css_value)
       end)
-      |> Map.new()
 
-    [{css_prop, %{classes: classes}}]
+    [{css_prop, [classes: classes]}]
   end
 
   # Build a class entry for the default value (no selector suffix)
   defp build_class_entry(css_prop, nil, css_value) do
     entry = Builder.build(css_prop, css_value)
-    {:default, Map.put(entry, :selector_suffix, nil)}
+    {:default, Keyword.put(entry, :selector_suffix, nil)}
   end
 
   # Build a class entry for a conditional value (with selector or at-rule)
@@ -84,7 +82,7 @@ defmodule LiveStyle.Compiler.Class.Processor.Conditional do
 
     {selector,
      entry
-     |> Map.put(:selector_suffix, selector_suffix)
-     |> Map.put(:at_rule, at_rule)}
+     |> Keyword.put(:selector_suffix, selector_suffix)
+     |> Keyword.put(:at_rule, at_rule)}
   end
 end

@@ -60,12 +60,41 @@ defmodule LiveStyle.ShorthandBehavior.AcceptShorthands do
         [{css_property, conditions}]
 
       expansion ->
-        expanded_props = get_expanded_property_names(expansion)
-        expanded_conditions = expand_conditions_map(conditions, expansion)
+        do_expand_conditions(expansion, css_property, conditions)
+    end
+  end
 
-        expanded_props
-        |> Enum.map(&{&1, Map.get(expanded_conditions, &1)})
-        |> Enum.reject(fn {_prop, val} -> is_nil(val) or val == %{} end)
+  defp do_expand_conditions(expansion, css_property, conditions) do
+    conditions
+    |> Enum.flat_map(&expand_condition_to_props(expansion, css_property, &1))
+    |> Enum.group_by(fn {prop, _} -> prop end, fn {_, cond_entry} -> cond_entry end)
+    |> Enum.map(&merge_condition_entries/1)
+    |> Enum.reject(fn {_prop, conds} -> conds == [] end)
+  end
+
+  defp expand_condition_to_props(expansion, _css_property, {condition, value}) do
+    expanded = apply_expansion(expansion, value)
+    Enum.map(expanded, fn {prop, val} -> {prop, {condition, val}} end)
+  end
+
+  # Merge condition entries and return as sorted list for deterministic iteration
+  defp merge_condition_entries({prop, cond_entries}) do
+    merged =
+      cond_entries
+      |> Enum.reduce([], &merge_entry/2)
+      |> Enum.sort_by(fn {k, _v} -> to_string(k) end)
+
+    {prop, merged}
+  end
+
+  # Skip nil values
+  defp merge_entry({_condition, nil}, acc), do: acc
+
+  # Replace existing or prepend
+  defp merge_entry({condition, val}, acc) do
+    case List.keyfind(acc, condition, 0) do
+      nil -> [{condition, val} | acc]
+      _ -> List.keyreplace(acc, condition, 0, {condition, val})
     end
   end
 
@@ -78,10 +107,10 @@ defmodule LiveStyle.ShorthandBehavior.AcceptShorthands do
   @expansions @keep_shorthands_expansions
 
   # Add complex expansions that require runtime parsing
-  @complex_expansions %{
-    "overscroll-behavior" => :overscroll_behavior,
-    "contain-intrinsic-size" => :contain_intrinsic_size
-  }
+  @complex_expansions [
+    {"overscroll-behavior", :overscroll_behavior},
+    {"contain-intrinsic-size", :contain_intrinsic_size}
+  ]
 
   # Generate lookup function for simple expansions
   for {css_prop, props} <- @expansions do
@@ -146,34 +175,6 @@ defmodule LiveStyle.ShorthandBehavior.AcceptShorthands do
       [size1, "auto", size2] -> {size1, "auto #{size2}"}
       _ -> {value, value}
     end
-  end
-
-  # ==========================================================================
-  # Conditional Expansion Helpers
-  # ==========================================================================
-
-  defp get_expanded_property_names(expansion) do
-    apply_expansion(expansion, "sample")
-    |> Enum.map(fn {prop, _} -> prop end)
-  end
-
-  defp expand_conditions_map(conditions, expansion) do
-    Enum.reduce(conditions, %{}, fn {condition, value}, acc ->
-      expanded = apply_expansion(expansion, value)
-      merge_expanded_condition(expanded, condition, acc)
-    end)
-  end
-
-  defp merge_expanded_condition(expanded, condition, acc) do
-    Enum.reduce(expanded, acc, fn {prop, val}, inner_acc ->
-      add_prop_condition(inner_acc, prop, condition, val)
-    end)
-  end
-
-  defp add_prop_condition(acc, _prop, _condition, nil), do: acc
-
-  defp add_prop_condition(acc, prop, condition, val) do
-    update_in(acc, [Access.key(prop, %{})], &Map.put(&1, condition, val))
   end
 
   # ==========================================================================
