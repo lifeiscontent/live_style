@@ -35,8 +35,7 @@ defmodule LiveStyle.Compiler.CSS.DynamicProperties do
     end)
     |> Enum.uniq()
     |> Enum.sort()
-    |> Enum.map(&format_property_rule/1)
-    |> Enum.join("\n")
+    |> Enum.map_join("\n", &format_property_rule/1)
   end
 
   defp format_property_rule(css_var) do

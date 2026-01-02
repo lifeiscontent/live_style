@@ -103,7 +103,7 @@ defmodule LiveStyle.ClassTest do
       assert is_binary(attrs.class)
       # The class string contains space-separated atomic classes
       classes = String.split(attrs.class, " ")
-      assert length(classes) > 0
+      assert classes != []
     end
   end
 end

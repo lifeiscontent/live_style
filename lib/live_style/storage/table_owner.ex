@@ -56,13 +56,11 @@ defmodule LiveStyle.Storage.TableOwner do
   # Fallback table creation for when the owner process isn't running
   # (e.g., during compilation)
   defp create_table_fallback do
-    try do
-      :ets.new(@table_name, [:named_table, :public, :set, {:read_concurrency, true}])
-      :ok
-    rescue
-      # Table was created by another process
-      ArgumentError -> :ok
-    end
+    :ets.new(@table_name, [:named_table, :public, :set, {:read_concurrency, true}])
+    :ok
+  rescue
+    # Table was created by another process
+    ArgumentError -> :ok
   end
 
   # GenServer callbacks
@@ -71,20 +69,18 @@ defmodule LiveStyle.Storage.TableOwner do
   def init(_opts) do
     # Create the ETS table, owned by this process
     # No :heir needed - this process stays alive
-    table =
-      try do
-        :ets.new(@table_name, [:named_table, :public, :set, {:read_concurrency, true}])
-      rescue
-        # Table already exists (from fallback creation during compilation)
-        ArgumentError ->
-          # Take ownership of existing table if possible
-          case :ets.whereis(@table_name) do
-            :undefined -> raise "Table creation failed"
-            tid -> tid
-          end
-      end
-
+    table = get_or_create_table()
     {:ok, %{table: table}}
+  end
+
+  defp get_or_create_table do
+    case :ets.whereis(@table_name) do
+      :undefined ->
+        :ets.new(@table_name, [:named_table, :public, :set, {:read_concurrency, true}])
+
+      tid ->
+        tid
+    end
   end
 
   @impl true

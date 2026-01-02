@@ -10,7 +10,6 @@ defmodule LiveStyle.Config.Validation do
   """
 
   # Compile-time configuration
-  @validate_properties Application.compile_env(:live_style, :validate_properties, true)
   @unknown_property_level Application.compile_env(:live_style, :unknown_property_level, :warn)
   @vendor_prefix_level Application.compile_env(:live_style, :vendor_prefix_level, :warn)
   @deprecated_property_level Application.compile_env(
@@ -18,7 +17,6 @@ defmodule LiveStyle.Config.Validation do
                                :deprecated_property_level,
                                :warn
                              )
-  @deprecated_fn Application.compile_env(:live_style, :deprecated?, nil)
 
   @doc """
   Returns whether property validation is enabled.
@@ -33,7 +31,7 @@ defmodule LiveStyle.Config.Validation do
       config :live_style, validate_properties: false
   """
   @spec validate_properties?() :: boolean()
-  def validate_properties?, do: @validate_properties
+  def validate_properties?, do: Application.get_env(:live_style, :validate_properties, true)
 
   @doc """
   Returns the level of unknown property handling.
@@ -98,6 +96,6 @@ defmodule LiveStyle.Config.Validation do
 
       @spec deprecated?(String.t()) :: boolean() | nil
   """
-  @spec deprecated?() :: (String.t() -> boolean() | nil) | nil
-  def deprecated?, do: @deprecated_fn
+  @spec deprecated?() :: (String.t() -> boolean() | nil) | {module(), atom()} | nil
+  def deprecated?, do: Application.get_env(:live_style, :deprecated?)
 end

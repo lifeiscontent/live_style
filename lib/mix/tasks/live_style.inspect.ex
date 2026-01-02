@@ -44,41 +44,52 @@ defmodule Mix.Tasks.LiveStyle.Inspect do
 
     case args do
       [] ->
-        Mix.shell().error("Usage: mix live_style.inspect Module [class_name...] [--css] [--list]")
-        Mix.shell().error("Example: mix live_style.inspect MyAppWeb.Button primary")
+        print_usage()
 
       [module_string | class_names] ->
         Mix.Task.run("app.start")
+        module = load_module!(module_string)
+        execute_command(module, class_names, opts)
+    end
+  end
 
-        module = Module.concat([module_string])
+  defp print_usage do
+    Mix.shell().error("Usage: mix live_style.inspect Module [class_name...] [--css] [--list]")
+    Mix.shell().error("Example: mix live_style.inspect MyAppWeb.Button primary")
+  end
 
-        unless Code.ensure_loaded?(module) do
-          Mix.shell().error("Module #{module_string} not found")
-          exit({:shutdown, 1})
-        end
+  defp load_module!(module_string) do
+    module = Module.concat([module_string])
 
-        unless function_exported?(module, :__live_style__, 1) do
-          Mix.shell().error("Module #{module_string} is not a LiveStyle module")
-          exit({:shutdown, 1})
-        end
+    unless Code.ensure_loaded?(module) do
+      Mix.shell().error("Module #{module_string} not found")
+      exit({:shutdown, 1})
+    end
 
-        cond do
-          opts[:list] ->
-            print_list(module)
+    unless function_exported?(module, :__live_style__, 1) do
+      Mix.shell().error("Module #{module_string} is not a LiveStyle module")
+      exit({:shutdown, 1})
+    end
 
-          opts[:css] && class_names != [] ->
-            class_atoms = Enum.map(class_names, &String.to_existing_atom/1)
-            print_css(module, class_atoms)
+    module
+  end
 
-          class_names != [] ->
-            class_atoms = Enum.map(class_names, &String.to_existing_atom/1)
-            print_inspection(module, class_atoms)
+  defp execute_command(module, class_names, opts) do
+    cond do
+      opts[:list] ->
+        print_list(module)
 
-          true ->
-            # No class names and no --list flag
-            Mix.shell().error("Please specify class names or use --list")
-            Mix.shell().error("Example: mix live_style.inspect MyAppWeb.Button primary")
-        end
+      opts[:css] && class_names != [] ->
+        class_atoms = Enum.map(class_names, &String.to_existing_atom/1)
+        print_css(module, class_atoms)
+
+      class_names != [] ->
+        class_atoms = Enum.map(class_names, &String.to_existing_atom/1)
+        print_inspection(module, class_atoms)
+
+      true ->
+        Mix.shell().error("Please specify class names or use --list")
+        Mix.shell().error("Example: mix live_style.inspect MyAppWeb.Button primary")
     end
   end
 

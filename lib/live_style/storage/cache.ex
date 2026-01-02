@@ -27,6 +27,8 @@ defmodule LiveStyle.Storage.Cache do
   interact with it directly.
   """
 
+  alias LiveStyle.Storage.TableOwner
+
   @table_name :live_style_manifest_cache
   @initialized_key :__initialized__
 
@@ -38,7 +40,7 @@ defmodule LiveStyle.Storage.Cache do
   At runtime, the TableOwner GenServer owns the table.
   """
   def init do
-    LiveStyle.Storage.TableOwner.ensure_table()
+    TableOwner.ensure_table()
   end
 
   @doc """
@@ -303,11 +305,11 @@ defmodule LiveStyle.Storage.Cache do
 
       %{
         initialized: true,
-        classes: length(manifest.classes || []),
-        vars: length(manifest.vars || []),
-        theme_classes: length(manifest.theme_classes || []),
-        consts: length(manifest.consts || []),
-        keyframes: length(manifest.keyframes || [])
+        classes: length(manifest.classes),
+        vars: length(manifest.vars),
+        theme_classes: length(manifest.theme_classes),
+        consts: length(manifest.consts),
+        keyframes: length(manifest.keyframes)
       }
     else
       %{initialized: false}

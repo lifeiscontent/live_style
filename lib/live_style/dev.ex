@@ -93,8 +93,12 @@ defmodule LiveStyle.Dev do
 
     # Header
     IO.puts("")
-    IO.puts("#{IO.ANSI.bright()}:#{class_name}#{IO.ANSI.reset()}" <>
-            if(is_dynamic, do: " #{IO.ANSI.yellow()}(dynamic)#{IO.ANSI.reset()}", else: ""))
+
+    IO.puts(
+      "#{IO.ANSI.bright()}:#{class_name}#{IO.ANSI.reset()}" <>
+        if(is_dynamic, do: " #{IO.ANSI.yellow()}(dynamic)#{IO.ANSI.reset()}", else: "")
+    )
+
     IO.puts("class: #{if class_str == "", do: "(none)", else: class_str}")
     IO.puts("")
 
@@ -146,6 +150,7 @@ defmodule LiveStyle.Dev do
       props = Keyword.get(prop_classes, name, [])
 
       IO.puts("#{IO.ANSI.cyan()}:#{name}#{IO.ANSI.reset()}")
+
       if props == [] do
         IO.puts("  (no properties)")
       else
@@ -154,6 +159,7 @@ defmodule LiveStyle.Dev do
           IO.puts("  #{prop}: #{class_display}")
         end
       end
+
       IO.puts("")
     end
 
@@ -161,10 +167,12 @@ defmodule LiveStyle.Dev do
     attrs = LiveStyle.resolve_attrs(module, class_refs, nil)
 
     IO.puts("#{IO.ANSI.bright()}Merged:#{IO.ANSI.reset()}")
-    IO.puts("  class: #{attrs.class || "(none)"}")
+    IO.puts("  class: #{if attrs.class == "", do: "(none)", else: attrs.class}")
+
     if attrs.style do
       IO.puts("  style: #{attrs.style}")
     end
+
     IO.puts("")
 
     :ok
@@ -189,23 +197,23 @@ defmodule LiveStyle.Dev do
     manifest = Storage.read()
 
     class_atoms
-    |> Enum.flat_map(fn name ->
-      key = Manifest.key(module, name)
-
-      case Manifest.get_class(manifest, key) do
-        nil ->
-          []
-
-        entry ->
-          entry
-          |> Keyword.fetch!(:atomic_classes)
-          |> Enum.flat_map(fn {_prop, data} ->
-            extract_css_rules(data)
-          end)
-      end
-    end)
+    |> Enum.flat_map(&get_css_rules_for_class(&1, module, manifest))
     |> Enum.uniq()
     |> Enum.join("\n")
+  end
+
+  defp get_css_rules_for_class(name, module, manifest) do
+    key = Manifest.key(module, name)
+
+    case Manifest.get_class(manifest, key) do
+      nil ->
+        []
+
+      entry ->
+        entry
+        |> Keyword.fetch!(:atomic_classes)
+        |> Enum.flat_map(fn {_prop, data} -> extract_css_rules(data) end)
+    end
   end
 
   @doc """

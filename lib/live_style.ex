@@ -109,6 +109,7 @@ defmodule LiveStyle do
     end
   end
 
+  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   defmacro __before_compile__(env) do
     classes = Module.get_attribute(env.module, :__live_style_classes__) |> Enum.reverse()
     module = env.module
@@ -176,7 +177,9 @@ defmodule LiveStyle do
     theme_classes_map = Map.new(theme_classes)
 
     # Get accumulated view_transition_class entries
-    view_transition_classes = Module.get_attribute(env.module, :__live_style_view_transition_classes__) || []
+    view_transition_classes =
+      Module.get_attribute(env.module, :__live_style_view_transition_classes__) || []
+
     view_transition_classes_map = Map.new(view_transition_classes)
 
     # Get accumulated position_try entries
@@ -219,7 +222,8 @@ defmodule LiveStyle do
     view_transition_class_clauses =
       for {name, entry} <- view_transition_classes do
         quote do
-          def __live_style__(:view_transition_class, unquote(name)), do: unquote(Macro.escape(entry))
+          def __live_style__(:view_transition_class, unquote(name)),
+            do: unquote(Macro.escape(entry))
         end
       end
 
@@ -343,8 +347,9 @@ defmodule LiveStyle do
 
       nil ->
         raise CompileError,
-          description: "CSS variable :#{ref} not found in #{inspect(caller_module)}. " <>
-                       "Make sure `vars #{ref}: ...` is defined before this reference.",
+          description:
+            "CSS variable :#{ref} not found in #{inspect(caller_module)}. " <>
+              "Make sure `vars #{ref}: ...` is defined before this reference.",
           file: __CALLER__.file,
           line: __CALLER__.line
     end
@@ -359,8 +364,9 @@ defmodule LiveStyle do
     case module.__live_style__(:var, name) do
       nil ->
         raise CompileError,
-          description: "CSS variable :#{name} not found in #{inspect(module)}. " <>
-                       "Make sure `vars #{name}: ...` is defined in that module.",
+          description:
+            "CSS variable :#{name} not found in #{inspect(module)}. " <>
+              "Make sure `vars #{name}: ...` is defined in that module.",
           file: __CALLER__.file,
           line: __CALLER__.line
 

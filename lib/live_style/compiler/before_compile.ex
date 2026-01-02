@@ -3,6 +3,7 @@ defmodule LiveStyle.Compiler.BeforeCompile do
   # Compile-time helpers for __before_compile__
 
   alias LiveStyle.Manifest
+  alias LiveStyle.Runtime.Dynamic
 
   @doc """
   Builds class string and property class keyword lists for classes.
@@ -91,7 +92,7 @@ defmodule LiveStyle.Compiler.BeforeCompile do
       quote do
         @doc false
         def unquote(fn_name)(values) do
-          LiveStyle.Runtime.Dynamic.compute_var_list(
+          Dynamic.compute_var_list(
             unquote(Macro.escape(all_props)),
             values,
             unquote(module),

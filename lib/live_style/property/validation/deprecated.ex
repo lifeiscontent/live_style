@@ -15,6 +15,7 @@ defmodule LiveStyle.Property.Validation.Deprecated do
   defp deprecated?(property) do
     case LiveStyle.Config.deprecated?() do
       nil -> false
+      {mod, fun} -> apply(mod, fun, [property])
       fun when is_function(fun, 1) -> fun.(property)
     end
   end

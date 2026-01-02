@@ -27,6 +27,10 @@ defmodule LiveStyle.Property.Validation.VendorPrefix do
       nil ->
         false
 
+      {mod, fun} ->
+        result = apply(mod, fun, [property, "test"])
+        result != "#{property}:test"
+
       fun when is_function(fun, 2) ->
         result = fun.(property, "test")
         result != "#{property}:test"

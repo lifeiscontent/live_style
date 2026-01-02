@@ -35,7 +35,6 @@ defmodule LiveStyle.Manifest do
     ViewTransitionClassEntry
   }
 
-
   # Increment this when the manifest format changes to trigger regeneration.
   # This ensures stale manifests from previous versions are cleared.
   @current_version 7
@@ -125,7 +124,8 @@ defmodule LiveStyle.Manifest do
   def put_view_transition_class(manifest, key, entry),
     do: put_entry(manifest, :view_transition_classes, key, entry)
 
-  def get_view_transition_class(manifest, key), do: get_entry(manifest, :view_transition_classes, key)
+  def get_view_transition_class(manifest, key),
+    do: get_entry(manifest, :view_transition_classes, key)
 
   def put_class(manifest, key, entry), do: put_entry(manifest, :classes, key, entry)
   def get_class(manifest, key), do: get_entry(manifest, :classes, key)

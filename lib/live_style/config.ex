@@ -109,8 +109,6 @@ defmodule LiveStyle.Config do
   @debug_class_names Application.compile_env(:live_style, :debug_class_names, false)
   @font_size_px_to_rem Application.compile_env(:live_style, :font_size_px_to_rem, false)
   @font_size_root_px Application.compile_env(:live_style, :font_size_root_px, 16)
-  @use_css_layers Application.compile_env(:live_style, :use_css_layers, false)
-  @prefix_css Application.compile_env(:live_style, :prefix_css, nil)
 
   # ===========================================================================
   # Profile Configuration
@@ -343,7 +341,7 @@ defmodule LiveStyle.Config do
       config :live_style, use_css_layers: true
   """
   def use_css_layers? do
-    @use_css_layers
+    Application.get_env(:live_style, :use_css_layers, false)
   end
 
   @doc """
@@ -370,7 +368,7 @@ defmodule LiveStyle.Config do
       def prefix_css(property, value), do: "\#{property}:\#{value}"
   """
   def prefix_css do
-    @prefix_css
+    Application.get_env(:live_style, :prefix_css)
   end
 
   @doc """
@@ -383,7 +381,8 @@ defmodule LiveStyle.Config do
   def apply_prefix_css(property, value) do
     case prefix_css() do
       nil -> "#{property}:#{value}"
-      prefix_fun -> prefix_fun.(property, value)
+      {mod, fun} -> apply(mod, fun, [property, value])
+      prefix_fun when is_function(prefix_fun, 2) -> prefix_fun.(property, value)
     end
   end
 end

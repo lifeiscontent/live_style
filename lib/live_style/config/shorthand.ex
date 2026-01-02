@@ -14,13 +14,6 @@ defmodule LiveStyle.Config.Shorthand do
     forbid_shorthands: LiveStyle.ShorthandBehavior.ForbidShorthands
   ]
 
-  # Read at compile time
-  @shorthand_behavior Application.compile_env(
-                        :live_style,
-                        :shorthand_behavior,
-                        @default_shorthand_behavior
-                      )
-
   @doc """
   Returns the configured shorthand expansion behavior and options.
 
@@ -39,13 +32,16 @@ defmodule LiveStyle.Config.Shorthand do
   """
   @spec shorthand_behavior() :: {module(), keyword()}
   def shorthand_behavior do
-    case normalize_shorthand_behavior(@shorthand_behavior) do
+    configured =
+      Application.get_env(:live_style, :shorthand_behavior, @default_shorthand_behavior)
+
+    case normalize_shorthand_behavior(configured) do
       {:ok, result} ->
         result
 
       :error ->
         raise ArgumentError, """
-        Invalid shorthand_behavior: #{inspect(@shorthand_behavior)}
+        Invalid shorthand_behavior: #{inspect(configured)}
 
         Valid formats are:
         - An atom: :accept_shorthands, :flatten_shorthands, :forbid_shorthands

@@ -128,11 +128,17 @@ defmodule LiveStyle.Storage.FileAdapter do
       updated = fun.(current)
       ProcessState.put(updated)
     else
-      # Normal mode: update shared cache
+      # Normal mode: update cache and persist to file
+      # During compilation, ETS table may not survive between compiler phases,
+      # so we persist to file immediately to ensure data is not lost
       ensure_cache_initialized()
       current = Cache.get_manifest() || LiveStyle.Manifest.empty()
       updated = fun.(current)
       sync_to_cache(current, updated)
+
+      # Persist to file immediately during compilation
+      # This ensures data survives if the ETS table is destroyed
+      persist()
     end
 
     :ok
@@ -228,7 +234,13 @@ defmodule LiveStyle.Storage.FileAdapter do
     sync_collection(old.theme_classes, new.theme_classes, &Cache.put_theme_class/2)
     sync_collection(old.consts, new.consts, &Cache.put_const/2)
     sync_collection(old.keyframes, new.keyframes, &Cache.put_keyframes/2)
-    sync_collection(old.view_transition_classes, new.view_transition_classes, &Cache.put_view_transition_class/2)
+
+    sync_collection(
+      old.view_transition_classes,
+      new.view_transition_classes,
+      &Cache.put_view_transition_class/2
+    )
+
     sync_collection(old.position_try, new.position_try, &Cache.put_position_try/2)
     :ok
   end
