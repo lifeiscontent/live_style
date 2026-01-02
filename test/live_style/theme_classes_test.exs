@@ -1,6 +1,6 @@
-defmodule LiveStyle.ThemesTest do
+defmodule LiveStyle.ThemeClassesTest do
   @moduledoc """
-  Tests for the theme/2 macro and theme/1 reference.
+  Tests for the theme/2 macro and theme_class/1 reference.
   """
   use LiveStyle.TestCase
 
@@ -51,14 +51,14 @@ defmodule LiveStyle.ThemesTest do
   describe "theme reference" do
     test "theme/1 returns class name string" do
       # Theme references return the theme class name
-      theme_class = LiveStyle.Theme.ref({ThemeModule, :dark})
+      theme_class = LiveStyle.ThemeClass.ref({ThemeModule, :dark})
       assert is_binary(theme_class)
       assert theme_class != ""
     end
 
     test "theme class appears in CSS output" do
       css = LiveStyle.Compiler.generate_css()
-      theme_class = LiveStyle.Theme.ref({ThemeModule, :dark})
+      theme_class = LiveStyle.ThemeClass.ref({ThemeModule, :dark})
       # The theme class should be in the CSS
       assert css =~ theme_class
     end

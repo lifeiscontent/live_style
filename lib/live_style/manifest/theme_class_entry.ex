@@ -1,4 +1,4 @@
-defmodule LiveStyle.Manifest.ThemeEntry do
+defmodule LiveStyle.Manifest.ThemeClassEntry do
   @moduledoc """
   Entry structure for theme variable overrides.
   """
@@ -15,7 +15,7 @@ defmodule LiveStyle.Manifest.ThemeEntry do
 
   ## Examples
 
-      ThemeEntry.new("x1abc123", [{"--x-color-primary", "darkblue"}])
+      ThemeClassEntry.new("x1abc123", [{"--x-color-primary", "darkblue"}])
   """
   @spec new(String.t(), list()) :: t()
   def new(ident, overrides) do

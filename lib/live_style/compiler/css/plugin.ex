@@ -37,9 +37,9 @@ defmodule LiveStyle.Compiler.CSS.Plugin do
   3. `LiveStyle.Compiler.CSS.Vars` - :root variables (priority 200)
   4. `LiveStyle.Compiler.CSS.Keyframes` - @keyframes (priority 300)
   5. `LiveStyle.Compiler.CSS.PositionTry` - @position-try (priority 400)
-  6. `LiveStyle.Compiler.CSS.ViewTransitions` - view transitions (priority 500)
+  6. `LiveStyle.Compiler.CSS.ViewTransitionClasses` - view transitions (priority 500)
   7. `LiveStyle.Compiler.CSS.Classes` - style classes (priority 600)
-  8. `LiveStyle.Compiler.CSS.Themes` - theme overrides (priority 700)
+  8. `LiveStyle.Compiler.CSS.ThemeClasses` - theme overrides (priority 700)
   """
 
   alias LiveStyle.Manifest
@@ -72,9 +72,9 @@ defmodule LiveStyle.Compiler.CSS.Plugin do
       DynamicProperties,
       Keyframes,
       PositionTry,
-      Themes,
+      ThemeClasses,
       Vars,
-      ViewTransitions
+      ViewTransitionClasses
     }
 
     [
@@ -83,9 +83,9 @@ defmodule LiveStyle.Compiler.CSS.Plugin do
       {200, {Vars, :generate_vars}},
       {300, {Keyframes, :generate}},
       {400, {PositionTry, :generate}},
-      {500, {ViewTransitions, :generate}},
+      {500, {ViewTransitionClasses, :generate}},
       {600, {Classes, :generate}},
-      {700, {Themes, :generate}}
+      {700, {ThemeClasses, :generate}}
     ]
   end
 

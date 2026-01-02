@@ -7,9 +7,9 @@ defmodule LiveStyle.Manifest do
   - consts: Compile-time constants (no CSS output)
   - keyframes: @keyframes animations
   - position_try: @position-try rules
-  - view_transitions: View transition classes
+  - view_transition_classes: View transition classes
   - classes: Style classes (atomic CSS)
-  - themes: Variable override themes
+  - theme_classes: Variable override themes
 
   Each entry is keyed by a fully-qualified name like "MyAppWeb.Tokens.color.white"
   for namespaced items or "MyAppWeb.Tokens.spin" for non-namespaced items.
@@ -20,9 +20,9 @@ defmodule LiveStyle.Manifest do
 
   - `LiveStyle.Manifest.VarEntry` - CSS custom properties
   - `LiveStyle.Manifest.KeyframesEntry` - @keyframes animations
-  - `LiveStyle.Manifest.ThemeEntry` - Theme variable overrides
+  - `LiveStyle.Manifest.ThemeClassEntry` - Theme class variable overrides
   - `LiveStyle.Manifest.PositionTryEntry` - @position-try rules
-  - `LiveStyle.Manifest.ViewTransitionEntry` - View transitions
+  - `LiveStyle.Manifest.ViewTransitionClassEntry` - View transition classes
   - `LiveStyle.Manifest.ClassEntry` - Style classes (static and dynamic)
   """
 
@@ -30,22 +30,23 @@ defmodule LiveStyle.Manifest do
     ClassEntry,
     KeyframesEntry,
     PositionTryEntry,
-    ThemeEntry,
+    ThemeClassEntry,
     VarEntry,
-    ViewTransitionEntry
+    ViewTransitionClassEntry
   }
+
 
   # Increment this when the manifest format changes to trigger regeneration.
   # This ensures stale manifests from previous versions are cleared.
-  @current_version 6
+  @current_version 7
 
   @type var_entry :: VarEntry.t()
   @type const_entry :: String.t()
   @type keyframes_entry :: KeyframesEntry.t()
   @type position_try_entry :: PositionTryEntry.t()
-  @type view_transition_entry :: ViewTransitionEntry.t()
+  @type view_transition_class_entry :: ViewTransitionClassEntry.t()
   @type class_entry :: ClassEntry.t()
-  @type theme_entry :: ThemeEntry.t()
+  @type theme_class_entry :: ThemeClassEntry.t()
 
   # All collections use sorted lists of {key, entry} tuples for deterministic ordering
   @type t :: %{
@@ -54,9 +55,9 @@ defmodule LiveStyle.Manifest do
           consts: [{String.t(), const_entry()}],
           keyframes: [{String.t(), keyframes_entry()}],
           position_try: [{String.t(), position_try_entry()}],
-          view_transitions: [{String.t(), view_transition_entry()}],
+          view_transition_classes: [{String.t(), view_transition_class_entry()}],
           classes: [{String.t(), class_entry()}],
-          themes: [{String.t(), theme_entry()}]
+          theme_classes: [{String.t(), theme_class_entry()}]
         }
 
   @doc """
@@ -73,9 +74,9 @@ defmodule LiveStyle.Manifest do
       consts: [],
       keyframes: [],
       position_try: [],
-      view_transitions: [],
+      view_transition_classes: [],
       classes: [],
-      themes: []
+      theme_classes: []
     }
   end
 
@@ -121,16 +122,16 @@ defmodule LiveStyle.Manifest do
   def put_position_try(manifest, key, entry), do: put_entry(manifest, :position_try, key, entry)
   def get_position_try(manifest, key), do: get_entry(manifest, :position_try, key)
 
-  def put_view_transition(manifest, key, entry),
-    do: put_entry(manifest, :view_transitions, key, entry)
+  def put_view_transition_class(manifest, key, entry),
+    do: put_entry(manifest, :view_transition_classes, key, entry)
 
-  def get_view_transition(manifest, key), do: get_entry(manifest, :view_transitions, key)
+  def get_view_transition_class(manifest, key), do: get_entry(manifest, :view_transition_classes, key)
 
   def put_class(manifest, key, entry), do: put_entry(manifest, :classes, key, entry)
   def get_class(manifest, key), do: get_entry(manifest, :classes, key)
 
-  def put_theme(manifest, key, entry), do: put_entry(manifest, :themes, key, entry)
-  def get_theme(manifest, key), do: get_entry(manifest, :themes, key)
+  def put_theme_class(manifest, key, entry), do: put_entry(manifest, :theme_classes, key, entry)
+  def get_theme_class(manifest, key), do: get_entry(manifest, :theme_classes, key)
 
   # Private helpers for sorted list operations
 

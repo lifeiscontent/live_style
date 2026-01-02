@@ -1,4 +1,4 @@
-defmodule LiveStyle.ViewTransition do
+defmodule LiveStyle.ViewTransitionClass do
   @moduledoc """
   CSS View Transitions API support.
 
@@ -75,8 +75,8 @@ defmodule LiveStyle.ViewTransition do
   alias LiveStyle.{CSSValue, Hash, Manifest}
 
   use LiveStyle.Registry,
-    entity_name: "View transition",
-    manifest_type: :view_transition,
+    entity_name: "View transition class",
+    manifest_type: :view_transition_class,
     ref_field: :ident
 
   # Valid view transition keys: snake_case atoms or CSS-format strings

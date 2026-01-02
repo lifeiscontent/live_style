@@ -225,10 +225,10 @@ defmodule LiveStyle.Storage.FileAdapter do
   defp sync_to_cache(old, new) do
     sync_collection(old.classes, new.classes, &Cache.put_class/2)
     sync_collection(old.vars, new.vars, &Cache.put_var/2)
-    sync_collection(old.themes, new.themes, &Cache.put_theme/2)
+    sync_collection(old.theme_classes, new.theme_classes, &Cache.put_theme_class/2)
     sync_collection(old.consts, new.consts, &Cache.put_const/2)
     sync_collection(old.keyframes, new.keyframes, &Cache.put_keyframes/2)
-    sync_collection(old.view_transitions, new.view_transitions, &Cache.put_view_transition/2)
+    sync_collection(old.view_transition_classes, new.view_transition_classes, &Cache.put_view_transition_class/2)
     sync_collection(old.position_try, new.position_try, &Cache.put_position_try/2)
     :ok
   end

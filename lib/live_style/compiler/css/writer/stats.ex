@@ -6,7 +6,7 @@ defmodule LiveStyle.Compiler.CSS.Writer.Stats do
     vars_count = length(manifest.vars)
     keyframes_count = length(manifest.keyframes)
     classes_count = length(manifest.classes)
-    themes_count = length(manifest.themes)
+    themes_count = length(manifest.theme_classes)
 
     "/* LiveStyle: #{vars_count} vars, #{keyframes_count} keyframes, #{classes_count} classes, #{themes_count} themes */"
   end

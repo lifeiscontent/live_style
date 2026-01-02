@@ -1,4 +1,4 @@
-defmodule LiveStyle.Compiler.CSS.ViewTransitions do
+defmodule LiveStyle.Compiler.CSS.ViewTransitionClasses do
   @moduledoc """
   Generates CSS view transition rules from the manifest.
 
@@ -45,7 +45,7 @@ defmodule LiveStyle.Compiler.CSS.ViewTransitions do
   """
   @spec generate(LiveStyle.Manifest.t()) :: String.t()
   def generate(manifest) do
-    manifest.view_transitions
+    manifest.view_transition_classes
     |> Enum.sort_by(fn {_key, entry} -> Keyword.fetch!(entry, :ident) end)
     |> Enum.map_join("\n", fn {_key, entry} ->
       generate_entry(entry)

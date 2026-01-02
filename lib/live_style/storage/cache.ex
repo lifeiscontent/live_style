@@ -18,7 +18,7 @@ defmodule LiveStyle.Storage.Cache do
   Entries are stored as:
   - `{:class, key}` => class_entry
   - `{:var, key}` => var_entry
-  - `{:theme, key}` => theme_entry
+  - `{:theme_class, key}` => theme_entry
   - etc.
 
   ## Usage
@@ -111,10 +111,10 @@ defmodule LiveStyle.Storage.Cache do
       # Collections are sorted lists of {key, entry} tuples
       insert_entries(:class, manifest.classes)
       insert_entries(:var, manifest.vars)
-      insert_entries(:theme, manifest.themes)
+      insert_entries(:theme_class, manifest.theme_classes)
       insert_entries(:const, manifest.consts)
       insert_entries(:keyframes, manifest.keyframes)
-      insert_entries(:view_transition, manifest.view_transitions)
+      insert_entries(:view_transition_class, manifest.view_transition_classes)
       insert_entries(:position_try, manifest.position_try)
       :ok
     else
@@ -177,22 +177,22 @@ defmodule LiveStyle.Storage.Cache do
   end
 
   @doc """
-  Stores a single theme entry.
+  Stores a single theme_class entry.
   """
-  def put_theme(key, entry) do
+  def put_theme_class(key, entry) do
     init()
-    :ets.insert(@table_name, {{:theme, key}, entry})
+    :ets.insert(@table_name, {{:theme_class, key}, entry})
     :ok
   end
 
   @doc """
-  Gets a single theme entry.
+  Gets a single theme_class entry.
   """
-  def get_theme(key) do
+  def get_theme_class(key) do
     init()
 
-    case :ets.lookup(@table_name, {:theme, key}) do
-      [{{:theme, ^key}, entry}] -> entry
+    case :ets.lookup(@table_name, {:theme_class, key}) do
+      [{{:theme_class, ^key}, entry}] -> entry
       [] -> nil
     end
   end
@@ -240,22 +240,22 @@ defmodule LiveStyle.Storage.Cache do
   end
 
   @doc """
-  Stores a single view transition entry.
+  Stores a single view_transition_class entry.
   """
-  def put_view_transition(key, entry) do
+  def put_view_transition_class(key, entry) do
     init()
-    :ets.insert(@table_name, {{:view_transition, key}, entry})
+    :ets.insert(@table_name, {{:view_transition_class, key}, entry})
     :ok
   end
 
   @doc """
-  Gets a single view transition entry.
+  Gets a single view_transition_class entry.
   """
-  def get_view_transition(key) do
+  def get_view_transition_class(key) do
     init()
 
-    case :ets.lookup(@table_name, {:view_transition, key}) do
-      [{{:view_transition, ^key}, entry}] -> entry
+    case :ets.lookup(@table_name, {:view_transition_class, key}) do
+      [{{:view_transition_class, ^key}, entry}] -> entry
       [] -> nil
     end
   end
@@ -305,7 +305,7 @@ defmodule LiveStyle.Storage.Cache do
         initialized: true,
         classes: length(manifest.classes || []),
         vars: length(manifest.vars || []),
-        themes: length(manifest.themes || []),
+        theme_classes: length(manifest.theme_classes || []),
         consts: length(manifest.consts || []),
         keyframes: length(manifest.keyframes || [])
       }
@@ -340,13 +340,13 @@ defmodule LiveStyle.Storage.Cache do
       |> Enum.map(fn {{:var, key}, entry} -> {key, entry} end)
       |> Enum.sort_by(fn {key, _} -> key end)
 
-    themes =
+    theme_classes =
       all_entries
       |> Enum.filter(fn
-        {{:theme, _key}, _entry} -> true
+        {{:theme_class, _key}, _entry} -> true
         _ -> false
       end)
-      |> Enum.map(fn {{:theme, key}, entry} -> {key, entry} end)
+      |> Enum.map(fn {{:theme_class, key}, entry} -> {key, entry} end)
       |> Enum.sort_by(fn {key, _} -> key end)
 
     consts =
@@ -367,13 +367,13 @@ defmodule LiveStyle.Storage.Cache do
       |> Enum.map(fn {{:keyframes, key}, entry} -> {key, entry} end)
       |> Enum.sort_by(fn {key, _} -> key end)
 
-    view_transitions =
+    view_transition_classes =
       all_entries
       |> Enum.filter(fn
-        {{:view_transition, _key}, _entry} -> true
+        {{:view_transition_class, _key}, _entry} -> true
         _ -> false
       end)
-      |> Enum.map(fn {{:view_transition, key}, entry} -> {key, entry} end)
+      |> Enum.map(fn {{:view_transition_class, key}, entry} -> {key, entry} end)
       |> Enum.sort_by(fn {key, _} -> key end)
 
     position_try =
@@ -389,10 +389,10 @@ defmodule LiveStyle.Storage.Cache do
       version: LiveStyle.Manifest.current_version(),
       classes: classes,
       vars: vars,
-      themes: themes,
+      theme_classes: theme_classes,
       consts: consts,
       keyframes: keyframes,
-      view_transitions: view_transitions,
+      view_transition_classes: view_transition_classes,
       position_try: position_try
     }
   end

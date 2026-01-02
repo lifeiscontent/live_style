@@ -1,4 +1,4 @@
-defmodule LiveStyle.Manifest.ViewTransitionEntry do
+defmodule LiveStyle.Manifest.ViewTransitionClassEntry do
   @moduledoc """
   Entry structure for view transitions.
   """
@@ -15,7 +15,7 @@ defmodule LiveStyle.Manifest.ViewTransitionEntry do
 
   ## Examples
 
-      ViewTransitionEntry.new("x1abc123", [
+      ViewTransitionClassEntry.new("x1abc123", [
         old: [animation_name: "fadeOut"],
         new: [animation_name: "fadeIn"]
       ])

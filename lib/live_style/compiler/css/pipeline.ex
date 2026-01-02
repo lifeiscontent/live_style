@@ -64,9 +64,9 @@ defmodule LiveStyle.Compiler.CSS.Pipeline do
       vars: length(manifest.vars),
       keyframes: length(manifest.keyframes),
       classes: length(manifest.classes),
-      themes: length(manifest.themes),
+      theme_classes: length(manifest.theme_classes),
       position_try: length(manifest.position_try),
-      view_transitions: length(manifest.view_transitions)
+      view_transition_classes: length(manifest.view_transition_classes)
     ]
   end
 end

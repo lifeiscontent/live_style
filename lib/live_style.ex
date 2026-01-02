@@ -49,14 +49,14 @@ defmodule LiveStyle do
   - `var({Module, :name})` - Reference a CSS variable
   - `const({Module, :name})` - Reference a compile-time constant
   - `keyframes({Module, :name})` - Reference a keyframes animation
-  - `theme({Module, :name})` - Reference a theme class
+  - `theme_class({Module, :name})` - Reference a theme class
   - `position_try({Module, :name})` - Reference a position-try rule
   - `view_transition({Module, :name})` - Reference a view transition
 
   Local references (within the same module):
   - `var(:name)`
   - `keyframes(:name)`
-  - `theme(:name)`
+  - `theme_class(:name)`
 
   ## Public API Functions
 
@@ -74,8 +74,8 @@ defmodule LiveStyle do
     Module.register_attribute(module, :__live_style_vars__, accumulate: true)
     Module.register_attribute(module, :__live_style_consts__, accumulate: true)
     Module.register_attribute(module, :__live_style_keyframes__, accumulate: true)
-    Module.register_attribute(module, :__live_style_themes__, accumulate: true)
-    Module.register_attribute(module, :__live_style_view_transitions__, accumulate: true)
+    Module.register_attribute(module, :__live_style_theme_classes__, accumulate: true)
+    Module.register_attribute(module, :__live_style_view_transition_classes__, accumulate: true)
     Module.register_attribute(module, :__live_style_position_try__, accumulate: true)
 
     quote do
@@ -95,7 +95,7 @@ defmodule LiveStyle do
           keyframes: 1,
           position_try: 1,
           view_transition_class: 1,
-          theme: 1,
+          theme_class: 1,
           # Runtime resolution macros (validates at compile time, resolves at runtime)
           css: 1,
           css: 2,
@@ -171,13 +171,13 @@ defmodule LiveStyle do
     keyframes = Module.get_attribute(env.module, :__live_style_keyframes__) || []
     keyframes_map = Map.new(keyframes)
 
-    # Get accumulated theme entries
-    themes = Module.get_attribute(env.module, :__live_style_themes__) || []
-    themes_map = Map.new(themes)
+    # Get accumulated theme_class entries
+    theme_classes = Module.get_attribute(env.module, :__live_style_theme_classes__) || []
+    theme_classes_map = Map.new(theme_classes)
 
-    # Get accumulated view_transition entries
-    view_transitions = Module.get_attribute(env.module, :__live_style_view_transitions__) || []
-    view_transitions_map = Map.new(view_transitions)
+    # Get accumulated view_transition_class entries
+    view_transition_classes = Module.get_attribute(env.module, :__live_style_view_transition_classes__) || []
+    view_transition_classes_map = Map.new(view_transition_classes)
 
     # Get accumulated position_try entries
     position_try = Module.get_attribute(env.module, :__live_style_position_try__) || []
@@ -207,19 +207,19 @@ defmodule LiveStyle do
         end
       end
 
-    # Generate theme lookup function clauses
-    theme_clauses =
-      for {name, entry} <- themes do
+    # Generate theme_class lookup function clauses
+    theme_class_clauses =
+      for {name, entry} <- theme_classes do
         quote do
-          def __live_style__(:theme, unquote(name)), do: unquote(Macro.escape(entry))
+          def __live_style__(:theme_class, unquote(name)), do: unquote(Macro.escape(entry))
         end
       end
 
-    # Generate view_transition lookup function clauses
-    view_transition_clauses =
-      for {name, entry} <- view_transitions do
+    # Generate view_transition_class lookup function clauses
+    view_transition_class_clauses =
+      for {name, entry} <- view_transition_classes do
         quote do
-          def __live_style__(:view_transition, unquote(name)), do: unquote(Macro.escape(entry))
+          def __live_style__(:view_transition_class, unquote(name)), do: unquote(Macro.escape(entry))
         end
       end
 
@@ -238,16 +238,16 @@ defmodule LiveStyle do
       @__vars__ unquote(Macro.escape(vars_map))
       @__consts__ unquote(Macro.escape(consts_map))
       @__keyframes__ unquote(Macro.escape(keyframes_map))
-      @__themes__ unquote(Macro.escape(themes_map))
-      @__view_transitions__ unquote(Macro.escape(view_transitions_map))
+      @__theme_classes__ unquote(Macro.escape(theme_classes_map))
+      @__view_transition_classes__ unquote(Macro.escape(view_transition_classes_map))
       @__position_try__ unquote(Macro.escape(position_try_map))
 
       unquote_splicing(dynamic_fns)
       unquote_splicing(var_clauses)
       unquote_splicing(const_clauses)
       unquote_splicing(keyframes_clauses)
-      unquote_splicing(theme_clauses)
-      unquote_splicing(view_transition_clauses)
+      unquote_splicing(theme_class_clauses)
+      unquote_splicing(view_transition_class_clauses)
       unquote_splicing(position_try_clauses)
 
       @doc false
@@ -257,16 +257,16 @@ defmodule LiveStyle do
       def __live_style__(:vars), do: @__vars__
       def __live_style__(:consts), do: @__consts__
       def __live_style__(:keyframes), do: @__keyframes__
-      def __live_style__(:themes), do: @__themes__
-      def __live_style__(:view_transitions), do: @__view_transitions__
+      def __live_style__(:theme_classes), do: @__theme_classes__
+      def __live_style__(:view_transition_classes), do: @__view_transition_classes__
       def __live_style__(:position_try), do: @__position_try__
 
       # Fallback for lookups - returns nil if not found
       def __live_style__(:var, _name), do: nil
       def __live_style__(:const, _name), do: nil
       def __live_style__(:keyframes, _name), do: nil
-      def __live_style__(:theme, _name), do: nil
-      def __live_style__(:view_transition, _name), do: nil
+      def __live_style__(:theme_class, _name), do: nil
+      def __live_style__(:view_transition_class, _name), do: nil
       def __live_style__(:position_try, _name), do: nil
     end
   end
@@ -646,22 +646,22 @@ defmodule LiveStyle do
     # Validate keys at compile time
     style_map = LiveStyle.Utils.validate_keyword_list!(evaluated_styles)
 
-    case LiveStyle.ViewTransition.validate_keys(style_map) do
+    case LiveStyle.ViewTransitionClass.validate_keys(style_map) do
       :ok ->
         :ok
 
       {:error, invalid_keys} ->
         raise ArgumentError,
               "Invalid view transition key: #{inspect(invalid_keys)}. " <>
-                "Valid keys are: #{inspect(LiveStyle.ViewTransition.valid_atom_keys())} (atoms) " <>
-                "or #{inspect(LiveStyle.ViewTransition.valid_string_keys())} (strings)"
+                "Valid keys are: #{inspect(LiveStyle.ViewTransitionClass.valid_atom_keys())} (atoms) " <>
+                "or #{inspect(LiveStyle.ViewTransitionClass.valid_string_keys())} (strings)"
     end
 
     # Define view transition and store in manifest, get entry back
-    {^name, entry} = LiveStyle.ViewTransition.define(module, name, evaluated_styles)
+    {^name, entry} = LiveStyle.ViewTransitionClass.define(module, name, evaluated_styles)
 
     # Store in module attribute IMMEDIATELY during macro expansion
-    Module.put_attribute(module, :__live_style_view_transitions__, {name, entry})
+    Module.put_attribute(module, :__live_style_view_transition_classes__, {name, entry})
 
     quote do
       :ok
@@ -699,8 +699,8 @@ defmodule LiveStyle do
     # Local reference: look up from module attributes (still compiling)
     caller_module = __CALLER__.module
 
-    # Get accumulated view_transitions (already a list due to accumulate: true)
-    vt_list = Module.get_attribute(caller_module, :__live_style_view_transitions__) || []
+    # Get accumulated view_transition_classes (already a list due to accumulate: true)
+    vt_list = Module.get_attribute(caller_module, :__live_style_view_transition_classes__) || []
 
     case List.keyfind(vt_list, ref, 0) do
       {^ref, entry} ->
@@ -709,7 +709,7 @@ defmodule LiveStyle do
       nil ->
         raise CompileError,
           description:
-            "View transition :#{ref} not found in #{inspect(caller_module)}. " <>
+            "View transition class :#{ref} not found in #{inspect(caller_module)}. " <>
               "Make sure `view_transition :#{ref}, ...` is defined before this reference.",
           file: __CALLER__.file,
           line: __CALLER__.line
@@ -718,15 +718,15 @@ defmodule LiveStyle do
 
   # Cross-module reference: view_transition_class({Module, :name})
   defmacro view_transition_class({module_ast, name}) when is_atom(name) do
-    # Cross-module: call module.__live_style__(:view_transition, name) directly
+    # Cross-module: call module.__live_style__(:view_transition_class, name) directly
     # This creates an automatic compile-time dependency - no require needed!
     {module, _} = Code.eval_quoted(module_ast, [], __CALLER__)
 
-    case module.__live_style__(:view_transition, name) do
+    case module.__live_style__(:view_transition_class, name) do
       nil ->
         raise CompileError,
           description:
-            "View transition :#{name} not found in #{inspect(module)}. " <>
+            "View transition class :#{name} not found in #{inspect(module)}. " <>
               "Make sure `view_transition :#{name}, ...` is defined in that module.",
           file: __CALLER__.file,
           line: __CALLER__.line
@@ -997,10 +997,10 @@ defmodule LiveStyle do
     module = __CALLER__.module
 
     # Define theme and store in manifest, get entry back
-    {^name, entry} = LiveStyle.Theme.define(module, name, evaluated_overrides)
+    {^name, entry} = LiveStyle.ThemeClass.define(module, name, evaluated_overrides)
 
     # Store in module attribute IMMEDIATELY during macro expansion
-    Module.put_attribute(module, :__live_style_themes__, {name, entry})
+    Module.put_attribute(module, :__live_style_theme_classes__, {name, entry})
 
     quote do
       :ok
@@ -1012,43 +1012,43 @@ defmodule LiveStyle do
 
   ## Local reference
 
-      theme(:dark)
+      theme_class(:dark)
 
   ## Cross-module reference
 
-      theme({MyAppWeb.Tokens, :dark})
+      theme_class({MyAppWeb.Tokens, :dark})
   """
-  defmacro theme(ref) when is_atom(ref) do
+  defmacro theme_class(ref) when is_atom(ref) do
     # Local reference: look up from module attributes (still compiling)
     caller_module = __CALLER__.module
 
-    # Get accumulated themes (already a list due to accumulate: true)
-    themes_list = Module.get_attribute(caller_module, :__live_style_themes__) || []
+    # Get accumulated theme_classes (already a list due to accumulate: true)
+    theme_classes_list = Module.get_attribute(caller_module, :__live_style_theme_classes__) || []
 
-    case List.keyfind(themes_list, ref, 0) do
+    case List.keyfind(theme_classes_list, ref, 0) do
       {^ref, entry} ->
         Keyword.fetch!(entry, :ident)
 
       nil ->
         raise CompileError,
           description:
-            "Theme :#{ref} not found in #{inspect(caller_module)}. " <>
+            "Theme class :#{ref} not found in #{inspect(caller_module)}. " <>
               "Make sure `theme :#{ref}, ...` is defined before this reference.",
           file: __CALLER__.file,
           line: __CALLER__.line
     end
   end
 
-  defmacro theme({module_ast, name}) when is_atom(name) do
-    # Cross-module: call module.__live_style__(:theme, name) directly
+  defmacro theme_class({module_ast, name}) when is_atom(name) do
+    # Cross-module: call module.__live_style__(:theme_class, name) directly
     # This creates an automatic compile-time dependency - no require needed!
     {module, _} = Code.eval_quoted(module_ast, [], __CALLER__)
 
-    case module.__live_style__(:theme, name) do
+    case module.__live_style__(:theme_class, name) do
       nil ->
         raise CompileError,
           description:
-            "Theme :#{name} not found in #{inspect(module)}. " <>
+            "Theme class :#{name} not found in #{inspect(module)}. " <>
               "Make sure `theme :#{name}, ...` is defined in that module.",
           file: __CALLER__.file,
           line: __CALLER__.line

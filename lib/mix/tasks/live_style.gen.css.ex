@@ -103,8 +103,8 @@ defmodule Mix.Tasks.LiveStyle.Gen.Css do
     consts_count = length(manifest.consts)
     keyframes_count = length(manifest.keyframes)
     classes_count = length(manifest.classes)
-    themes_count = length(manifest.themes)
-    vt_count = length(manifest.view_transitions)
+    themes_count = length(manifest.theme_classes)
+    vt_count = length(manifest.view_transition_classes)
     pt_count = length(manifest.position_try)
 
     [

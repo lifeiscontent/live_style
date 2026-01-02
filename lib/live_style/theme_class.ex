@@ -1,4 +1,4 @@
-defmodule LiveStyle.Theme do
+defmodule LiveStyle.ThemeClass do
   @moduledoc """
   CSS theme support for variable overrides.
 
@@ -35,15 +35,15 @@ defmodule LiveStyle.Theme do
 
   ## Applying Themes
 
-  Use `theme/1` to get the theme class name:
+  Use `theme_class/1` to get the theme class name:
 
       # Apply to a container
-      <div class={theme({MyAppWeb.Tokens, :dark})}>
+      <div class={theme_class({MyAppWeb.Tokens, :dark})}>
         <!-- Children use dark theme -->
       </div>
 
       # Conditional theming
-      <div class={@dark_mode && theme({MyAppWeb.Tokens, :dark})}>
+      <div class={@dark_mode && theme_class({MyAppWeb.Tokens, :dark})}>
         ...
       </div>
 
@@ -57,8 +57,8 @@ defmodule LiveStyle.Theme do
   alias LiveStyle.Utils
 
   use LiveStyle.Registry,
-    entity_name: "Theme",
-    manifest_type: :theme,
+    entity_name: "Theme class",
+    manifest_type: :theme_class,
     ref_field: :ident
 
   # Identity-based CSS class name generation (private)

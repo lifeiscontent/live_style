@@ -1,6 +1,6 @@
-defmodule LiveStyle.ViewTransitionTest do
+defmodule LiveStyle.ViewTransitionClassesTest do
   @moduledoc """
-  Tests for view_transition/2 macro and view_transition/1 reference.
+  Tests for view_transition/2 macro and view_transition_class/1 reference.
   """
   use LiveStyle.TestCase
 
@@ -60,14 +60,14 @@ defmodule LiveStyle.ViewTransitionTest do
 
   describe "view_transition reference" do
     test "returns class name string" do
-      class = LiveStyle.ViewTransition.ref({TransitionsModule, :card_transition})
+      class = LiveStyle.ViewTransitionClass.ref({TransitionsModule, :card_transition})
       assert is_binary(class)
       assert class != ""
     end
 
     test "class name appears in CSS" do
       css = LiveStyle.Compiler.generate_css()
-      class = LiveStyle.ViewTransition.ref({TransitionsModule, :card_transition})
+      class = LiveStyle.ViewTransitionClass.ref({TransitionsModule, :card_transition})
       assert css =~ class
     end
   end
