@@ -109,7 +109,7 @@ defmodule Mix.Tasks.LiveStyle.Audit do
 
       %{
         module: module,
-        class: String.to_atom(class_name),
+        class: class_name,
         file: file,
         line: line
       }
@@ -155,13 +155,13 @@ defmodule Mix.Tasks.LiveStyle.Audit do
       css_refs =
         ~r/(?<![_a-z])css\(\s*:([a-z_][a-z0-9_]*)/
         |> Regex.scan(content)
-        |> Enum.map(fn [_, name] -> String.to_atom(name) end)
+        |> Enum.map(fn [_, name] -> name end)
 
       # Find class references in lists like css([:button, :primary])
       list_refs =
         ~r/(?<![_a-z])css\(\s*\[([^\]]+)\]\s*\)/
         |> Regex.scan(content)
-        |> Enum.flat_map(&extract_atoms_from_list/1)
+        |> Enum.flat_map(&extract_class_names_from_list/1)
 
       css_refs ++ list_refs
     end)
@@ -179,17 +179,17 @@ defmodule Mix.Tasks.LiveStyle.Audit do
       css_refs =
         ~r/[^_]css\(\s*@?:?(\w+)/
         |> Regex.scan(content)
-        |> Enum.map(fn [_, name] -> String.to_atom(name) end)
+        |> Enum.map(fn [_, name] -> name end)
 
       css_refs
     end)
     |> MapSet.new()
   end
 
-  defp extract_atoms_from_list([_, list_content]) do
+  defp extract_class_names_from_list([_, list_content]) do
     ~r/:([a-z_][a-z0-9_]*)/
     |> Regex.scan(list_content)
-    |> Enum.map(fn [_, name] -> String.to_atom(name) end)
+    |> Enum.map(fn [_, name] -> name end)
   end
 
   defp find_unused(definitions, references) do
@@ -214,7 +214,7 @@ defmodule Mix.Tasks.LiveStyle.Audit do
 
         for %{class: class, file: file, line: line} <- Enum.sort_by(classes, & &1.line) do
           Mix.shell().info(
-            "    #{IO.ANSI.yellow()}:#{class}#{IO.ANSI.reset()} #{IO.ANSI.faint()}(#{file}:#{line})#{IO.ANSI.reset()}"
+            "    #{IO.ANSI.yellow()}#{class}#{IO.ANSI.reset()} #{IO.ANSI.faint()}(#{file}:#{line})#{IO.ANSI.reset()}"
           )
         end
 

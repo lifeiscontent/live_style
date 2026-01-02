@@ -67,11 +67,11 @@ defmodule Mix.Tasks.LiveStyle.Inspect do
             print_list(module)
 
           opts[:css] && class_names != [] ->
-            class_atoms = Enum.map(class_names, &String.to_atom/1)
+            class_atoms = Enum.map(class_names, &String.to_existing_atom/1)
             print_css(module, class_atoms)
 
           class_names != [] ->
-            class_atoms = Enum.map(class_names, &String.to_atom/1)
+            class_atoms = Enum.map(class_names, &String.to_existing_atom/1)
             print_inspection(module, class_atoms)
 
           true ->
