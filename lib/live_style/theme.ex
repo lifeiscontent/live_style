@@ -2,7 +2,7 @@ defmodule LiveStyle.Theme do
   @moduledoc """
   CSS theme support for variable overrides.
 
-  Similar to StyleX's `createTheme`, this module handles creating themes
+  Similar to StyleX's `createTheme`, this module handles creating theme classes
   that override CSS variables defined with `vars`.
 
   ## How Themes Work
@@ -77,11 +77,15 @@ defmodule LiveStyle.Theme do
   Defines a theme with variable overrides and stores it in the manifest.
 
   Called internally by the `theme` macro.
+
+  Returns `{name, entry}` tuple for storage in module attributes.
   """
-  @spec define(module(), atom(), keyword(), String.t()) :: :ok
-  def define(module, name, overrides, ident) do
-    key = Manifest.simple_key(module, name)
+  @spec define(module(), atom(), keyword()) :: {atom(), keyword()}
+  def define(module, name, overrides) do
+    key = Manifest.key(module, name)
     overrides = Utils.validate_keyword_list!(overrides)
+
+    theme_ident = ident(module, name)
 
     # Convert override keys to CSS var names and sort for deterministic iteration
     # Keep as sorted list - we only iterate, never lookup by key
@@ -93,20 +97,9 @@ defmodule LiveStyle.Theme do
       end)
       |> Enum.sort_by(fn {k, _v} -> k end)
 
-    entry = %{
-      ident: ident,
-      overrides: css_overrides
-    }
+    entry = [ident: theme_ident, overrides: css_overrides]
 
     store_entry(key, entry)
-    :ok
-  end
-
-  @doc """
-  Generates the CSS class name for a theme.
-  """
-  @spec generate_ident(module(), atom()) :: String.t()
-  def generate_ident(module, name) do
-    ident(module, name)
+    {name, entry}
   end
 end

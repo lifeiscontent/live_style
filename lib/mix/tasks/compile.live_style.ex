@@ -49,6 +49,9 @@ defmodule Mix.Tasks.Compile.LiveStyle do
 
   @impl true
   def run(_args) do
+    # Persist manifest to disk for incremental compilation
+    LiveStyle.Storage.FileAdapter.persist()
+
     case Writer.write_css(log: &log_write/1) do
       :ok -> {:ok, []}
       {:error, reason} -> {:error, [reason]}
@@ -60,7 +63,7 @@ defmodule Mix.Tasks.Compile.LiveStyle do
       :green,
       "LiveStyle: ",
       :reset,
-      "#{stats.vars} vars, #{stats.keyframes} keyframes, #{stats.classes} rules → ",
+      "#{stats[:vars]} vars, #{stats[:keyframes]} keyframes, #{stats[:classes]} rules → ",
       :cyan,
       output_path
     ])

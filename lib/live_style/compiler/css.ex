@@ -10,12 +10,13 @@ defmodule LiveStyle.Compiler.CSS do
   The CSS output includes (in order):
 
   1. **@property rules** - For typed CSS variables
-  2. **CSS custom properties** - `:root { --var: value; }`
-  3. **@keyframes animations** - With RTL variants when needed
-  4. **@position-try rules** - For CSS Anchor Positioning
-  5. **View transition rules** - `::view-transition-*` pseudo-elements
-  6. **Atomic style rules** - Sorted by priority, with RTL overrides
-  7. **Theme override rules** - `.theme-class { --var: override; }`
+  2. **@property rules** - For dynamic CSS variables (with `inherits: false`)
+  3. **CSS custom properties** - `:root { --var: value; }`
+  4. **@keyframes animations** - With RTL variants when needed
+  5. **@position-try rules** - For CSS Anchor Positioning
+  6. **View transition rules** - `::view-transition-*` pseudo-elements
+  7. **Atomic style rules** - Sorted by priority, with RTL overrides
+  8. **Theme override rules** - `.theme-class { --var: override; }`
 
   ## Extending the Pipeline
 

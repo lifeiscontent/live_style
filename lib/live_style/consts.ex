@@ -38,17 +38,22 @@ defmodule LiveStyle.Consts do
   Defines compile-time constants.
 
   Called internally by the `consts` macro.
+  Returns a list of `{name, value}` tuples for storage in module attributes.
   """
-  @spec define(module(), keyword()) :: :ok
+  @spec define(module(), keyword()) :: [{atom(), String.t()}]
   def define(module, consts) do
     consts = Utils.validate_keyword_list!(consts)
 
-    Enum.each(consts, fn {name, value} ->
-      key = Manifest.simple_key(module, name)
-      entry = %{value: value}
-      store_entry(key, entry)
+    Enum.map(consts, fn {name, value} ->
+      key = Manifest.key(module, name)
+      # Store the value directly - consts are just strings
+      store_entry(key, value)
+      {name, value}
     end)
-
-    :ok
   end
+
+  # Override ref/1 since const entry IS the value (not a map/keyword with :value key)
+  @spec ref(atom() | {module(), atom()}) :: String.t()
+  def ref(name) when is_atom(name), do: ref({__MODULE__, name})
+  def ref({module, name}), do: fetch!({module, name})
 end

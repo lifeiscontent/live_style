@@ -1,8 +1,8 @@
 defmodule LiveStyle.Registry do
   @moduledoc """
-  Shared lookup/define pattern for LiveStyle registries.
+  Shared fetch/define pattern for LiveStyle registries.
 
-  This module provides a macro that generates the common `lookup/1`, `lookup!/1`,
+  This module provides a macro that generates the common `fetch/1`, `fetch!/1`,
   and `ref/1` functions used across LiveStyle's definition modules.
 
   ## Usage
@@ -18,8 +18,8 @@ defmodule LiveStyle.Registry do
 
   ## Generated Functions
 
-  - `lookup/1` - Returns `{:ok, entry}` or `{:error, reason}` (hidden)
-  - `lookup!/1` - Returns entry or raises
+  - `fetch/1` - Returns `{:ok, entry}` or `{:error, reason}`
+  - `fetch!/1` - Returns entry or raises
   - `ref/1` - Extracts the ref_field from the entry
   - `store_entry/2` - Helper to store entries in manifest (private)
   """
@@ -37,11 +37,11 @@ defmodule LiveStyle.Registry do
       alias LiveStyle.Manifest
 
       @doc false
-      @spec lookup(atom() | {module(), atom()}) :: {:ok, map()} | {:error, String.t()}
-      def lookup(name) when is_atom(name), do: lookup({__MODULE__, name})
+      @spec fetch(atom() | {module(), atom()}) :: {:ok, term()} | {:error, String.t()}
+      def fetch(name) when is_atom(name), do: fetch({__MODULE__, name})
 
-      def lookup({module, name}) do
-        key = Manifest.simple_key(module, name)
+      def fetch({module, name}) do
+        key = Manifest.key(module, name)
         manifest = LiveStyle.Storage.read()
 
         case Manifest.unquote(getter)(manifest, key) do
@@ -56,15 +56,15 @@ defmodule LiveStyle.Registry do
       end
 
       @doc """
-      Looks up a #{unquote(entity_name)} by reference.
+      Fetches a #{unquote(entity_name)} by reference.
 
-      Returns the full entry map. Raises if not found.
+      Returns the entry. Raises if not found.
       """
-      @spec lookup!(atom() | {module(), atom()}) :: map()
-      def lookup!(name) when is_atom(name), do: lookup!({__MODULE__, name})
+      @spec fetch!(atom() | {module(), atom()}) :: term()
+      def fetch!(name) when is_atom(name), do: fetch!({__MODULE__, name})
 
-      def lookup!({module, name}) do
-        case lookup({module, name}) do
+      def fetch!({module, name}) do
+        case fetch({module, name}) do
           {:ok, entry} -> entry
           {:error, reason} -> raise ArgumentError, reason
         end
@@ -77,8 +77,8 @@ defmodule LiveStyle.Registry do
       def ref(name) when is_atom(name), do: ref({__MODULE__, name})
 
       def ref({module, name}) do
-        entry = lookup!({module, name})
-        entry[unquote(ref_field)] || raise KeyError, key: unquote(ref_field), term: entry
+        entry = fetch!({module, name})
+        Keyword.fetch!(entry, unquote(ref_field))
       end
 
       @doc false
@@ -92,7 +92,7 @@ defmodule LiveStyle.Registry do
       end
 
       # Allow modules to override generated functions
-      defoverridable lookup: 1, lookup!: 1, ref: 1
+      defoverridable fetch: 1, fetch!: 1, ref: 1
     end
   end
 end

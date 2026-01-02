@@ -1,1 +1,0 @@
-".x6m3b6q:not(#\\#){background-color:blue}\n.x6um648:not(#\\#){background-color:purple}\n.xrkmrrc{background-color:red}\n@supports (hover: hover){.x6m3b6q:not(#\\#){background-color:blue}}\n@supports not (hover: hover){.x6um648:not(#\\#){background-color:purple}}"

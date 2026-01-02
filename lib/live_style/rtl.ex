@@ -2,17 +2,13 @@ defmodule LiveStyle.RTL do
   @moduledoc false
   # Internal module for RTL/LTR bidirectional CSS support.
 
-  alias LiveStyle.PropertyMetadata
+  alias LiveStyle.{Property, PropertyMetadata}
 
   # Load mappings at compile time
   @ltr_mappings PropertyMetadata.logical_to_ltr()
   @rtl_mappings PropertyMetadata.logical_to_rtl()
   @ltr_values PropertyMetadata.logical_value_to_ltr()
   @rtl_values PropertyMetadata.logical_value_to_rtl()
-
-  # Properties with logical values that need physical transformation
-  # NOTE: text-align is NOT included because browsers handle start/end natively
-  @logical_value_properties ["float", "clear"]
 
   # Generate function clauses for LTR property mapping
   for {logical, physical} <- @ltr_mappings do
@@ -96,15 +92,13 @@ defmodule LiveStyle.RTL do
   end
 
   # Transform logical values to physical for LTR
-  defp transform_value_ltr(property, value) when property in @logical_value_properties do
-    ltr_value(value)
-  end
-
   defp transform_value_ltr("background-position", value) do
     flip_background_position_ltr(value)
   end
 
-  defp transform_value_ltr(_property, value), do: value
+  defp transform_value_ltr(property, value) do
+    if Property.rtl_value?(property), do: ltr_value(value), else: value
+  end
 
   # Shared helper for flipping background-position logical values
   @logical_position_values ["start", "end", "inline-start", "inline-end"]
@@ -127,18 +121,14 @@ defmodule LiveStyle.RTL do
   end
 
   # Check if value needs RTL transformation
-  defp needs_value_rtl?(property, value) when property in @logical_value_properties do
-    has_rtl_value?(value)
+  defp needs_value_rtl?(property, value) do
+    Property.rtl_value?(property) and has_rtl_value?(value)
   end
-
-  defp needs_value_rtl?(_property, _value), do: false
 
   # Transform logical values to physical for RTL
-  defp transform_value_rtl(property, value) when property in @logical_value_properties do
-    rtl_value(value)
+  defp transform_value_rtl(property, value) do
+    if Property.rtl_value?(property), do: rtl_value(value), else: value
   end
-
-  defp transform_value_rtl(_property, value), do: value
 
   # Transform background-position logical values to physical for RTL
   defp flip_word_rtl("start"), do: "right"

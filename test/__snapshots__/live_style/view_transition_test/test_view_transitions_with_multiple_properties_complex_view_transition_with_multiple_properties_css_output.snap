@@ -1,1 +1,0 @@
-"::view-transition-group(*.x1rvedv7){animation-duration:.3s;animation-timing-function:ease-in-out;}\n::view-transition-image-pair(*.x1rvedv7){border-radius:8px;overflow:hidden;}\n::view-transition-new(*.x1rvedv7){animation-duration:.3s;animation-fill-mode:backwards;}\n::view-transition-old(*.x1rvedv7){animation-duration:.3s;animation-fill-mode:forwards;}"

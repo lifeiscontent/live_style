@@ -99,9 +99,10 @@ defmodule LiveStyle.Runtime.Attrs do
     {merged, vars_acc}
   end
 
-  defp merge_resolved_ref({:dynamic, class_string, var_map}, props_acc, vars_acc) do
-    new_props = PropertyMerger.add_dynamic(class_string, props_acc)
-    {new_props, [var_map | vars_acc]}
+  defp merge_resolved_ref({:dynamic, prop_classes, var_list}, props_acc, vars_acc) do
+    # Dynamic classes now merge by property just like static classes (StyleX behavior)
+    merged = PropertyMerger.merge(prop_classes, props_acc)
+    {merged, [var_list | vars_acc]}
   end
 
   defp merge_resolved_ref(:skip, props_acc, vars_acc), do: {props_acc, vars_acc}

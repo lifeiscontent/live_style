@@ -88,60 +88,20 @@ defmodule LiveStyle.Keyframes do
 
   ## Returns
 
-  The generated CSS animation name.
+  `{name, entry}` tuple for storage in module attributes.
   """
-  @spec define(module(), atom(), keyword()) :: String.t()
+  @spec define(module(), atom(), keyword()) :: {atom(), keyword()}
   def define(module, name, frames) when is_list(frames) do
-    key = Manifest.simple_key(module, name)
-    manifest = LiveStyle.Storage.read()
+    key = Manifest.key(module, name)
+    keyframes_ident = ident(frames)
+    entry = [ident: keyframes_ident, frames: frames]
 
-    ident = ident(frames)
+    # Store in manifest for CSS generation
+    LiveStyle.Storage.update(fn manifest ->
+      Manifest.put_keyframes(manifest, key, entry)
+    end)
 
-    # If already defined, keep it unless the frames changed.
-    # In dev/code-reload, keyframes need to update so the compiled CSS matches source.
-    case Manifest.get_keyframes(manifest, key) do
-      %{ident: ^ident, frames: ^frames} ->
-        ident
-
-      _existing ->
-        # Generate the StyleX-compatible metadata
-        ltr = generate_css(ident, frames)
-
-        entry = %{
-          ident: ident,
-          frames: frames,
-          ltr: ltr,
-          rtl: nil,
-          priority: 0
-        }
-
-        LiveStyle.Storage.update(fn manifest ->
-          Manifest.put_keyframes(manifest, key, entry)
-        end)
-
-        ident
-    end
-  end
-
-  @doc """
-  Generates the CSS string for a keyframes animation.
-
-  Format: `@keyframes name{from{prop:value;}to{prop:value;}}`
-  """
-  @spec generate_css(String.t(), keyword()) :: String.t()
-  def generate_css(ident, frames) do
-    sorted_frames =
-      frames
-      |> Enum.sort_by(fn {frame_key, _} -> frame_sort_order(frame_key) end)
-
-    frame_css =
-      Enum.map_join(sorted_frames, "", fn {frame_key, props} ->
-        frame_name = normalize_frame_key(frame_key)
-        props_css = generate_frame_props_css(props)
-        "#{frame_name}{#{props_css}}"
-      end)
-
-    "@keyframes #{ident}{#{frame_css}}"
+    {name, entry}
   end
 
   @doc false
@@ -175,22 +135,5 @@ defmodule LiveStyle.Keyframes do
 
   defp invalid_frame_key_message(key) do
     "Invalid keyframe key: #{inspect(key)}. Expected 'from', 'to', or a percentage like '50%'"
-  end
-
-  # Normalize frame key to string
-  defp normalize_frame_key(:from), do: "from"
-  defp normalize_frame_key(:to), do: "to"
-  defp normalize_frame_key(key) when is_binary(key), do: key
-  defp normalize_frame_key(key) when is_atom(key), do: Atom.to_string(key)
-
-  # Generate CSS for a single frame's properties
-  # Preserves insertion order like StyleX (JavaScript Object.entries)
-  defp generate_frame_props_css(props) when is_list(props) do
-    props
-    |> Enum.map_join("", fn {prop, value} ->
-      css_prop = CSSValue.to_css_property(prop)
-      css_value = CSSValue.to_css(value, css_prop)
-      "#{css_prop}:#{css_value};"
-    end)
   end
 end

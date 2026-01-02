@@ -5,7 +5,6 @@ defmodule LiveStyle.Runtime.PropertyMerger do
   This module handles the StyleX-compatible merging behavior where:
   - Later values override earlier ones for the same property
   - `:__unset__` removes a property from the accumulator
-  - Dynamic classes are tracked separately with unique keys
 
   ## Merge Semantics
 
@@ -15,9 +14,8 @@ defmodule LiveStyle.Runtime.PropertyMerger do
   3. `:__unset__` explicitly removes a property
   """
 
-  @type prop_classes :: [{atom(), String.t() | :__unset__}]
-  @type dynamic_key :: {:__dynamic__, integer()}
-  @type accumulator :: [{atom() | dynamic_key(), String.t() | :__unset__}]
+  @type prop_classes :: [{atom() | String.t(), String.t() | :__unset__}]
+  @type accumulator :: [{atom() | String.t(), String.t() | :__unset__}]
 
   @doc """
   Merges property classes into an accumulator.
@@ -39,21 +37,9 @@ defmodule LiveStyle.Runtime.PropertyMerger do
   @doc """
   Merges a single property class into the accumulator.
   """
-  @spec merge_prop({atom(), String.t() | :__unset__}, accumulator()) :: accumulator()
+  @spec merge_prop({atom() | String.t(), String.t() | :__unset__}, accumulator()) :: accumulator()
   def merge_prop({prop, :__unset__}, acc), do: List.keydelete(acc, prop, 0)
   def merge_prop({prop, class}, acc), do: List.keystore(acc, prop, 0, {prop, class})
-
-  @doc """
-  Adds a dynamic class to the accumulator with a unique key.
-
-  Dynamic classes don't merge by property - each one is tracked separately.
-  Uses a tagged tuple key `{:__dynamic__, id}` instead of magic strings.
-  """
-  @spec add_dynamic(String.t(), accumulator()) :: accumulator()
-  def add_dynamic(class_string, acc) do
-    dyn_key = {:__dynamic__, :erlang.unique_integer([:positive])}
-    [{dyn_key, class_string} | acc]
-  end
 
   @doc """
   Extracts the final class list from the accumulator.

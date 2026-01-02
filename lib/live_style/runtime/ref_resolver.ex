@@ -17,14 +17,14 @@ defmodule LiveStyle.Runtime.RefResolver do
 
   All resolve functions return a tagged tuple:
   - `{:static, prop_classes}` - Static class list
-  - `{:dynamic, class_string, var_list}` - Dynamic with CSS variables
+  - `{:dynamic, prop_classes, var_list}` - Dynamic with property classes and CSS variables
   - `:skip` - Reference should be skipped
   """
 
   @type prop_classes :: [{atom(), String.t() | :__unset__}]
   @type resolve_result ::
           {:static, prop_classes()}
-          | {:dynamic, String.t(), list()}
+          | {:dynamic, prop_classes(), list()}
           | :skip
 
   @doc """
@@ -59,15 +59,17 @@ defmodule LiveStyle.Runtime.RefResolver do
     end
   end
 
-  def resolve(module, {name, args}, _property_classes) when is_atom(name) do
+  def resolve(module, {name, args}, property_classes) when is_atom(name) do
     dynamic_names = module.__live_style__(:dynamic_names)
 
     if name in dynamic_names do
+      # Dynamic classes: get property_classes from compile-time map, compute var_list at runtime
+      prop_classes = Keyword.get(property_classes, name, [])
       fn_name = :"__dynamic_#{name}__"
-      {class_string, var_list} = apply(module, fn_name, [args])
-      {:dynamic, class_string, var_list || []}
+      var_list = apply(module, fn_name, [args])
+      {:dynamic, prop_classes, var_list || []}
     else
-      prop_classes = module.__live_style__(:property_classes) |> Keyword.get(name, [])
+      prop_classes = Keyword.get(property_classes, name, [])
       {:static, prop_classes}
     end
   end

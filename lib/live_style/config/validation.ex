@@ -4,15 +4,21 @@ defmodule LiveStyle.Config.Validation do
 
   Controls how LiveStyle validates property names and handles
   unknown, vendor-prefixed, and deprecated properties.
+
+  All configuration is compile-time only (like StyleX Babel plugin config).
+  Changing these settings requires recompilation.
   """
 
-  alias LiveStyle.Config.Overrides
-
-  @default_validate_properties true
-  @default_unknown_property_level :warn
-  @default_vendor_prefix_level :warn
-  @default_deprecated_property_level :warn
-  @default_deprecated? nil
+  # Compile-time configuration
+  @validate_properties Application.compile_env(:live_style, :validate_properties, true)
+  @unknown_property_level Application.compile_env(:live_style, :unknown_property_level, :warn)
+  @vendor_prefix_level Application.compile_env(:live_style, :vendor_prefix_level, :warn)
+  @deprecated_property_level Application.compile_env(
+                               :live_style,
+                               :deprecated_property_level,
+                               :warn
+                             )
+  @deprecated_fn Application.compile_env(:live_style, :deprecated?, nil)
 
   @doc """
   Returns whether property validation is enabled.
@@ -27,9 +33,7 @@ defmodule LiveStyle.Config.Validation do
       config :live_style, validate_properties: false
   """
   @spec validate_properties?() :: boolean()
-  def validate_properties? do
-    Overrides.get_config(:validate_properties, @default_validate_properties)
-  end
+  def validate_properties?, do: @validate_properties
 
   @doc """
   Returns the level of unknown property handling.
@@ -43,9 +47,7 @@ defmodule LiveStyle.Config.Validation do
       config :live_style, unknown_property_level: :error
   """
   @spec unknown_property_level() :: :warn | :error | :ignore
-  def unknown_property_level do
-    Overrides.get_config(:unknown_property_level, @default_unknown_property_level)
-  end
+  def unknown_property_level, do: @unknown_property_level
 
   @doc """
   Returns the level of vendor prefix property handling.
@@ -62,9 +64,7 @@ defmodule LiveStyle.Config.Validation do
       config :live_style, vendor_prefix_level: :ignore
   """
   @spec vendor_prefix_level() :: :warn | :ignore
-  def vendor_prefix_level do
-    Overrides.get_config(:vendor_prefix_level, @default_vendor_prefix_level)
-  end
+  def vendor_prefix_level, do: @vendor_prefix_level
 
   @doc """
   Returns the level of deprecated property handling.
@@ -80,9 +80,7 @@ defmodule LiveStyle.Config.Validation do
       config :live_style, deprecated_property_level: :ignore
   """
   @spec deprecated_property_level() :: :warn | :ignore
-  def deprecated_property_level do
-    Overrides.get_config(:deprecated_property_level, @default_deprecated_property_level)
-  end
+  def deprecated_property_level, do: @deprecated_property_level
 
   @doc """
   Returns the `deprecated?` function for checking deprecated CSS properties.
@@ -101,7 +99,5 @@ defmodule LiveStyle.Config.Validation do
       @spec deprecated?(String.t()) :: boolean() | nil
   """
   @spec deprecated?() :: (String.t() -> boolean() | nil) | nil
-  def deprecated? do
-    Overrides.get_config(:deprecated?, @default_deprecated?)
-  end
+  def deprecated?, do: @deprecated_fn
 end

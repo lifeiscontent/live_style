@@ -28,6 +28,7 @@ defmodule LiveStyle.Vars do
       end
   """
 
+  alias LiveStyle.Config
   alias LiveStyle.Hash
   alias LiveStyle.Manifest
   alias LiveStyle.Utils
@@ -41,27 +42,28 @@ defmodule LiveStyle.Vars do
   # Hashes module + name for identity-based naming
   defp ident(module, name) do
     input = "var:#{inspect(module)}.#{name}"
-    "--v" <> Hash.create_hash(input)
+    "--#{Config.class_name_prefix()}" <> Hash.create_hash(input)
   end
 
   @doc """
   Defines CSS custom properties.
 
   Called internally by the `vars` macro.
+  Returns a list of `{name, entry}` tuples for storage in module attributes.
   """
-  @spec define(module(), keyword()) :: :ok
+  @spec define(module(), keyword()) :: [{atom(), keyword()}]
   def define(module, vars) do
     vars = Utils.validate_keyword_list!(vars)
 
-    Enum.each(vars, fn {name, value} ->
-      key = Manifest.simple_key(module, name)
-      define_var(module, name, key, value)
+    Enum.map(vars, fn {name, value} ->
+      key = Manifest.key(module, name)
+      entry = build_entry(module, name, value)
+      store_entry(key, entry)
+      {name, entry}
     end)
-
-    :ok
   end
 
-  defp define_var(module, name, key, value) do
+  defp build_entry(module, name, value) do
     ident = ident(module, name)
     {css_value, type_info} = extract_var_value(value)
 
@@ -71,19 +73,14 @@ defmodule LiveStyle.Vars do
     # Also sort initial value in type_info if present
     sorted_type_info = sort_type_info_initial(type_info)
 
-    entry = %{
-      ident: ident,
-      value: sorted_value,
-      type: sorted_type_info
-    }
-
-    store_entry(key, entry)
+    [ident: ident, value: sorted_value, type: sorted_type_info]
   end
 
   defp sort_type_info_initial(nil), do: nil
 
-  defp sort_type_info_initial(%{initial: initial} = type_info) do
-    %{type_info | initial: Utils.sort_conditional_value(initial)}
+  defp sort_type_info_initial(type_info) when is_list(type_info) do
+    initial = Keyword.fetch!(type_info, :initial)
+    Keyword.put(type_info, :initial, Utils.sort_conditional_value(initial))
   end
 
   @doc """
@@ -110,34 +107,36 @@ defmodule LiveStyle.Vars do
   end
 
   # Extract value and type info from a variable definition
-  defp extract_var_value(%{__css_type__: type, value: value}) do
-    syntax = "<#{type}>"
-    {value, %{syntax: syntax, initial: value}}
+  defp extract_var_value(typed) when is_list(typed) do
+    cond do
+      # Types module format: [__type__: :typed_var, syntax: "<angle>", value: "0deg"]
+      Keyword.get(typed, :__type__) == :typed_var ->
+        extract_typed_var(typed)
+
+      # Types format: [syntax: "<angle>", initial: "0deg", inherits: true]
+      is_binary(Keyword.get(typed, :syntax)) ->
+        extract_typed_property(typed)
+
+      # Conditional values as keyword lists (no :syntax key)
+      true ->
+        {typed, nil}
+    end
   end
 
-  # LiveStyle.TypedProperty format: %{syntax: "<angle>", initial: "0deg", inherits: true}
-  defp extract_var_value(%{syntax: syntax, initial: initial} = typed)
-       when is_binary(syntax) do
-    inherits = if is_map_key(typed, :inherits), do: typed.inherits, else: true
-    {initial, %{syntax: syntax, initial: initial, inherits: inherits}}
+  defp extract_var_value(value) when is_binary(value), do: {value, nil}
+  defp extract_var_value(value) when is_number(value), do: {to_string(value), nil}
+
+  defp extract_typed_var(typed) do
+    syntax = Keyword.fetch!(typed, :syntax)
+    value = Keyword.fetch!(typed, :value)
+    inherits = Keyword.get(typed, :inherits, true)
+    {value, [syntax: syntax, initial: value, inherits: inherits]}
   end
 
-  # LiveStyle.PropertyType module format: %{__type__: :typed_var, syntax: "<angle>", value: "0deg"}
-  defp extract_var_value(%{__type__: :typed_var, syntax: syntax, value: value} = typed) do
-    inherits = if is_map_key(typed, :inherits), do: typed.inherits, else: true
-    {value, %{syntax: syntax, initial: value, inherits: inherits}}
-  end
-
-  defp extract_var_value(value) when is_binary(value) do
-    {value, nil}
-  end
-
-  # Conditional values as keyword lists
-  defp extract_var_value(value) when is_list(value) do
-    {value, nil}
-  end
-
-  defp extract_var_value(value) when is_number(value) do
-    {to_string(value), nil}
+  defp extract_typed_property(typed) do
+    syntax = Keyword.fetch!(typed, :syntax)
+    initial = Keyword.fetch!(typed, :initial)
+    inherits = Keyword.get(typed, :inherits, true)
+    {initial, [syntax: syntax, initial: initial, inherits: inherits]}
   end
 end

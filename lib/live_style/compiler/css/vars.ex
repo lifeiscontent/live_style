@@ -36,12 +36,14 @@ defmodule LiveStyle.Compiler.CSS.Vars do
   @spec generate_properties(Manifest.t()) :: String.t()
   def generate_properties(manifest) do
     manifest.vars
-    |> Enum.filter(fn {_key, entry} -> entry.type != nil end)
-    |> Enum.sort_by(fn {_key, entry} -> entry.ident end)
+    |> Enum.filter(fn {_key, entry} -> Keyword.get(entry, :type) != nil end)
+    |> Enum.sort_by(fn {_key, entry} -> Keyword.fetch!(entry, :ident) end)
     |> Enum.map_join("\n", fn {_key, entry} ->
-      %{ident: ident, type: type_info} = entry
-      %{syntax: syntax, initial: initial} = type_info
-      inherits = if is_map_key(type_info, :inherits), do: type_info.inherits, else: true
+      ident = Keyword.fetch!(entry, :ident)
+      type_info = Keyword.fetch!(entry, :type)
+      syntax = Keyword.fetch!(type_info, :syntax)
+      initial = Keyword.fetch!(type_info, :initial)
+      inherits = Keyword.get(type_info, :inherits, true)
 
       # Extract default value for @property initial-value
       initial_value = extract_initial_value(initial)
@@ -60,14 +62,15 @@ defmodule LiveStyle.Compiler.CSS.Vars do
   def generate_vars(manifest) do
     vars = manifest.vars
 
-    if map_size(vars) == 0 do
+    if vars == [] do
       ""
     else
       # Collect all CSS variable rules with their at-rule wrappers
       var_rules =
         vars
         |> Enum.flat_map(fn {_key, entry} ->
-          %{ident: ident, value: value} = entry
+          ident = Keyword.fetch!(entry, :ident)
+          value = Keyword.fetch!(entry, :value)
           flatten_var_value(ident, value, [])
         end)
 

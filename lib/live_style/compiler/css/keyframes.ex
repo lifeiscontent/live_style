@@ -27,9 +27,10 @@ defmodule LiveStyle.Compiler.CSS.Keyframes do
   @spec generate(Manifest.t()) :: String.t()
   def generate(manifest) do
     manifest.keyframes
-    |> Enum.sort_by(fn {_key, entry} -> entry.ident end)
+    |> Enum.sort_by(fn {_key, entry} -> Keyword.fetch!(entry, :ident) end)
     |> Enum.flat_map(fn {_key, entry} ->
-      %{ident: ident, frames: frames} = entry
+      ident = Keyword.fetch!(entry, :ident)
+      frames = Keyword.fetch!(entry, :frames)
 
       # Generate LTR and RTL versions of each frame
       {ltr_frames, rtl_frames} = transform_frames_for_rtl(frames)

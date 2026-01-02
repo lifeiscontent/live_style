@@ -32,13 +32,13 @@ defmodule LiveStyle.ShorthandBehavior.ForbidShorthands do
   # ==========================================================================
 
   @impl true
-  def expand_declaration(css_property, value, _opts) do
+  def expand_declaration(css_property, value) do
     forbid_if_disallowed!(css_property)
     [{css_property, value}]
   end
 
   @impl true
-  def expand_shorthand_conditions(css_property, conditions, _opts) do
+  def expand_shorthand_conditions(css_property, conditions) do
     forbid_if_disallowed!(css_property)
     [{css_property, conditions}]
   end

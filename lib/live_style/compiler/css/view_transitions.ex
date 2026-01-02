@@ -46,7 +46,7 @@ defmodule LiveStyle.Compiler.CSS.ViewTransitions do
   @spec generate(LiveStyle.Manifest.t()) :: String.t()
   def generate(manifest) do
     manifest.view_transitions
-    |> Enum.sort_by(fn {_key, entry} -> entry.ident end)
+    |> Enum.sort_by(fn {_key, entry} -> Keyword.fetch!(entry, :ident) end)
     |> Enum.map_join("\n", fn {_key, entry} ->
       generate_entry(entry)
     end)
@@ -55,7 +55,10 @@ defmodule LiveStyle.Compiler.CSS.ViewTransitions do
   # Generate CSS for a single view transition entry
   # All pseudo-elements for one view transition on a single line
   # Sort by pseudo-element for deterministic output across Elixir/OTP versions
-  defp generate_entry(%{ident: ident, styles: styles}) do
+  defp generate_entry(entry) do
+    ident = Keyword.fetch!(entry, :ident)
+    styles = Keyword.fetch!(entry, :styles)
+
     styles
     # Sort by pseudo key for deterministic iteration order
     |> Enum.sort_by(fn {pseudo_key, _} -> pseudo_sort_order(pseudo_key) end)

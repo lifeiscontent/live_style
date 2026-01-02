@@ -9,7 +9,7 @@ defmodule LiveStyle.Compiler.CSS.PositionTry do
 
   Entries from the `position_try` macro have the format:
 
-      %{ident: "--xabc123", declarations: %{top: "0", left: "anchor(left)"}}
+      [ident: "--xabc123", declarations: [top: "0", left: "anchor(left)"]]
 
   """
 
@@ -24,12 +24,14 @@ defmodule LiveStyle.Compiler.CSS.PositionTry do
   @spec generate(LiveStyle.Manifest.t()) :: String.t()
   def generate(manifest) do
     manifest.position_try
-    |> Enum.sort_by(fn {_key, entry} -> entry.ident end)
+    |> Enum.sort_by(fn {_key, entry} -> Keyword.fetch!(entry, :ident) end)
     |> Enum.flat_map(fn {_key, entry} -> generate_entry(entry) end)
     |> Enum.join("\n")
   end
 
-  defp generate_entry(%{ident: ident, declarations: declarations}) do
+  defp generate_entry(entry) do
+    ident = Keyword.fetch!(entry, :ident)
+    declarations = Keyword.fetch!(entry, :declarations)
     decl_str = Utils.format_declarations(declarations)
     ["@position-try #{ident}{#{decl_str}}"]
   end

@@ -12,7 +12,7 @@ defmodule LiveStyle.Runtime do
   class/2 and css/1 macros in LiveStyle.
   """
 
-  alias LiveStyle.Runtime.{Attrs, ClassString, Dynamic}
+  alias LiveStyle.Runtime.{Attrs, ClassString}
 
   @doc """
   Resolve a list of refs into a class string.
@@ -41,19 +41,4 @@ defmodule LiveStyle.Runtime do
   def resolve_attrs(module, refs, opts) when is_list(refs) do
     Attrs.resolve_attrs(module, refs, opts)
   end
-
-  @doc """
-  Process a dynamic rule at runtime.
-
-  Dynamic rules generate:
-  1. Static CSS classes that reference CSS variables (var(--x-...))
-  2. At runtime, we return the class + a list of CSS variable tuples to set
-
-  This follows the StyleX pattern where static CSS uses var() references
-  and runtime just sets the variable values via inline style.
-  """
-  @spec process_dynamic_rule(list(), list(), term(), module(), atom(), boolean()) ::
-          {String.t(), list()}
-  defdelegate process_dynamic_rule(all_props, param_names, values, module, name, has_computed),
-    to: Dynamic
 end

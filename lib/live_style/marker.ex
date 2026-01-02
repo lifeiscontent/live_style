@@ -46,6 +46,21 @@ defmodule LiveStyle.Marker do
       <tr {css(marker(:row))}>
         <td {css(:cell)}>...</td>
       </tr>
+
+  ## Cross-Module Markers
+
+  Use `{Module, :name}` syntax to reference markers from other modules:
+
+      # In template:
+      <tr {css(marker({OtherModule, :row}))}>
+
+  Different modules using the same marker name get independent markers:
+
+      # In ComponentA
+      marker(:row)  # Different from ComponentB's :row
+
+      # In ComponentB
+      marker(:row)  # Different from ComponentA's :row
   """
 
   alias LiveStyle.{Config, Hash}
@@ -53,9 +68,11 @@ defmodule LiveStyle.Marker do
   @type t :: %__MODULE__{class: String.t()}
   defstruct [:class]
 
-  # Content-based CSS name generation (private)
-  defp ident(name) do
-    Hash.class_prefix() <> Hash.create_hash("marker:#{name}")
+  # Identity-based CSS name generation (private)
+  # Includes module for uniqueness, matching other LiveStyle APIs
+  defp ident(module, name) do
+    input = "marker:#{inspect(module)}.#{name}"
+    Hash.class_prefix() <> Hash.create_hash(input)
   end
 
   @doc """
@@ -76,9 +93,9 @@ defmodule LiveStyle.Marker do
 
   # Internal: use LiveStyle.marker/1 instead
   @doc false
-  @spec ref(atom()) :: t()
-  def ref(name) when is_atom(name) do
-    %__MODULE__{class: ident(name)}
+  @spec ref({module(), atom()}) :: t()
+  def ref({module, name}) when is_atom(module) and is_atom(name) do
+    %__MODULE__{class: ident(module, name)}
   end
 
   @doc """

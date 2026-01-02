@@ -3,9 +3,8 @@ defmodule LiveStyle.Config.Shorthand do
   Configuration for CSS shorthand property handling.
 
   Controls how LiveStyle expands shorthand properties like `margin`, `padding`, etc.
+  This is compile-time configuration (like StyleX Babel plugin config).
   """
-
-  alias LiveStyle.Config.Overrides
 
   @default_shorthand_behavior LiveStyle.ShorthandBehavior.AcceptShorthands
 
@@ -14,6 +13,13 @@ defmodule LiveStyle.Config.Shorthand do
     flatten_shorthands: LiveStyle.ShorthandBehavior.FlattenShorthands,
     forbid_shorthands: LiveStyle.ShorthandBehavior.ForbidShorthands
   ]
+
+  # Read at compile time
+  @shorthand_behavior Application.compile_env(
+                        :live_style,
+                        :shorthand_behavior,
+                        @default_shorthand_behavior
+                      )
 
   @doc """
   Returns the configured shorthand expansion behavior and options.
@@ -33,17 +39,13 @@ defmodule LiveStyle.Config.Shorthand do
   """
   @spec shorthand_behavior() :: {module(), keyword()}
   def shorthand_behavior do
-    value =
-      Overrides.get(:shorthand_behavior) ||
-        Application.get_env(:live_style, :shorthand_behavior, @default_shorthand_behavior)
-
-    case normalize_shorthand_behavior(value) do
+    case normalize_shorthand_behavior(@shorthand_behavior) do
       {:ok, result} ->
         result
 
       :error ->
         raise ArgumentError, """
-        Invalid shorthand_behavior: #{inspect(value)}
+        Invalid shorthand_behavior: #{inspect(@shorthand_behavior)}
 
         Valid formats are:
         - An atom: :accept_shorthands, :flatten_shorthands, :forbid_shorthands
@@ -78,7 +80,7 @@ defmodule LiveStyle.Config.Shorthand do
 
   defp valid_behavior_module?(module) do
     Code.ensure_loaded?(module) and
-      function_exported?(module, :expand_declaration, 3) and
-      function_exported?(module, :expand_shorthand_conditions, 3)
+      function_exported?(module, :expand_declaration, 2) and
+      function_exported?(module, :expand_shorthand_conditions, 2)
   end
 end

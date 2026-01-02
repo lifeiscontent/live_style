@@ -63,41 +63,31 @@ defmodule LiveStyle.PositionTry do
   @doc """
   Defines a named position-try rule and stores it in the manifest.
   Called from the position_try/2 macro.
+
+  Returns `{name, entry}` tuple for storage in module attributes.
   """
-  @spec define(module(), atom(), keyword(), String.t()) :: :ok
-  def define(module, name, declarations, ident) do
-    key = Manifest.simple_key(module, name)
-
-    entry = %{
-      ident: ident,
-      declarations: declarations
-    }
-
+  @spec define(module(), atom(), keyword()) :: {atom(), keyword()}
+  def define(module, name, declarations) do
+    key = Manifest.key(module, name)
+    position_ident = ident(declarations)
+    entry = [ident: position_ident, declarations: declarations]
     store_entry(key, entry)
-    :ok
+    {name, entry}
   end
 
   @doc """
   Defines an anonymous position-try rule and stores it in the manifest.
   Called from the position_try/1 macro with inline declarations.
+
+  Returns the generated ident (CSS dashed-ident name).
   """
-  @spec define_anonymous(module(), keyword(), String.t()) :: :ok
-  def define_anonymous(module, declarations, ident) do
-    key = "#{module}:__anon_position_try__:#{ident}"
-
-    entry = %{
-      ident: ident,
-      declarations: declarations
-    }
-
+  @spec define_anonymous(module(), keyword()) :: String.t()
+  def define_anonymous(module, declarations) do
+    position_ident = ident(declarations)
+    key = "#{module}:__anon_position_try__:#{position_ident}"
+    entry = [ident: position_ident, declarations: declarations]
     store_entry(key, entry)
-    :ok
-  end
-
-  @doc false
-  @spec generate_ident(keyword()) :: String.t()
-  def generate_ident(declarations) do
-    ident(declarations)
+    position_ident
   end
 
   # Content-based CSS name generation (private)

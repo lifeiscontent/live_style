@@ -1,19 +1,17 @@
 defmodule LiveStyle.DevTest do
   @moduledoc """
-  Tests for LiveStyle.Dev module - development helpers for inspecting styles.
+  Tests for the LiveStyle.Dev module.
   """
   use LiveStyle.TestCase
 
   alias LiveStyle.Dev
 
-  # Test module with various class types
-  defmodule TestComponent do
+  defmodule TestStyles do
     use LiveStyle
 
     class(:button,
       display: "flex",
-      padding: "8px 16px",
-      background_color: "blue"
+      padding: "8px 16px"
     )
 
     class(:primary,
@@ -21,200 +19,115 @@ defmodule LiveStyle.DevTest do
       color: "white"
     )
 
-    class(:secondary,
-      background_color: "gray",
-      color: "black"
-    )
-
-    class(:hover_style,
+    class(:hover_effect,
       color: [
         default: "blue",
         ":hover": "darkblue"
       ]
     )
-  end
 
-  defmodule DynamicComponent do
-    use LiveStyle
-
-    class(:static, display: "block")
-
-    class(:dynamic, fn opacity ->
-      [opacity: opacity]
-    end)
+    class(:dynamic_opacity, fn opacity -> [opacity: opacity] end)
   end
 
   describe "list/1" do
-    test "returns all class names" do
-      classes = Dev.list(TestComponent)
+    test "returns all class names in a module" do
+      classes = Dev.list(TestStyles)
+
+      assert is_list(classes)
       assert :button in classes
       assert :primary in classes
-      assert :secondary in classes
-      assert :hover_style in classes
+      assert :hover_effect in classes
+      assert :dynamic_opacity in classes
     end
 
-    test "returns sorted list" do
-      classes = Dev.list(TestComponent)
-      assert classes == Enum.sort(classes)
-    end
-  end
-
-  describe "list/2" do
-    test "filters static classes" do
-      static = Dev.list(DynamicComponent, :static)
-      assert :static in static
-      refute :dynamic in static
-    end
-
-    test "filters dynamic classes" do
-      dynamic = Dev.list(DynamicComponent, :dynamic)
-      assert :dynamic in dynamic
-      refute :static in dynamic
-    end
-
-    test "returns all with :all filter" do
-      all = Dev.list(DynamicComponent, :all)
-      assert :static in all
-      assert :dynamic in all
-    end
-  end
-
-  describe "class_info/2" do
-    test "returns class details" do
-      info = Dev.class_info(TestComponent, :button)
-
-      assert info.name == :button
-      assert is_binary(info.class)
-      assert is_binary(info.css)
-      assert info.dynamic? == false
-      assert is_list(info.properties)
-    end
-
-    test "properties contain expected values" do
-      info = Dev.class_info(TestComponent, :button)
-
-      display = List.keyfind(info.properties, "display", 0)
-      assert display != nil
-      {_, display_meta} = display
-      assert display_meta.value == "flex"
-      assert is_binary(display_meta.class)
-    end
-
-    test "returns error for unknown class" do
-      assert {:error, :not_found} = Dev.class_info(TestComponent, :nonexistent)
-    end
-  end
-
-  describe "diff/2" do
-    test "shows merged class string" do
-      diff = Dev.diff(TestComponent, [:button, :primary])
-
-      assert is_binary(diff.merged_class)
-      assert diff.refs == [:button, :primary]
-    end
-
-    test "tracks property sources" do
-      diff = Dev.diff(TestComponent, [:button, :primary])
-
-      # button defines display and padding
-      assert diff.properties["display"].from == :button
-      assert diff.properties["padding"].from == :button
-
-      # primary overrides background-color and adds color
-      assert diff.properties["background-color"].from == :primary
-      assert diff.properties["color"].from == :primary
-    end
-
-    test "later refs override earlier ones" do
-      # button has background-color: blue, primary also has background-color: blue
-      # but primary should be marked as the source since it comes later
-      diff = Dev.diff(TestComponent, [:button, :primary])
-
-      assert diff.properties["background-color"].from == :primary
-    end
-  end
-
-  describe "css/2" do
-    test "returns CSS for single class" do
-      css = Dev.css(TestComponent, :button)
-
-      assert is_binary(css)
-      assert css =~ "display:flex"
-      assert css =~ "padding:8px 16px"
-      assert css =~ "background-color:blue"
-    end
-
-    test "returns CSS for multiple classes" do
-      css = Dev.css(TestComponent, [:button, :primary])
-
-      assert is_binary(css)
-      assert css =~ "display:flex"
-      assert css =~ "color:white"
-    end
-
-    test "returns empty string for unknown class" do
-      css = Dev.css(TestComponent, :nonexistent)
-      assert css == ""
-    end
-  end
-
-  describe "pp/2" do
-    test "prints class info to console" do
-      # Capture IO output
-      output =
-        ExUnit.CaptureIO.capture_io(fn ->
-          Dev.pp(TestComponent, :button)
-        end)
-
-      assert output =~ ":button"
-      assert output =~ "display"
-      assert output =~ "flex"
-    end
-
-    test "returns :ok" do
-      result =
-        ExUnit.CaptureIO.capture_io(fn ->
-          assert Dev.pp(TestComponent, :button) == :ok
-        end)
-
-      assert result =~ ":button"
-    end
-  end
-
-  describe "pp_list/1" do
-    test "prints all classes in module" do
-      output =
-        ExUnit.CaptureIO.capture_io(fn ->
-          Dev.pp_list(TestComponent)
-        end)
-
-      assert output =~ "TestComponent"
-      assert output =~ ":button"
-      assert output =~ ":primary"
-      assert output =~ ":secondary"
-    end
-
-    test "returns :ok" do
-      result =
-        ExUnit.CaptureIO.capture_io(fn ->
-          assert Dev.pp_list(TestComponent) == :ok
-        end)
-
-      assert result =~ "TestComponent"
-    end
-  end
-
-  describe "error handling" do
     test "raises for non-LiveStyle module" do
-      assert_raise ArgumentError, ~r/is not a LiveStyle module/, fn ->
+      assert_raise ArgumentError, ~r/not a LiveStyle module/, fn ->
         Dev.list(Enum)
       end
     end
 
     test "raises for non-existent module" do
-      assert_raise ArgumentError, ~r/is not a LiveStyle module/, fn ->
+      assert_raise ArgumentError, ~r/not loaded/, fn ->
         Dev.list(NonExistentModule)
       end
+    end
+  end
+
+  describe "show/2" do
+    test "returns :ok for static class" do
+      assert :ok = Dev.show(TestStyles, :button)
+    end
+
+    test "returns :ok for class with conditionals" do
+      assert :ok = Dev.show(TestStyles, :hover_effect)
+    end
+
+    test "returns :ok for dynamic class" do
+      assert :ok = Dev.show(TestStyles, :dynamic_opacity)
+    end
+
+    test "returns :ok for non-existent class" do
+      # Should not raise, just show empty
+      assert :ok = Dev.show(TestStyles, :nonexistent)
+    end
+  end
+
+  describe "diff/2" do
+    test "returns :ok for multiple classes" do
+      assert :ok = Dev.diff(TestStyles, [:button, :primary])
+    end
+
+    test "returns :ok for single class list" do
+      assert :ok = Dev.diff(TestStyles, [:button])
+    end
+
+    test "returns :ok for empty list" do
+      assert :ok = Dev.diff(TestStyles, [])
+    end
+  end
+
+  describe "css/2" do
+    test "returns CSS string for static class" do
+      css = Dev.css(TestStyles, [:button])
+
+      assert is_binary(css)
+      assert css =~ "display:flex"
+      assert css =~ "padding:8px 16px"
+    end
+
+    test "returns CSS string for multiple classes" do
+      css = Dev.css(TestStyles, [:button, :primary])
+
+      assert is_binary(css)
+      assert css =~ "display:flex"
+      assert css =~ "background-color:blue"
+    end
+
+    test "returns CSS for class with conditionals" do
+      css = Dev.css(TestStyles, [:hover_effect])
+
+      assert is_binary(css)
+      assert css =~ "color:blue"
+      assert css =~ ":hover"
+      assert css =~ "color:darkblue"
+    end
+
+    test "returns empty string for non-existent class" do
+      css = Dev.css(TestStyles, [:nonexistent])
+      assert css == ""
+    end
+
+    test "returns empty string for empty list" do
+      css = Dev.css(TestStyles, [])
+      assert css == ""
+    end
+  end
+
+  describe "pp/2" do
+    test "is an alias for show/2" do
+      # Both should return :ok and not raise
+      assert :ok = Dev.pp(TestStyles, :button)
+      assert :ok = Dev.show(TestStyles, :button)
     end
   end
 end

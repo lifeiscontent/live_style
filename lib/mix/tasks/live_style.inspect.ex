@@ -1,44 +1,53 @@
 defmodule Mix.Tasks.LiveStyle.Inspect do
   @moduledoc """
-  Inspects a LiveStyle class, showing its generated CSS and properties.
+  Inspects LiveStyle class definitions, showing generated CSS and properties.
 
   ## Usage
 
-      mix live_style.inspect MyAppWeb.Components.Button button
-      mix live_style.inspect MyAppWeb.Components.Button button primary
+      mix live_style.inspect MyAppWeb.Button primary
+      mix live_style.inspect MyAppWeb.Button base primary
+      mix live_style.inspect MyAppWeb.Button --list
 
   ## Options
 
     * `--css` - Show raw CSS output instead of property breakdown
+    * `--list` - List all class definitions in the module
 
   ## Examples
 
       $ mix live_style.inspect MyAppWeb.CoreComponents btn_base
-      
+
       :btn_base
       class: x1a2b3c4 x5d6e7f8
 
-      display: flex (x1a2b3c4)
-      padding: 8px 16px (x5d6e7f8)
+        display: x1a2b3c4
+        padding: x5d6e7f8
 
       $ mix live_style.inspect MyAppWeb.CoreComponents btn_base btn_primary --css
-      .x1a2b3c4:not(#\\#){display:flex}...
+      .x1a2b3c4:not(#\\#){display:flex}
+      .x5d6e7f8:not(#\\#){padding:8px 16px}
+
+      $ mix live_style.inspect MyAppWeb.CoreComponents --list
+      Classes in MyAppWeb.CoreComponents:
+        :btn_base
+        :btn_primary
+        :btn_secondary
   """
 
   use Mix.Task
 
-  @shortdoc "Inspect a LiveStyle class definition"
+  @shortdoc "Inspect LiveStyle class definitions"
 
   @impl Mix.Task
   def run(args) do
-    {opts, args, _} = OptionParser.parse(args, switches: [css: :boolean])
+    {opts, args, _} = OptionParser.parse(args, switches: [css: :boolean, list: :boolean])
 
     case args do
       [] ->
-        Mix.shell().error("Usage: mix live_style.inspect Module class_name [class_name...]")
-        Mix.shell().error("Example: mix live_style.inspect MyAppWeb.Button button")
+        Mix.shell().error("Usage: mix live_style.inspect Module [class_name...] [--css] [--list]")
+        Mix.shell().error("Example: mix live_style.inspect MyAppWeb.Button primary")
 
-      [module_string | class_names] when class_names != [] ->
+      [module_string | class_names] ->
         Mix.Task.run("app.start")
 
         module = Module.concat([module_string])
@@ -53,36 +62,60 @@ defmodule Mix.Tasks.LiveStyle.Inspect do
           exit({:shutdown, 1})
         end
 
-        class_atoms = Enum.map(class_names, &String.to_atom/1)
+        cond do
+          opts[:list] ->
+            print_list(module)
 
-        if opts[:css] do
-          print_css(module, class_atoms)
-        else
-          print_inspection(module, class_atoms)
+          opts[:css] && class_names != [] ->
+            class_atoms = Enum.map(class_names, &String.to_atom/1)
+            print_css(module, class_atoms)
+
+          class_names != [] ->
+            class_atoms = Enum.map(class_names, &String.to_atom/1)
+            print_inspection(module, class_atoms)
+
+          true ->
+            # No class names and no --list flag
+            Mix.shell().error("Please specify class names or use --list")
+            Mix.shell().error("Example: mix live_style.inspect MyAppWeb.Button primary")
         end
-
-      [_module_string] ->
-        Mix.shell().error("Please specify at least one class name")
-        Mix.shell().error("Example: mix live_style.inspect MyAppWeb.Button button")
     end
   end
 
-  defp print_inspection(module, class_atoms) do
-    Enum.each(class_atoms, fn class_name ->
-      LiveStyle.Dev.pp(module, class_name)
-    end)
+  defp print_list(module) do
+    classes = LiveStyle.Dev.list(module)
 
-    if match?([_, _ | _], class_atoms) do
-      diff = LiveStyle.Dev.diff(module, class_atoms)
-      Mix.shell().info("")
-      Mix.shell().info("  #{IO.ANSI.bright()}Merged result:#{IO.ANSI.reset()}")
-      Mix.shell().info("  class: #{diff.merged_class}")
-      Mix.shell().info("")
+    Mix.shell().info("")
+    Mix.shell().info("Classes in #{inspect(module)}:")
+
+    if classes == [] do
+      Mix.shell().info("  (no classes defined)")
+    else
+      for class <- classes do
+        Mix.shell().info("  :#{class}")
+      end
+    end
+
+    Mix.shell().info("")
+  end
+
+  defp print_inspection(module, class_atoms) do
+    case class_atoms do
+      [single] ->
+        LiveStyle.Dev.show(module, single)
+
+      multiple ->
+        LiveStyle.Dev.diff(module, multiple)
     end
   end
 
   defp print_css(module, class_atoms) do
     css = LiveStyle.Dev.css(module, class_atoms)
-    Mix.shell().info(css)
+
+    if css == "" do
+      Mix.shell().info("(no CSS generated)")
+    else
+      Mix.shell().info(css)
+    end
   end
 end

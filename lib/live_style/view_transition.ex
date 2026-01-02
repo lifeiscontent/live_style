@@ -3,7 +3,7 @@ defmodule LiveStyle.ViewTransition do
   CSS View Transitions API support.
 
   View transitions enable smooth animations between different DOM states.
-  This module handles the generation and storage of view transition rules
+  This module handles the generation and storage of view transition class rules
   with content-based hashing (StyleX-compatible).
 
   ## Browser Support
@@ -26,7 +26,7 @@ defmodule LiveStyle.ViewTransition do
           from: [opacity: "1", transform: "scale(1)"],
           to: [opacity: "0", transform: "scale(0.8)"]
 
-        view_transition_class :card,
+        view_transition :card,
           old: [
             animation_name: keyframes(:scale_out),
             animation_duration: "200ms"
@@ -40,13 +40,13 @@ defmodule LiveStyle.ViewTransition do
   Apply in templates using `css/2` with the `style` option:
 
       <div {css([:card_styles], style: [
-        view_transition_class: view_transition_class(:card),
+        view_transition_class: view_transition(:card),
         view_transition_name: "card-\#{@id}"
       ])}>
 
   Or directly in inline styles:
 
-      <div style={"view-transition-class: \#{view_transition_class(:card)}; view-transition-name: card-\#{@id}"}>
+      <div style={"view-transition-class: \#{view_transition(:card)}; view-transition-name: card-\#{@id}"}>
 
   ## Available Pseudo-element Keys
 
@@ -110,26 +110,20 @@ defmodule LiveStyle.ViewTransition do
 
   @doc """
   Defines a named view transition and stores it in the manifest.
+
+  Returns `{name, entry}` tuple for storage in module attributes.
   """
-  @spec define(module(), atom(), keyword(), String.t()) :: :ok
-  def define(module, name, styles, ident) do
-    key = Manifest.simple_key(module, name)
+  @spec define(module(), atom(), keyword()) :: {atom(), keyword()}
+  def define(module, name, styles) do
+    key = Manifest.key(module, name)
+    transition_ident = ident(styles)
 
     # Keep keyword lists as-is to preserve insertion order (StyleX parity)
     # View transitions preserve the order of pseudo-elements and declarations
-    entry = %{
-      ident: ident,
-      styles: styles
-    }
+    entry = [ident: transition_ident, styles: styles]
 
     store_entry(key, entry)
-    :ok
-  end
-
-  @doc false
-  @spec generate_ident(keyword() | map()) :: String.t()
-  def generate_ident(styles) do
-    ident(styles)
+    {name, entry}
   end
 
   # Content-based CSS name generation (private)
@@ -139,10 +133,9 @@ defmodule LiveStyle.ViewTransition do
   end
 
   @doc false
-  @spec generate_css_string(keyword() | map()) :: String.t()
-  def generate_css_string(styles) do
-    # Convert to list preserving order (keyword list stays as-is, map gets converted)
-    style_list = if is_list(styles), do: styles, else: Enum.to_list(styles)
+  @spec generate_css_string(keyword()) :: String.t()
+  def generate_css_string(styles) when is_list(styles) do
+    style_list = styles
 
     Enum.map_join(style_list, "", fn {pseudo_key, declarations} ->
       # Normalize pseudo key to CSS format (image_pair -> image-pair)
@@ -155,8 +148,7 @@ defmodule LiveStyle.ViewTransition do
           s -> s
         end)
 
-      # Convert declarations to list preserving order
-      decl_list = if is_list(declarations), do: declarations, else: Enum.to_list(declarations)
+      decl_list = declarations
 
       # Generate style string in StyleX format: "property:value;"
       # IMPORTANT: Preserve the original property order, do NOT sort

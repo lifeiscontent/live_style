@@ -21,22 +21,6 @@ defmodule LiveStyle.Attrs do
         }
 
   @doc """
-  Creates a new Attrs struct.
-
-  ## Examples
-
-      iex> LiveStyle.Attrs.new("btn primary", nil)
-      %LiveStyle.Attrs{class: "btn primary", style: nil}
-
-      iex> LiveStyle.Attrs.new("btn", "--opacity: 0.5")
-      %LiveStyle.Attrs{class: "btn", style: "--opacity: 0.5"}
-  """
-  @spec new(String.t() | nil, String.t() | nil) :: t()
-  def new(class, style) do
-    %__MODULE__{class: class, style: style}
-  end
-
-  @doc """
   Converts the Attrs struct to a keyword list suitable for spreading into HTML elements.
 
   ## Examples
@@ -56,18 +40,7 @@ defmodule LiveStyle.Attrs do
   end
 end
 
-# Implement Phoenix.HTML.Safe for spreading into templates
-if Code.ensure_loaded?(Phoenix.HTML.Safe) do
-  defimpl Phoenix.HTML.Safe, for: LiveStyle.Attrs do
-    def to_iodata(%LiveStyle.Attrs{} = attrs) do
-      attrs
-      |> LiveStyle.Attrs.to_list()
-      |> Phoenix.HTML.attributes_escape()
-    end
-  end
-end
-
-# Implement Access behaviour for pattern matching and direct spreading
+# Implement Enumerable for HEEx attribute spreading: <div {css(:class)}>
 defimpl Enumerable, for: LiveStyle.Attrs do
   def count(_attrs), do: {:error, __MODULE__}
 
@@ -79,5 +52,16 @@ defimpl Enumerable, for: LiveStyle.Attrs do
     attrs
     |> LiveStyle.Attrs.to_list()
     |> Enumerable.List.reduce(acc, fun)
+  end
+end
+
+# Implement Phoenix.HTML.Safe for spreading into templates
+if Code.ensure_loaded?(Phoenix.HTML.Safe) do
+  defimpl Phoenix.HTML.Safe, for: LiveStyle.Attrs do
+    def to_iodata(%LiveStyle.Attrs{} = attrs) do
+      attrs
+      |> LiveStyle.Attrs.to_list()
+      |> Phoenix.HTML.attributes_escape()
+    end
   end
 end

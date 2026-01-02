@@ -99,13 +99,13 @@ defmodule Mix.Tasks.LiveStyle.Gen.Css do
   end
 
   defp collect_stats(manifest) do
-    vars_count = map_size(manifest.vars)
-    consts_count = map_size(manifest.consts)
-    keyframes_count = map_size(manifest.keyframes)
-    classes_count = map_size(manifest.classes)
-    themes_count = map_size(manifest.themes)
-    vt_count = map_size(manifest.view_transitions)
-    pt_count = map_size(manifest.position_try)
+    vars_count = length(manifest.vars)
+    consts_count = length(manifest.consts)
+    keyframes_count = length(manifest.keyframes)
+    classes_count = length(manifest.classes)
+    themes_count = length(manifest.themes)
+    vt_count = length(manifest.view_transitions)
+    pt_count = length(manifest.position_try)
 
     [
       {vars_count, "vars"},

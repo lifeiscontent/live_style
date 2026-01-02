@@ -34,21 +34,21 @@ defmodule LiveStyle.ShorthandBehavior do
         @behaviour LiveStyle.ShorthandBehavior
 
         @impl true
-        def expand_declaration(css_property, value, opts) do
+        def expand_declaration(css_property, value) do
           # Return list of {css_property_string, value} tuples
           [{css_property, value}]
         end
 
         @impl true
-        def expand_shorthand_conditions(css_property, conditions, opts) do
+        def expand_shorthand_conditions(css_property, conditions) do
           # Return list of {css_property_string, conditions_map} tuples
           [{css_property, conditions}]
         end
       end
   """
 
-  @callback expand_declaration(String.t(), any(), map()) :: [{String.t(), any()}]
-  @callback expand_shorthand_conditions(String.t(), map(), map()) :: [{String.t(), any()}]
+  @callback expand_declaration(String.t(), any()) :: [{String.t(), any()}]
+  @callback expand_shorthand_conditions(String.t(), keyword()) :: [{String.t(), any()}]
 
   @doc """
   Returns the configured behavior module and options.
@@ -68,29 +68,13 @@ defmodule LiveStyle.ShorthandBehavior do
   end
 
   @doc """
-  Returns the standard options map for shorthand expansion.
-
-  This centralizes the options construction so callers don't need to
-  build it themselves.
-  """
-  def opts do
-    %{
-      shorthand_properties: LiveStyle.PropertyMetadata.shorthand_properties(),
-      disallowed_shorthands: LiveStyle.PropertyMetadata.disallowed_shorthands(),
-      disallowed_shorthands_with_messages:
-        LiveStyle.PropertyMetadata.disallowed_shorthands_with_messages()
-    }
-  end
-
-  @doc """
   Expands a declaration using the configured behavior.
 
   Takes a CSS property string (e.g., `"margin"`, `"background-color"`) and value.
   Returns a list of `{css_property_string, value}` tuples.
   """
-  def expand_declaration(css_property, value, expansion_opts \\ nil) do
-    expansion_opts = expansion_opts || opts()
-    backend_module().expand_declaration(css_property, value, expansion_opts)
+  def expand_declaration(css_property, value) do
+    backend_module().expand_declaration(css_property, value)
   end
 
   @doc """
@@ -99,8 +83,7 @@ defmodule LiveStyle.ShorthandBehavior do
   Takes a CSS property string and a conditions map.
   Returns a list of `{css_property_string, conditions_map}` tuples.
   """
-  def expand_shorthand_conditions(css_property, conditions, expansion_opts \\ nil) do
-    expansion_opts = expansion_opts || opts()
-    backend_module().expand_shorthand_conditions(css_property, conditions, expansion_opts)
+  def expand_shorthand_conditions(css_property, conditions) do
+    backend_module().expand_shorthand_conditions(css_property, conditions)
   end
 end

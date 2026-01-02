@@ -42,7 +42,7 @@ defmodule LiveStyle.Compiler.Writer do
     require Logger
 
     Logger.info(
-      "LiveStyle: #{stats.vars} vars, #{stats.keyframes} keyframes, #{stats.classes} rules → #{output_path}"
+      "LiveStyle: #{stats[:vars]} vars, #{stats[:keyframes]} keyframes, #{stats[:classes]} rules → #{output_path}"
     )
   end
 end

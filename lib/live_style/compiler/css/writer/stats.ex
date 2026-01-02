@@ -3,10 +3,10 @@ defmodule LiveStyle.Compiler.CSS.Writer.Stats do
 
   @spec comment(LiveStyle.Manifest.t()) :: String.t()
   def comment(manifest) do
-    vars_count = map_size(manifest.vars)
-    keyframes_count = map_size(manifest.keyframes)
-    classes_count = map_size(manifest.classes)
-    themes_count = map_size(manifest.themes)
+    vars_count = length(manifest.vars)
+    keyframes_count = length(manifest.keyframes)
+    classes_count = length(manifest.classes)
+    themes_count = length(manifest.themes)
 
     "/* LiveStyle: #{vars_count} vars, #{keyframes_count} keyframes, #{classes_count} classes, #{themes_count} themes */"
   end

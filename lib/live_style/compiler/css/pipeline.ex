@@ -58,15 +58,15 @@ defmodule LiveStyle.Compiler.CSS.Pipeline do
 
   Useful for logging after CSS generation.
   """
-  @spec stats(LiveStyle.Manifest.t()) :: map()
+  @spec stats(LiveStyle.Manifest.t()) :: keyword()
   def stats(manifest) do
-    %{
-      vars: map_size(manifest.vars),
-      keyframes: map_size(manifest.keyframes),
-      classes: map_size(manifest.classes),
-      themes: map_size(manifest.themes),
-      position_try: map_size(manifest.position_try),
-      view_transitions: map_size(manifest.view_transitions)
-    }
+    [
+      vars: length(manifest.vars),
+      keyframes: length(manifest.keyframes),
+      classes: length(manifest.classes),
+      themes: length(manifest.themes),
+      position_try: length(manifest.position_try),
+      view_transitions: length(manifest.view_transitions)
+    ]
   end
 end

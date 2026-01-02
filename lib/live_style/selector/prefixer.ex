@@ -55,12 +55,6 @@ defmodule LiveStyle.Selector.Prefixer do
   defp do_variants_for(_), do: nil
 
   @doc """
-  Returns the list of selectors that will be expanded.
-  """
-  @spec handled_selectors() :: [String.t()]
-  def handled_selectors, do: @handled_selectors
-
-  @doc """
   Expands a CSS selector to include vendor-prefixed variants.
 
   If the selector contains any of the handled pseudo-elements or pseudo-classes,
@@ -89,38 +83,6 @@ defmodule LiveStyle.Selector.Prefixer do
       {prefix, suffix, variants} -> expand_selector(selector, prefix, suffix, variants)
     end
   end
-
-  @doc """
-  Checks if a selector contains any pseudo-element or pseudo-class that needs prefixing.
-
-  ## Examples
-
-      iex> LiveStyle.Selector.Prefixer.needs_prefix?(".x123::placeholder")
-      true
-
-      iex> LiveStyle.Selector.Prefixer.needs_prefix?(".x123:hover")
-      false
-  """
-  @spec needs_prefix?(String.t()) :: boolean()
-  def needs_prefix?(selector) do
-    Regex.match?(@selector_pattern, selector)
-  end
-
-  @doc """
-  Returns the variants for a given pseudo-element or pseudo-class.
-
-  Returns `nil` if the selector is not handled.
-
-  ## Examples
-
-      iex> LiveStyle.Selector.Prefixer.variants_for("::placeholder")
-      ["::-webkit-input-placeholder", "::-moz-placeholder", ":-ms-input-placeholder", "::placeholder"]
-
-      iex> LiveStyle.Selector.Prefixer.variants_for(":hover")
-      nil
-  """
-  @spec variants_for(String.t()) :: [String.t()] | nil
-  def variants_for(pseudo), do: do_variants_for(pseudo)
 
   # Find the first matching expansion pattern in the selector using regex
   # Returns {prefix, pattern, suffix, variants} for efficient expansion

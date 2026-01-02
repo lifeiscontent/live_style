@@ -5,7 +5,7 @@ defmodule LiveStyle.Selector do
   alias LiveStyle.Selector.Prefixer, as: SelectorPrefixer
 
   # NOTE: This module exists to keep selector generation consistent between:
-  # - LiveStyle.Compiler.CSS.AtomicRules (final CSS output)
+  # - LiveStyle.Compiler.CSS.Classes (final CSS output)
   # - LiveStyle.Compiler.CSS.AtomicClass (class metadata generation)
 
   # -----------------
@@ -21,7 +21,14 @@ defmodule LiveStyle.Selector do
           String.t()
   def build_atomic_rule_selector(class_name, selector_suffix, pseudo_element, at_rule) do
     use_layers = LiveStyle.Config.use_css_layers?()
-    needs_bump = at_rule != nil or selector_suffix != nil
+
+    # Specificity bump needed for at-rules and pseudo-classes (not pseudo-elements alone)
+    # StyleX only bumps for contextual conditions, not pure pseudo-elements
+    has_pseudo_class =
+      selector_suffix != nil and not String.starts_with?(to_string(selector_suffix), "::")
+
+    needs_bump = at_rule != nil or has_pseudo_class
+
     # Sort pseudo-classes for deterministic output, but keep pseudo-elements as-is
     sorted_suffix = if selector_suffix, do: PseudoSort.sort_combined(selector_suffix), else: nil
     suffix = pseudo_element || sorted_suffix

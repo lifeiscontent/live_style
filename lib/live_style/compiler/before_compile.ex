@@ -5,11 +5,11 @@ defmodule LiveStyle.Compiler.BeforeCompile do
   alias LiveStyle.Manifest
 
   @doc """
-  Builds class string and property class keyword lists for static classes.
+  Builds class string and property class keyword lists for classes.
 
   ## Parameters
 
-    * `static_classes` - List of `{name, declaration}` tuples
+    * `classes` - List of `{name, declaration}` tuples (static) or `{name, {:__dynamic__, ...}}` (dynamic)
     * `module` - The module being compiled
     * `manifest` - The manifest to look up classes from (injected for DIP)
 
@@ -17,18 +17,21 @@ defmodule LiveStyle.Compiler.BeforeCompile do
 
   A tuple of `{class_strings_list, property_classes_list}`.
   """
-  @spec build_static_class_maps(list(), module(), Manifest.t()) :: {keyword(), keyword()}
-  def build_static_class_maps(static_classes, module, manifest) do
-    Enum.reduce(static_classes, {[], []}, fn {name, _decl}, {cs_acc, pc_acc} ->
-      build_static_class_map(name, module, manifest, cs_acc, pc_acc)
+  @spec build_class_maps(list(), module(), Manifest.t()) :: {keyword(), keyword()}
+  def build_class_maps(classes, module, manifest) do
+    Enum.reduce(classes, {[], []}, fn class_entry, {cs_acc, pc_acc} ->
+      name = elem(class_entry, 0)
+      build_class_map(name, module, manifest, cs_acc, pc_acc)
     end)
   end
 
-  defp build_static_class_map(name, module, manifest, cs_acc, pc_acc) do
-    key = Manifest.simple_key(module, name)
+  defp build_class_map(name, module, manifest, cs_acc, pc_acc) do
+    key = Manifest.key(module, name)
 
     case Manifest.get_class(manifest, key) do
-      %{class_string: cs, atomic_classes: atomic_classes} ->
+      entry when is_list(entry) ->
+        cs = Keyword.fetch!(entry, :class_string)
+        atomic_classes = Keyword.fetch!(entry, :atomic_classes)
         prop_classes = build_prop_classes(atomic_classes)
         {[{name, cs} | cs_acc], [{name, prop_classes} | pc_acc]}
 
@@ -72,17 +75,24 @@ defmodule LiveStyle.Compiler.BeforeCompile do
 
   defp build_conditional_entry(_prop, _), do: []
 
+  @doc """
+  Normalizes a class entry to the standard {name, declarations, opts} format.
+  Handles legacy format without opts.
+  """
+  @spec normalize_class_entry(tuple()) :: {atom(), term(), keyword()}
+  def normalize_class_entry({name, declarations, opts}), do: {name, declarations, opts}
+  def normalize_class_entry({name, declarations}), do: {name, declarations, []}
+
   @doc false
   def build_dynamic_fns(dynamic_rules, module) do
-    Enum.map(dynamic_rules, fn {name, {:__dynamic__, all_props, param_names, has_computed}} ->
+    Enum.map(dynamic_rules, fn {name, {:__dynamic__, all_props, has_computed}} ->
       fn_name = :"__dynamic_#{name}__"
 
       quote do
         @doc false
         def unquote(fn_name)(values) do
-          LiveStyle.Runtime.process_dynamic_rule(
+          LiveStyle.Runtime.Dynamic.compute_var_list(
             unquote(Macro.escape(all_props)),
-            unquote(param_names),
             values,
             unquote(module),
             unquote(name),

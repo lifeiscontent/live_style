@@ -116,15 +116,6 @@ defmodule LiveStyle.Hash do
   end
 
   @doc """
-  Generates a dynamic CSS variable name for runtime-set values.
-  """
-  @spec dynamic_var(module(), atom(), atom(), non_neg_integer()) :: String.t()
-  def dynamic_var(module, style_name, prop, idx) do
-    input = "#{inspect(module)}:#{style_name}:#{prop}:#{idx}"
-    "--x" <> create_hash(input) <> "-#{idx}"
-  end
-
-  @doc """
   Creates a hash string using MurmurHash2, encoded in base36.
   This matches StyleX's hash function.
   """

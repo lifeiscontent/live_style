@@ -66,7 +66,7 @@ defmodule LiveStyle.Utils do
     Set to `false` to preserve insertion order (for StyleX parity with keyframes
     and view-transitions which use JavaScript's Object.entries order).
   """
-  @spec format_declarations(map() | keyword(), keyword()) :: String.t()
+  @spec format_declarations(keyword(), keyword()) :: String.t()
   def format_declarations(declarations, opts \\ []) do
     sort = Keyword.get(opts, :sort, true)
 
@@ -132,11 +132,19 @@ defmodule LiveStyle.Utils do
   @spec sort_conditional_value(term()) :: term()
   # Skip special structures that shouldn't be sorted (fallback values, typed vars, etc.)
   def sort_conditional_value({:__fallback__, _} = value), do: value
-  def sort_conditional_value(%{__css_type__: _} = value), do: value
-  def sort_conditional_value(%{__type__: _} = value), do: value
-  def sort_conditional_value(%{syntax: _} = value), do: value
 
   def sort_conditional_value(value) when is_list(value) do
+    # Skip typed value keyword lists (have :__type__, :syntax, etc. keys)
+    cond do
+      Keyword.has_key?(value, :__type__) -> value
+      Keyword.has_key?(value, :syntax) -> value
+      true -> sort_keyword_value(value)
+    end
+  end
+
+  def sort_conditional_value(value), do: value
+
+  defp sort_keyword_value(value) do
     if Keyword.keyword?(value) or tuple_list?(value) do
       value
       |> Enum.sort_by(fn {k, _v} -> to_string(k) end)
@@ -145,8 +153,6 @@ defmodule LiveStyle.Utils do
       value
     end
   end
-
-  def sort_conditional_value(value), do: value
 
   defp tuple_list?([{_, _} | _]), do: true
   defp tuple_list?(_), do: false

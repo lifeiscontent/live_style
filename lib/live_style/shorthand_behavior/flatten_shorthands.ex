@@ -16,7 +16,7 @@ defmodule LiveStyle.ShorthandBehavior.FlattenShorthands do
 
   ## Example
 
-      iex> FlattenShorthands.expand_declaration("margin", "10px 20px", %{})
+      iex> FlattenShorthands.expand_declaration("margin", "10px 20px")
       [
         {"margin-top", "10px"},
         {"margin-right", "20px"},
@@ -51,7 +51,7 @@ defmodule LiveStyle.ShorthandBehavior.FlattenShorthands do
   # ==========================================================================
 
   @impl true
-  def expand_declaration(css_property, value, _opts) do
+  def expand_declaration(css_property, value) do
     case get_expansion(css_property) do
       nil ->
         # Not a shorthand, pass through
@@ -64,7 +64,7 @@ defmodule LiveStyle.ShorthandBehavior.FlattenShorthands do
   end
 
   @impl true
-  def expand_shorthand_conditions(css_property, conditions, _opts) do
+  def expand_shorthand_conditions(css_property, conditions) do
     case get_expansion(css_property) do
       nil ->
         [{css_property, conditions}]

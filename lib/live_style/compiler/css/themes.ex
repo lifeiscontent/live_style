@@ -2,8 +2,8 @@ defmodule LiveStyle.Compiler.CSS.Themes do
   @moduledoc """
   CSS theme override generation for LiveStyle.
 
-  This module handles generating theme override rules from the manifest.
-  Themes allow overriding CSS variable values when a theme class is applied.
+  This module handles generating theme class override rules from the manifest.
+  Theme classes allow overriding CSS variable values when the theme class is applied.
 
   ## Output Format
 
@@ -24,9 +24,10 @@ defmodule LiveStyle.Compiler.CSS.Themes do
   @spec generate(Manifest.t()) :: String.t()
   def generate(manifest) do
     manifest.themes
-    |> Enum.sort_by(fn {_key, entry} -> entry.ident end)
+    |> Enum.sort_by(fn {_key, entry} -> Keyword.fetch!(entry, :ident) end)
     |> Enum.flat_map(fn {_key, entry} ->
-      %{ident: ident, overrides: overrides} = entry
+      ident = Keyword.fetch!(entry, :ident)
+      overrides = Keyword.fetch!(entry, :overrides)
 
       # Collect all rules: default, single-level conditional, and nested conditional
       # Each rule is {conditions_list, name, value} where conditions_list is a list of @-rule strings

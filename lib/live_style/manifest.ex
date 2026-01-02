@@ -13,55 +13,50 @@ defmodule LiveStyle.Manifest do
 
   Each entry is keyed by a fully-qualified name like "MyAppWeb.Tokens.color.white"
   for namespaced items or "MyAppWeb.Tokens.spin" for non-namespaced items.
+
+  ## Entry Types
+
+  Each entry type has a corresponding module with constructors and accessors:
+
+  - `LiveStyle.Manifest.VarEntry` - CSS custom properties
+  - `LiveStyle.Manifest.KeyframesEntry` - @keyframes animations
+  - `LiveStyle.Manifest.ThemeEntry` - Theme variable overrides
+  - `LiveStyle.Manifest.PositionTryEntry` - @position-try rules
+  - `LiveStyle.Manifest.ViewTransitionEntry` - View transitions
+  - `LiveStyle.Manifest.ClassEntry` - Style classes (static and dynamic)
   """
+
+  alias LiveStyle.Manifest.{
+    ClassEntry,
+    KeyframesEntry,
+    PositionTryEntry,
+    ThemeEntry,
+    VarEntry,
+    ViewTransitionEntry
+  }
 
   # Increment this when the manifest format changes to trigger regeneration.
   # This ensures stale manifests from previous versions are cleared.
-  @current_version 2
+  @current_version 6
 
-  @type var_entry :: %{
-          ident: String.t(),
-          value: String.t() | map(),
-          type: nil | %{syntax: String.t(), initial: String.t()}
-        }
-
+  @type var_entry :: VarEntry.t()
   @type const_entry :: String.t()
+  @type keyframes_entry :: KeyframesEntry.t()
+  @type position_try_entry :: PositionTryEntry.t()
+  @type view_transition_entry :: ViewTransitionEntry.t()
+  @type class_entry :: ClassEntry.t()
+  @type theme_entry :: ThemeEntry.t()
 
-  @type keyframes_entry :: %{
-          ident: String.t(),
-          frames: map()
-        }
-
-  @type position_try_entry :: %{
-          ident: String.t(),
-          declarations: map()
-        }
-
-  @type view_transition_entry :: %{
-          ident: String.t(),
-          styles: map()
-        }
-
-  @type class_entry :: %{
-          class_string: String.t(),
-          atomic_classes: map(),
-          declarations: map()
-        }
-
-  @type theme_entry :: %{
-          ident: String.t(),
-          overrides: map()
-        }
-
+  # All collections use sorted lists of {key, entry} tuples for deterministic ordering
   @type t :: %{
           version: pos_integer(),
-          vars: %{String.t() => var_entry()},
-          consts: %{String.t() => const_entry()},
-          keyframes: %{String.t() => keyframes_entry()},
-          position_try: %{String.t() => position_try_entry()},
-          view_transitions: %{String.t() => view_transition_entry()},
-          classes: %{String.t() => class_entry()},
-          themes: %{String.t() => theme_entry()}
+          vars: [{String.t(), var_entry()}],
+          consts: [{String.t(), const_entry()}],
+          keyframes: [{String.t(), keyframes_entry()}],
+          position_try: [{String.t(), position_try_entry()}],
+          view_transitions: [{String.t(), view_transition_entry()}],
+          classes: [{String.t(), class_entry()}],
+          themes: [{String.t(), theme_entry()}]
         }
 
   @doc """
@@ -74,13 +69,13 @@ defmodule LiveStyle.Manifest do
   def empty do
     %{
       version: @current_version,
-      vars: %{},
-      consts: %{},
-      keyframes: %{},
-      position_try: %{},
-      view_transitions: %{},
-      classes: %{},
-      themes: %{}
+      vars: [],
+      consts: [],
+      keyframes: [],
+      position_try: [],
+      view_transitions: [],
+      classes: [],
+      themes: []
     }
   end
 
@@ -104,23 +99,8 @@ defmodule LiveStyle.Manifest do
 
   def ensure_keys(_manifest), do: empty()
 
-  @spec namespaced_key(module(), atom(), atom()) :: String.t()
-  def namespaced_key(module, namespace, name), do: "#{inspect(module)}.#{namespace}.#{name}"
-
-  @spec simple_key(module(), atom()) :: String.t()
-  def simple_key(module, name), do: "#{inspect(module)}.#{name}"
-
-  @spec has_styles?(t()) :: boolean()
-  def has_styles?(manifest) do
-    has_entries?(manifest, :vars) or
-      has_entries?(manifest, :keyframes) or
-      has_entries?(manifest, :classes) or
-      has_entries?(manifest, :position_try) or
-      has_entries?(manifest, :view_transitions) or
-      has_entries?(manifest, :themes)
-  end
-
-  defp has_entries?(manifest, key), do: map_size(manifest[key] || %{}) > 0
+  @spec key(module(), atom()) :: String.t()
+  def key(module, name), do: "#{inspect(module)}.#{name}"
 
   defp struct_merge(base, updates) when is_map(base) and is_map(updates) do
     Enum.reduce(updates, base, fn {k, v}, acc ->
@@ -128,27 +108,72 @@ defmodule LiveStyle.Manifest do
     end)
   end
 
-  # Entry helpers
-  def put_var(manifest, key, entry), do: put_in(manifest, [:vars, key], entry)
-  def get_var(manifest, key), do: get_in(manifest, [:vars, key])
+  # Entry helpers - all use sorted list operations for deterministic ordering
+  def put_var(manifest, key, entry), do: put_entry(manifest, :vars, key, entry)
+  def get_var(manifest, key), do: get_entry(manifest, :vars, key)
 
-  def put_const(manifest, key, entry), do: put_in(manifest, [:consts, key], entry)
-  def get_const(manifest, key), do: get_in(manifest, [:consts, key])
+  def put_const(manifest, key, entry), do: put_entry(manifest, :consts, key, entry)
+  def get_const(manifest, key), do: get_entry(manifest, :consts, key)
 
-  def put_keyframes(manifest, key, entry), do: put_in(manifest, [:keyframes, key], entry)
-  def get_keyframes(manifest, key), do: get_in(manifest, [:keyframes, key])
+  def put_keyframes(manifest, key, entry), do: put_entry(manifest, :keyframes, key, entry)
+  def get_keyframes(manifest, key), do: get_entry(manifest, :keyframes, key)
 
-  def put_position_try(manifest, key, entry), do: put_in(manifest, [:position_try, key], entry)
-  def get_position_try(manifest, key), do: get_in(manifest, [:position_try, key])
+  def put_position_try(manifest, key, entry), do: put_entry(manifest, :position_try, key, entry)
+  def get_position_try(manifest, key), do: get_entry(manifest, :position_try, key)
 
   def put_view_transition(manifest, key, entry),
-    do: put_in(manifest, [:view_transitions, key], entry)
+    do: put_entry(manifest, :view_transitions, key, entry)
 
-  def get_view_transition(manifest, key), do: get_in(manifest, [:view_transitions, key])
+  def get_view_transition(manifest, key), do: get_entry(manifest, :view_transitions, key)
 
-  def put_class(manifest, key, entry), do: put_in(manifest, [:classes, key], entry)
-  def get_class(manifest, key), do: get_in(manifest, [:classes, key])
+  def put_class(manifest, key, entry), do: put_entry(manifest, :classes, key, entry)
+  def get_class(manifest, key), do: get_entry(manifest, :classes, key)
 
-  def put_theme(manifest, key, entry), do: put_in(manifest, [:themes, key], entry)
-  def get_theme(manifest, key), do: get_in(manifest, [:themes, key])
+  def put_theme(manifest, key, entry), do: put_entry(manifest, :themes, key, entry)
+  def get_theme(manifest, key), do: get_entry(manifest, :themes, key)
+
+  # Private helpers for sorted list operations
+
+  # Insert or update entry in sorted list, maintaining sort order by key
+  defp put_entry(manifest, collection, key, entry) do
+    list = Map.get(manifest, collection, [])
+    updated = sorted_list_put(list, key, entry)
+    Map.put(manifest, collection, updated)
+  end
+
+  # Get entry from sorted list by key
+  defp get_entry(manifest, collection, key) do
+    list = Map.get(manifest, collection, [])
+    sorted_list_get(list, key)
+  end
+
+  # Insert or update in a sorted list, maintaining sort order
+  defp sorted_list_put(list, key, entry) do
+    case sorted_list_find_index(list, key) do
+      {:found, index} ->
+        List.replace_at(list, index, {key, entry})
+
+      {:insert_at, index} ->
+        List.insert_at(list, index, {key, entry})
+    end
+  end
+
+  # Get value from sorted list by key (linear search, but could use binary search)
+  defp sorted_list_get(list, key) do
+    case List.keyfind(list, key, 0) do
+      {^key, entry} -> entry
+      nil -> nil
+    end
+  end
+
+  # Find index where key exists or should be inserted
+  defp sorted_list_find_index(list, key) do
+    find_index(list, key, 0)
+  end
+
+  defp find_index([], _key, index), do: {:insert_at, index}
+
+  defp find_index([{k, _} | _rest], key, index) when key < k, do: {:insert_at, index}
+  defp find_index([{k, _} | _rest], key, index) when key == k, do: {:found, index}
+  defp find_index([_ | rest], key, index), do: find_index(rest, key, index + 1)
 end

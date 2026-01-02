@@ -89,24 +89,28 @@ defmodule LiveStyle.Config do
       config :live_style,
         debug_class_names: true
 
-  ## Per-Process Overrides
+  ## Compile-Time Only
 
-      LiveStyle.Config.put(:shorthand_behavior, :forbid_shorthands)
-      # ... run code with :forbid_shorthands mode ...
-      LiveStyle.Config.reset_all()
+  All style-affecting configuration is compile-time only (like StyleX's Babel plugin config).
+  Changing these settings requires recompiling your LiveStyle modules.
   """
 
   alias LiveStyle.Config.Overrides
   alias LiveStyle.Config.Shorthand
   alias LiveStyle.Config.Validation
 
-  @default_class_name_prefix "x"
-  @default_debug_class_names false
-  @default_font_size_px_to_rem false
-  @default_font_size_root_px 16
+  # ===========================================================================
+  # Compile-Time Configuration (like StyleX Babel plugin config)
+  # These are read at compile time and baked into the generated code.
+  # Changing these requires recompilation.
+  # ===========================================================================
 
-  @default_use_css_layers false
-  @default_prefix_css nil
+  @class_name_prefix Application.compile_env(:live_style, :class_name_prefix, "x")
+  @debug_class_names Application.compile_env(:live_style, :debug_class_names, false)
+  @font_size_px_to_rem Application.compile_env(:live_style, :font_size_px_to_rem, false)
+  @font_size_root_px Application.compile_env(:live_style, :font_size_root_px, 16)
+  @use_css_layers Application.compile_env(:live_style, :use_css_layers, false)
+  @prefix_css Application.compile_env(:live_style, :prefix_css, nil)
 
   # ===========================================================================
   # Profile Configuration
@@ -150,28 +154,6 @@ defmodule LiveStyle.Config do
   end
 
   # ===========================================================================
-  # Per-Process Overrides
-  # ===========================================================================
-
-  @doc """
-  Sets a per-process configuration override.
-
-  This is primarily used for test isolation, allowing each test to use
-  different configuration without affecting other tests.
-  """
-  defdelegate put(key, value), to: Overrides
-
-  @doc """
-  Resets all per-process configuration overrides.
-  """
-  defdelegate reset_all(), to: Overrides
-
-  @doc """
-  Resets a specific per-process configuration override.
-  """
-  defdelegate reset(key), to: Overrides
-
-  # ===========================================================================
   # Naming Configuration
   # ===========================================================================
 
@@ -183,19 +165,7 @@ defmodule LiveStyle.Config do
   """
   @spec class_name_prefix() :: String.t()
   def class_name_prefix do
-    value =
-      Overrides.get(:class_name_prefix) ||
-        Application.get_env(:live_style, :class_name_prefix, @default_class_name_prefix)
-
-    unless is_binary(value) and value != "" do
-      raise ArgumentError, """
-      Invalid class_name_prefix: #{inspect(value)}
-
-      class_name_prefix must be a non-empty string.
-      """
-    end
-
-    value
+    @class_name_prefix
   end
 
   @doc """
@@ -211,7 +181,7 @@ defmodule LiveStyle.Config do
   """
   @spec debug_class_names?() :: boolean()
   def debug_class_names? do
-    Overrides.get_config(:debug_class_names, @default_debug_class_names)
+    @debug_class_names
   end
 
   # ===========================================================================
@@ -254,7 +224,7 @@ defmodule LiveStyle.Config do
   """
   @spec font_size_px_to_rem?() :: boolean()
   def font_size_px_to_rem? do
-    Overrides.get_config(:font_size_px_to_rem, @default_font_size_px_to_rem)
+    @font_size_px_to_rem
   end
 
   @doc """
@@ -264,7 +234,7 @@ defmodule LiveStyle.Config do
   """
   @spec font_size_root_px() :: number()
   def font_size_root_px do
-    Overrides.get_config(:font_size_root_px, @default_font_size_root_px)
+    @font_size_root_px
   end
 
   # ===========================================================================
@@ -373,10 +343,7 @@ defmodule LiveStyle.Config do
       config :live_style, use_css_layers: true
   """
   def use_css_layers? do
-    case Overrides.get(:use_css_layers) do
-      nil -> Application.get_env(:live_style, :use_css_layers, @default_use_css_layers)
-      value -> value
-    end
+    @use_css_layers
   end
 
   @doc """
@@ -403,7 +370,7 @@ defmodule LiveStyle.Config do
       def prefix_css(property, value), do: "\#{property}:\#{value}"
   """
   def prefix_css do
-    Overrides.get_config(:prefix_css, @default_prefix_css)
+    @prefix_css
   end
 
   @doc """

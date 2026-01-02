@@ -51,7 +51,7 @@ defmodule LiveStyle do
   - `keyframes({Module, :name})` - Reference a keyframes animation
   - `theme({Module, :name})` - Reference a theme class
   - `position_try({Module, :name})` - Reference a position-try rule
-  - `view_transition_class({Module, :name})` - Reference a view transition
+  - `view_transition({Module, :name})` - Reference a view transition
 
   Local references (within the same module):
   - `var(:name)`
@@ -67,6 +67,17 @@ defmodule LiveStyle do
   """
 
   defmacro __using__(_opts \\ []) do
+    # Register attributes IMMEDIATELY during macro expansion (not in quote)
+    # This ensures accumulate: true is set before any vars/class calls
+    module = __CALLER__.module
+    Module.register_attribute(module, :__live_style_classes__, accumulate: true)
+    Module.register_attribute(module, :__live_style_vars__, accumulate: true)
+    Module.register_attribute(module, :__live_style_consts__, accumulate: true)
+    Module.register_attribute(module, :__live_style_keyframes__, accumulate: true)
+    Module.register_attribute(module, :__live_style_themes__, accumulate: true)
+    Module.register_attribute(module, :__live_style_view_transitions__, accumulate: true)
+    Module.register_attribute(module, :__live_style_position_try__, accumulate: true)
+
     quote do
       import LiveStyle,
         only: [
@@ -75,7 +86,7 @@ defmodule LiveStyle do
           consts: 1,
           keyframes: 2,
           position_try: 2,
-          view_transition_class: 2,
+          view_transition: 2,
           class: 2,
           theme: 2,
           # Reference macros
@@ -94,48 +105,169 @@ defmodule LiveStyle do
           fallback: 1
         ]
 
-      # Accumulate class definitions for @before_compile
-      Module.register_attribute(__MODULE__, :__live_style_classes__, accumulate: true)
-
       @before_compile LiveStyle
     end
   end
 
   defmacro __before_compile__(env) do
     classes = Module.get_attribute(env.module, :__live_style_classes__) |> Enum.reverse()
+    module = env.module
 
     # Separate static from dynamic classes
-    # Dynamic classes have format: {:__dynamic__, all_props, param_names, has_computed}
+    # Static classes have format: {name, declarations, opts}
+    # Dynamic classes have format: {name, {:__dynamic__, all_props, has_computed}}
     {static_classes, dynamic_classes} =
-      Enum.split_with(classes, fn {_name, decl} ->
-        not match?({:__dynamic__, _, _, _}, decl)
+      Enum.split_with(classes, fn
+        {_name, {:__dynamic__, _, _}} -> false
+        {_name, _declarations, _opts} -> true
+        # Legacy format without opts (shouldn't happen, but be safe)
+        {_name, decl} -> not match?({:__dynamic__, _, _}, decl)
       end)
 
-    # Build class string map and property_classes map for static classes
+    alias LiveStyle.Class
     alias LiveStyle.Compiler.BeforeCompile
 
+    # BATCH WRITE: Define all classes in a single manifest update
+    # This dramatically reduces lock contention during compilation
+    LiveStyle.Storage.update(fn manifest ->
+      # Define all static classes
+      manifest =
+        Enum.reduce(static_classes, manifest, fn class_entry, acc ->
+          {name, declarations, opts} = BeforeCompile.normalize_class_entry(class_entry)
+          Class.batch_define(acc, module, name, declarations, opts)
+        end)
+
+      # Define all dynamic classes
+      Enum.reduce(dynamic_classes, manifest, fn {name, {:__dynamic__, all_props, _has_computed}},
+                                                acc ->
+        Class.batch_define_dynamic(acc, module, name, all_props)
+      end)
+    end)
+
+    # Now read the updated manifest to build class maps
     manifest = LiveStyle.Storage.read()
 
-    {class_strings, property_classes} =
-      BeforeCompile.build_static_class_maps(static_classes, env.module, manifest)
+    # Build class_strings and property_classes for ALL classes (static + dynamic)
+    # This matches StyleX behavior where dynamic classes also have property-based merging
+    all_classes = static_classes ++ dynamic_classes
 
-    # Generate dynamic class functions
-    # Dynamic classes: {name, {:__dynamic__, all_props, param_names, has_computed}}
-    dynamic_fns = BeforeCompile.build_dynamic_fns(dynamic_classes, env.module)
+    {class_strings, property_classes} =
+      BeforeCompile.build_class_maps(all_classes, module, manifest)
+
+    # Generate dynamic class functions (only compute var_list at runtime)
+    dynamic_fns = BeforeCompile.build_dynamic_fns(dynamic_classes, module)
 
     dynamic_names = Enum.map(dynamic_classes, fn {name, _} -> name end)
+
+    # Get accumulated var entries
+    vars = Module.get_attribute(env.module, :__live_style_vars__) || []
+    vars_map = Map.new(vars)
+
+    # Get accumulated const entries
+    consts = Module.get_attribute(env.module, :__live_style_consts__) || []
+    consts_map = Map.new(consts)
+
+    # Get accumulated keyframes entries
+    keyframes = Module.get_attribute(env.module, :__live_style_keyframes__) || []
+    keyframes_map = Map.new(keyframes)
+
+    # Get accumulated theme entries
+    themes = Module.get_attribute(env.module, :__live_style_themes__) || []
+    themes_map = Map.new(themes)
+
+    # Get accumulated view_transition entries
+    view_transitions = Module.get_attribute(env.module, :__live_style_view_transitions__) || []
+    view_transitions_map = Map.new(view_transitions)
+
+    # Get accumulated position_try entries
+    position_try = Module.get_attribute(env.module, :__live_style_position_try__) || []
+    position_try_map = Map.new(position_try)
+
+    # Generate var lookup function clauses
+    var_clauses =
+      for {name, entry} <- vars do
+        quote do
+          def __live_style__(:var, unquote(name)), do: unquote(Macro.escape(entry))
+        end
+      end
+
+    # Generate const lookup function clauses
+    const_clauses =
+      for {name, value} <- consts do
+        quote do
+          def __live_style__(:const, unquote(name)), do: unquote(value)
+        end
+      end
+
+    # Generate keyframes lookup function clauses
+    keyframes_clauses =
+      for {name, entry} <- keyframes do
+        quote do
+          def __live_style__(:keyframes, unquote(name)), do: unquote(Macro.escape(entry))
+        end
+      end
+
+    # Generate theme lookup function clauses
+    theme_clauses =
+      for {name, entry} <- themes do
+        quote do
+          def __live_style__(:theme, unquote(name)), do: unquote(Macro.escape(entry))
+        end
+      end
+
+    # Generate view_transition lookup function clauses
+    view_transition_clauses =
+      for {name, entry} <- view_transitions do
+        quote do
+          def __live_style__(:view_transition, unquote(name)), do: unquote(Macro.escape(entry))
+        end
+      end
+
+    # Generate position_try lookup function clauses
+    position_try_clauses =
+      for {name, entry} <- position_try do
+        quote do
+          def __live_style__(:position_try, unquote(name)), do: unquote(Macro.escape(entry))
+        end
+      end
 
     quote do
       @__class_strings__ unquote(Macro.escape(class_strings))
       @__property_classes__ unquote(Macro.escape(property_classes))
       @__dynamic_names__ unquote(dynamic_names)
+      @__vars__ unquote(Macro.escape(vars_map))
+      @__consts__ unquote(Macro.escape(consts_map))
+      @__keyframes__ unquote(Macro.escape(keyframes_map))
+      @__themes__ unquote(Macro.escape(themes_map))
+      @__view_transitions__ unquote(Macro.escape(view_transitions_map))
+      @__position_try__ unquote(Macro.escape(position_try_map))
 
       unquote_splicing(dynamic_fns)
+      unquote_splicing(var_clauses)
+      unquote_splicing(const_clauses)
+      unquote_splicing(keyframes_clauses)
+      unquote_splicing(theme_clauses)
+      unquote_splicing(view_transition_clauses)
+      unquote_splicing(position_try_clauses)
 
       @doc false
       def __live_style__(:class_strings), do: @__class_strings__
       def __live_style__(:property_classes), do: @__property_classes__
       def __live_style__(:dynamic_names), do: @__dynamic_names__
+      def __live_style__(:vars), do: @__vars__
+      def __live_style__(:consts), do: @__consts__
+      def __live_style__(:keyframes), do: @__keyframes__
+      def __live_style__(:themes), do: @__themes__
+      def __live_style__(:view_transitions), do: @__view_transitions__
+      def __live_style__(:position_try), do: @__position_try__
+
+      # Fallback for lookups - returns nil if not found
+      def __live_style__(:var, _name), do: nil
+      def __live_style__(:const, _name), do: nil
+      def __live_style__(:keyframes, _name), do: nil
+      def __live_style__(:theme, _name), do: nil
+      def __live_style__(:view_transition, _name), do: nil
+      def __live_style__(:position_try, _name), do: nil
     end
   end
 
@@ -149,9 +281,9 @@ defmodule LiveStyle do
            spacing_sm: "0.5rem",
            spacing_lg: "2rem"
 
-  For typed variables that can be animated, use `LiveStyle.PropertyType`:
+  For typed variables that can be animated, use `LiveStyle.Types`:
 
-      import LiveStyle.PropertyType
+      import LiveStyle.Types
 
       vars angle: angle("0deg"),
            hue: percentage("0%")
@@ -161,9 +293,15 @@ defmodule LiveStyle do
     {evaluated_vars, _} = Code.eval_quoted(vars_list, [], __CALLER__)
     module = __CALLER__.module
 
-    # Store immediately during macro expansion
-    # so that var/1 references in the same module can find them
-    LiveStyle.Vars.define(module, evaluated_vars)
+    # Store immediately during macro expansion and get entries back
+    # This stores in manifest (for CSS generation) and returns entries
+    entries = LiveStyle.Vars.define(module, evaluated_vars)
+
+    # Store entries in module attribute IMMEDIATELY during macro expansion
+    # so that subsequent var/1 calls in the same module can find them
+    for {name, entry} <- entries do
+      Module.put_attribute(module, :__live_style_vars__, {name, entry})
+    end
 
     quote do
       :ok
@@ -192,15 +330,44 @@ defmodule LiveStyle do
         to: [{var({Tokens, :angle}), "360deg"}]
   """
   defmacro var(ref) when is_atom(ref) do
-    # Local reference: :name
-    module = __CALLER__.module
-    LiveStyle.Vars.var({module, ref})
+    # Local reference: look up from module attributes (still compiling)
+    caller_module = __CALLER__.module
+
+    # Get accumulated vars (already a list due to accumulate: true)
+    vars = Module.get_attribute(caller_module, :__live_style_vars__) || []
+
+    case List.keyfind(vars, ref, 0) do
+      {^ref, entry} ->
+        ident = Keyword.fetch!(entry, :ident)
+        "var(#{ident})"
+
+      nil ->
+        raise CompileError,
+          description: "CSS variable :#{ref} not found in #{inspect(caller_module)}. " <>
+                       "Make sure `vars #{ref}: ...` is defined before this reference.",
+          file: __CALLER__.file,
+          line: __CALLER__.line
+    end
   end
 
   defmacro var({module_ast, name}) when is_atom(name) do
-    # Cross-module: {Module, :name}
+    # Cross-module: call module.__live_style__(:var, name) directly
+    # This creates an automatic compile-time dependency - no require needed!
     {module, _} = Code.eval_quoted(module_ast, [], __CALLER__)
-    LiveStyle.Vars.var({module, name})
+
+    # This call ensures `module` is compiled before the current module
+    case module.__live_style__(:var, name) do
+      nil ->
+        raise CompileError,
+          description: "CSS variable :#{name} not found in #{inspect(module)}. " <>
+                       "Make sure `vars #{name}: ...` is defined in that module.",
+          file: __CALLER__.file,
+          line: __CALLER__.line
+
+      entry ->
+        ident = Keyword.fetch!(entry, :ident)
+        "var(#{ident})"
+    end
   end
 
   @doc """
@@ -218,9 +385,14 @@ defmodule LiveStyle do
     {evaluated_consts, _} = Code.eval_quoted(consts_list, [], __CALLER__)
     module = __CALLER__.module
 
-    # Store immediately during macro expansion
-    # so that const/1 references in the same module can find them
-    LiveStyle.Consts.define(module, evaluated_consts)
+    # Store in manifest (for CSS generation) and get entries back
+    entries = LiveStyle.Consts.define(module, evaluated_consts)
+
+    # Store entries in module attribute IMMEDIATELY during macro expansion
+    # so that subsequent const/1 calls in the same module can find them
+    for {name, value} <- entries do
+      Module.put_attribute(module, :__live_style_consts__, {name, value})
+    end
 
     quote do
       :ok
@@ -237,19 +409,46 @@ defmodule LiveStyle do
   ## Cross-module reference
 
       const({MyAppWeb.Tokens, :breakpoint_lg})
-
-  Note: Requires the defining module to be compiled first.
   """
   defmacro const(ref) when is_atom(ref) do
-    # Local reference: :name
-    module = __CALLER__.module
-    LiveStyle.Consts.ref({module, ref})
+    # Local reference: look up from module attributes (still compiling)
+    caller_module = __CALLER__.module
+
+    # Get accumulated consts (already a list due to accumulate: true)
+    consts = Module.get_attribute(caller_module, :__live_style_consts__) || []
+
+    case List.keyfind(consts, ref, 0) do
+      {^ref, value} ->
+        value
+
+      nil ->
+        raise CompileError,
+          description:
+            "Constant :#{ref} not found in #{inspect(caller_module)}. " <>
+              "Make sure `consts #{ref}: ...` is defined before this reference.",
+          file: __CALLER__.file,
+          line: __CALLER__.line
+    end
   end
 
   defmacro const({module_ast, name}) when is_atom(name) do
-    # Cross-module: {Module, :name}
+    # Cross-module: call module.__live_style__(:const, name) directly
+    # This creates an automatic compile-time dependency - no require needed!
     {module, _} = Code.eval_quoted(module_ast, [], __CALLER__)
-    LiveStyle.Consts.ref({module, name})
+
+    # This call ensures `module` is compiled before the current module
+    case module.__live_style__(:const, name) do
+      nil ->
+        raise CompileError,
+          description:
+            "Constant :#{name} not found in #{inspect(module)}. " <>
+              "Make sure `consts #{name}: ...` is defined in that module.",
+          file: __CALLER__.file,
+          line: __CALLER__.line
+
+      value ->
+        value
+    end
   end
 
   @doc """
@@ -277,8 +476,11 @@ defmodule LiveStyle do
     {evaluated_frames, _} = Code.eval_quoted(frames, [], __CALLER__)
     module = __CALLER__.module
 
-    # Define keyframes and store in manifest
-    LiveStyle.Keyframes.define(module, name, evaluated_frames)
+    # Define keyframes and store in manifest, get entry back
+    {^name, entry} = LiveStyle.Keyframes.define(module, name, evaluated_frames)
+
+    # Store in module attribute IMMEDIATELY during macro expansion
+    Module.put_attribute(module, :__live_style_keyframes__, {name, entry})
 
     quote do
       :ok
@@ -286,13 +488,43 @@ defmodule LiveStyle do
   end
 
   defmacro keyframes(ref) when is_atom(ref) do
-    module = __CALLER__.module
-    LiveStyle.Keyframes.ref({module, ref})
+    # Local reference: look up from module attributes (still compiling)
+    caller_module = __CALLER__.module
+
+    # Get accumulated keyframes (already a list due to accumulate: true)
+    keyframes_list = Module.get_attribute(caller_module, :__live_style_keyframes__) || []
+
+    case List.keyfind(keyframes_list, ref, 0) do
+      {^ref, entry} ->
+        Keyword.fetch!(entry, :ident)
+
+      nil ->
+        raise CompileError,
+          description:
+            "Keyframes :#{ref} not found in #{inspect(caller_module)}. " <>
+              "Make sure `keyframes :#{ref}, ...` is defined before this reference.",
+          file: __CALLER__.file,
+          line: __CALLER__.line
+    end
   end
 
   defmacro keyframes({module_ast, name}) do
+    # Cross-module: call module.__live_style__(:keyframes, name) directly
+    # This creates an automatic compile-time dependency - no require needed!
     {module, _} = Code.eval_quoted(module_ast, [], __CALLER__)
-    LiveStyle.Keyframes.ref({module, name})
+
+    case module.__live_style__(:keyframes, name) do
+      nil ->
+        raise CompileError,
+          description:
+            "Keyframes :#{name} not found in #{inspect(module)}. " <>
+              "Make sure `keyframes :#{name}, ...` is defined in that module.",
+          file: __CALLER__.file,
+          line: __CALLER__.line
+
+      entry ->
+        Keyword.fetch!(entry, :ident)
+    end
   end
 
   @doc """
@@ -316,32 +548,61 @@ defmodule LiveStyle do
     # Evaluate declarations at compile time for content-based hashing (StyleX behavior)
     {evaluated, _} = Code.eval_quoted(declarations, [], __CALLER__)
     normalized = LiveStyle.Utils.validate_keyword_list!(evaluated)
+    module = __CALLER__.module
 
     # Normalize values (add px to numbers, etc.)
     normalized_values =
       Enum.map(normalized, fn {k, v} -> {k, LiveStyle.PositionTry.normalize_value(v)} end)
 
-    # Generate CSS string for hashing (StyleX format: sorted keys, "key:value;" no spaces)
-    ident = LiveStyle.PositionTry.generate_ident(normalized_values)
+    # Define position_try and store in manifest, get entry back
+    {^name, entry} = LiveStyle.PositionTry.define(module, name, normalized_values)
+
+    # Store in module attribute IMMEDIATELY during macro expansion
+    Module.put_attribute(module, :__live_style_position_try__, {name, entry})
 
     quote do
-      LiveStyle.PositionTry.define(
-        __MODULE__,
-        unquote(name),
-        unquote(Macro.escape(normalized_values)),
-        unquote(ident)
-      )
+      :ok
     end
   end
 
   defmacro position_try(ref) when is_atom(ref) do
-    module = __CALLER__.module
-    LiveStyle.PositionTry.ref({module, ref})
+    # Local reference: look up from module attributes (still compiling)
+    caller_module = __CALLER__.module
+
+    # Get accumulated position_try (already a list due to accumulate: true)
+    pt_list = Module.get_attribute(caller_module, :__live_style_position_try__) || []
+
+    case List.keyfind(pt_list, ref, 0) do
+      {^ref, entry} ->
+        Keyword.fetch!(entry, :ident)
+
+      nil ->
+        raise CompileError,
+          description:
+            "Position-try :#{ref} not found in #{inspect(caller_module)}. " <>
+              "Make sure `position_try :#{ref}, ...` is defined before this reference.",
+          file: __CALLER__.file,
+          line: __CALLER__.line
+    end
   end
 
   defmacro position_try({module_ast, name}) when is_atom(name) do
+    # Cross-module: call module.__live_style__(:position_try, name) directly
+    # This creates an automatic compile-time dependency - no require needed!
     {module, _} = Code.eval_quoted(module_ast, [], __CALLER__)
-    LiveStyle.PositionTry.ref({module, name})
+
+    case module.__live_style__(:position_try, name) do
+      nil ->
+        raise CompileError,
+          description:
+            "Position-try :#{name} not found in #{inspect(module)}. " <>
+              "Make sure `position_try :#{name}, ...` is defined in that module.",
+          file: __CALLER__.file,
+          line: __CALLER__.line
+
+      entry ->
+        Keyword.fetch!(entry, :ident)
+    end
   end
 
   # Inline anonymous position-try: position_try(top: "0", left: "0")
@@ -354,9 +615,7 @@ defmodule LiveStyle do
     # Validate and normalize declarations
     case LiveStyle.PositionTry.validate_declarations(normalized) do
       {:ok, normalized_values} ->
-        ident = LiveStyle.PositionTry.generate_ident(normalized_values)
-        LiveStyle.PositionTry.define_anonymous(module, normalized_values, ident)
-        ident
+        LiveStyle.PositionTry.define_anonymous(module, normalized_values)
 
       {:error, invalid_props} ->
         allowed = LiveStyle.PositionTry.allowed_properties()
@@ -371,17 +630,18 @@ defmodule LiveStyle do
   end
 
   @doc """
-  Defines a view transition class.
+  Defines a view transition.
 
   ## Examples
 
-      view_transition_class :card_transition,
+      view_transition :card_transition,
         old: [animation_name: keyframes(:fade_out), animation_duration: "250ms"],
         new: [animation_name: keyframes(:fade_in), animation_duration: "250ms"]
   """
-  defmacro view_transition_class(name, styles) when is_atom(name) do
+  defmacro view_transition(name, styles) when is_atom(name) do
     # Evaluate styles at compile time to resolve keyframes references
     {evaluated_styles, _} = Code.eval_quoted(styles, [], __CALLER__)
+    module = __CALLER__.module
 
     # Validate keys at compile time
     style_map = LiveStyle.Utils.validate_keyword_list!(evaluated_styles)
@@ -397,16 +657,14 @@ defmodule LiveStyle do
                 "or #{inspect(LiveStyle.ViewTransition.valid_string_keys())} (strings)"
     end
 
-    # Generate CSS content string for content-based hashing (StyleX-compatible)
-    ident = LiveStyle.ViewTransition.generate_ident(evaluated_styles)
+    # Define view transition and store in manifest, get entry back
+    {^name, entry} = LiveStyle.ViewTransition.define(module, name, evaluated_styles)
+
+    # Store in module attribute IMMEDIATELY during macro expansion
+    Module.put_attribute(module, :__live_style_view_transitions__, {name, entry})
 
     quote do
-      LiveStyle.ViewTransition.define(
-        __MODULE__,
-        unquote(name),
-        unquote(Macro.escape(evaluated_styles)),
-        unquote(ident)
-      )
+      :ok
     end
   end
 
@@ -438,14 +696,44 @@ defmodule LiveStyle do
   """
   # Local reference: view_transition_class(:name)
   defmacro view_transition_class(ref) when is_atom(ref) do
-    module = __CALLER__.module
-    LiveStyle.ViewTransition.ref({module, ref})
+    # Local reference: look up from module attributes (still compiling)
+    caller_module = __CALLER__.module
+
+    # Get accumulated view_transitions (already a list due to accumulate: true)
+    vt_list = Module.get_attribute(caller_module, :__live_style_view_transitions__) || []
+
+    case List.keyfind(vt_list, ref, 0) do
+      {^ref, entry} ->
+        Keyword.fetch!(entry, :ident)
+
+      nil ->
+        raise CompileError,
+          description:
+            "View transition :#{ref} not found in #{inspect(caller_module)}. " <>
+              "Make sure `view_transition :#{ref}, ...` is defined before this reference.",
+          file: __CALLER__.file,
+          line: __CALLER__.line
+    end
   end
 
   # Cross-module reference: view_transition_class({Module, :name})
   defmacro view_transition_class({module_ast, name}) when is_atom(name) do
+    # Cross-module: call module.__live_style__(:view_transition, name) directly
+    # This creates an automatic compile-time dependency - no require needed!
     {module, _} = Code.eval_quoted(module_ast, [], __CALLER__)
-    LiveStyle.ViewTransition.ref({module, name})
+
+    case module.__live_style__(:view_transition, name) do
+      nil ->
+        raise CompileError,
+          description:
+            "View transition :#{name} not found in #{inspect(module)}. " <>
+              "Make sure `view_transition :#{name}, ...` is defined in that module.",
+          file: __CALLER__.file,
+          line: __CALLER__.line
+
+      entry ->
+        Keyword.fetch!(entry, :ident)
+    end
   end
 
   @doc """
@@ -501,58 +789,40 @@ defmodule LiveStyle do
   """
   defmacro class(name, declarations) when is_atom(name) and is_list(declarations) do
     # Static class - keyword list of declarations
-    # Defer evaluation to runtime within the module to access module attributes
-    module = __CALLER__.module
+    # Store in module attribute for processing in @before_compile
+    # This defers manifest writes to reduce lock contention
     file = __CALLER__.file
     line = __CALLER__.line
-    class_module = LiveStyle.Compiler.Class
 
     quote do
       declarations_evaluated = unquote(declarations)
       normalized = LiveStyle.Utils.validate_keyword_list!(declarations_evaluated)
 
-      unquote(class_module).define(
-        unquote(module),
-        unquote(name),
-        normalized,
-        file: unquote(file),
-        line: unquote(line)
-      )
-
-      @__live_style_classes__ {unquote(name), normalized}
+      # Store for batch processing in @before_compile
+      @__live_style_classes__ {unquote(name), normalized,
+                               [file: unquote(file), line: unquote(line)]}
     end
   end
 
   # Static class with map syntax - class(:name, %{...})
   # This will fail with validate_keyword_list! - maps are not supported
   defmacro class(name, {:%{}, _, _} = declarations) when is_atom(name) do
-    module = __CALLER__.module
     file = __CALLER__.file
     line = __CALLER__.line
-    class_module = LiveStyle.Compiler.Class
 
     quote do
       declarations_evaluated = unquote(declarations)
       normalized = LiveStyle.Utils.validate_keyword_list!(declarations_evaluated)
 
-      unquote(class_module).define(
-        unquote(module),
-        unquote(name),
-        normalized,
-        file: unquote(file),
-        line: unquote(line)
-      )
-
-      @__live_style_classes__ {unquote(name), normalized}
+      # Store for batch processing in @before_compile
+      @__live_style_classes__ {unquote(name), normalized,
+                               [file: unquote(file), line: unquote(line)]}
     end
   end
 
   # Dynamic class - function that returns declarations
   # class :dynamic_opacity, fn opacity -> [opacity: opacity] end
   defmacro class(name, {:fn, _, [{:->, _, [params, body]}]} = func) when is_atom(name) do
-    module = __CALLER__.module
-    class_module = LiveStyle.Compiler.Class
-
     # Extract parameter names from the function
     param_names = extract_param_names(params)
 
@@ -575,13 +845,6 @@ defmodule LiveStyle do
     compute_fn_name = :"__compute_#{name}__"
 
     quote do
-      unquote(class_module).define_dynamic(
-        unquote(module),
-        unquote(name),
-        unquote(Macro.escape(all_props)),
-        unquote(param_names)
-      )
-
       # Generate a function that computes the declarations at runtime
       # This function calls the original lambda with the provided values
       @doc false
@@ -590,9 +853,11 @@ defmodule LiveStyle do
         apply(func, values)
       end
 
+      # Store for batch processing in @before_compile
+      # Dynamic classes are marked with {:__dynamic__, ...}
       @__live_style_classes__ {unquote(name),
                                {:__dynamic__, unquote(Macro.escape(all_props)),
-                                unquote(param_names), unquote(has_computed)}}
+                                unquote(has_computed)}}
     end
   end
 
@@ -727,16 +992,18 @@ defmodule LiveStyle do
         primary: "#8ab4f8"
   """
   defmacro theme(name, overrides) when is_atom(name) do
+    # Evaluate overrides at compile time
+    {evaluated_overrides, _} = Code.eval_quoted(overrides, [], __CALLER__)
     module = __CALLER__.module
-    ident = LiveStyle.Theme.generate_ident(module, name)
+
+    # Define theme and store in manifest, get entry back
+    {^name, entry} = LiveStyle.Theme.define(module, name, evaluated_overrides)
+
+    # Store in module attribute IMMEDIATELY during macro expansion
+    Module.put_attribute(module, :__live_style_themes__, {name, entry})
 
     quote do
-      LiveStyle.Theme.define(
-        unquote(module),
-        unquote(name),
-        unquote(overrides),
-        unquote(ident)
-      )
+      :ok
     end
   end
 
@@ -752,15 +1019,43 @@ defmodule LiveStyle do
       theme({MyAppWeb.Tokens, :dark})
   """
   defmacro theme(ref) when is_atom(ref) do
-    # Local reference: :name
-    module = __CALLER__.module
-    LiveStyle.Theme.ref({module, ref})
+    # Local reference: look up from module attributes (still compiling)
+    caller_module = __CALLER__.module
+
+    # Get accumulated themes (already a list due to accumulate: true)
+    themes_list = Module.get_attribute(caller_module, :__live_style_themes__) || []
+
+    case List.keyfind(themes_list, ref, 0) do
+      {^ref, entry} ->
+        Keyword.fetch!(entry, :ident)
+
+      nil ->
+        raise CompileError,
+          description:
+            "Theme :#{ref} not found in #{inspect(caller_module)}. " <>
+              "Make sure `theme :#{ref}, ...` is defined before this reference.",
+          file: __CALLER__.file,
+          line: __CALLER__.line
+    end
   end
 
   defmacro theme({module_ast, name}) when is_atom(name) do
-    # Cross-module: {Module, :name}
+    # Cross-module: call module.__live_style__(:theme, name) directly
+    # This creates an automatic compile-time dependency - no require needed!
     {module, _} = Code.eval_quoted(module_ast, [], __CALLER__)
-    LiveStyle.Theme.ref({module, name})
+
+    case module.__live_style__(:theme, name) do
+      nil ->
+        raise CompileError,
+          description:
+            "Theme :#{name} not found in #{inspect(module)}. " <>
+              "Make sure `theme :#{name}, ...` is defined in that module.",
+          file: __CALLER__.file,
+          line: __CALLER__.line
+
+      entry ->
+        Keyword.fetch!(entry, :ident)
+    end
   end
 
   @doc """
@@ -850,10 +1145,6 @@ defmodule LiveStyle do
   defdelegate resolve_attrs(module, refs, opts),
     to: LiveStyle.Runtime
 
-  @doc false
-  defdelegate process_dynamic_rule(all_props, param_names, values, module, name, has_computed),
-    to: LiveStyle.Runtime
-
   @doc """
   Returns the default marker class name for use with `LiveStyle.When` selectors.
 
@@ -873,7 +1164,7 @@ defmodule LiveStyle do
 
   ## Examples
 
-      # Local marker
+      # Local marker (same module)
       marker(:row)
 
       # Cross-module marker
@@ -885,13 +1176,19 @@ defmodule LiveStyle do
         <td {css(:cell)}>...</td>
       </tr>
   """
-  @spec marker(atom() | {module(), atom()}) :: LiveStyle.Marker.t()
-  def marker(name) when is_atom(name) do
-    LiveStyle.Marker.ref(name)
+  defmacro marker(name) when is_atom(name) do
+    module = __CALLER__.module
+
+    quote do
+      LiveStyle.Marker.ref({unquote(module), unquote(name)})
+    end
   end
 
-  def marker({_module, name}) when is_atom(name) do
-    # Module is ignored since markers are content-hashed by name only
-    LiveStyle.Marker.ref(name)
+  defmacro marker({module_ast, name}) when is_atom(name) do
+    {module, _} = Code.eval_quoted(module_ast, [], __CALLER__)
+
+    quote do
+      LiveStyle.Marker.ref({unquote(module), unquote(name)})
+    end
   end
 end

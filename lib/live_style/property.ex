@@ -27,11 +27,6 @@ defmodule LiveStyle.Property do
       iex> LiveStyle.Property.category("color")
       :longhand_logical
 
-      iex> LiveStyle.Property.unitless?("opacity")
-      true
-
-      iex> LiveStyle.Property.time?("animation-duration")
-      true
   """
 
   alias LiveStyle.PropertyMetadata
@@ -82,56 +77,22 @@ defmodule LiveStyle.Property do
   # Default to longhand_logical for unlisted properties
   def category(_), do: :longhand_logical
 
-  @doc """
-  Returns true if the property should not have a unit appended to numeric values.
-
-  Properties like `opacity`, `z-index`, `flex-grow` etc. are unitless.
-
-  ## Examples
-
-      iex> LiveStyle.Property.unitless?("opacity")
-      true
-
-      iex> LiveStyle.Property.unitless?("z-index")
-      true
-
-      iex> LiveStyle.Property.unitless?("width")
-      false
-  """
-  @spec unitless?(String.t()) :: boolean()
-
   # Custom properties are unitless
-  def unitless?(<<"--", _rest::binary>>), do: true
+  defp unitless?(<<"--", _rest::binary>>), do: true
 
   # Generate function clauses for each unitless property
   for property <- @unitless_properties do
-    def unitless?(unquote(property)), do: true
+    defp unitless?(unquote(property)), do: true
   end
 
-  def unitless?(_), do: false
-
-  @doc """
-  Returns true if the property uses time units (ms/s) for numeric values.
-
-  ## Examples
-
-      iex> LiveStyle.Property.time?("animation-duration")
-      true
-
-      iex> LiveStyle.Property.time?("transition-delay")
-      true
-
-      iex> LiveStyle.Property.time?("width")
-      false
-  """
-  @spec time?(String.t()) :: boolean()
+  defp unitless?(_), do: false
 
   # Generate function clauses for each time property
   for property <- @time_properties do
-    def time?(unquote(property)), do: true
+    defp time?(unquote(property)), do: true
   end
 
-  def time?(_), do: false
+  defp time?(_), do: false
 
   @doc """
   Returns true if the property is allowed in @position-try rules.
@@ -159,15 +120,16 @@ defmodule LiveStyle.Property do
   @doc """
   Returns true if the property needs value flipping in RTL mode.
 
-  Properties like `text-align`, `float`, etc. have values that need
-  to be flipped (e.g., `left` -> `right`) in RTL layouts.
+  Properties like `float`, `clear` have values that need to be flipped
+  (e.g., `start` -> `right` in RTL). Note that `text-align` is NOT included
+  because browsers handle `start`/`end` natively.
 
   ## Examples
 
-      iex> LiveStyle.Property.rtl_value?("text-align")
+      iex> LiveStyle.Property.rtl_value?("float")
       true
 
-      iex> LiveStyle.Property.rtl_value?("float")
+      iex> LiveStyle.Property.rtl_value?("clear")
       true
 
       iex> LiveStyle.Property.rtl_value?("color")
