@@ -33,7 +33,26 @@ def project do
 end
 ```
 
-### 3. Configure LiveStyle
+### 3. Configure Esbuild for CSS
+
+Phoenix uses esbuild for JavaScript. Add a separate profile for CSS bundling in `config/config.exs`:
+
+```elixir
+config :esbuild,
+  version: "0.25.4",
+  my_app: [
+    args:
+      ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/*),
+    cd: Path.expand("../assets", __DIR__),
+    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+  ],
+  css: [
+    args: ~w(css/app.css --bundle --outdir=../priv/static/assets/css),
+    cd: Path.expand("../assets", __DIR__)
+  ]
+```
+
+### 4. Configure LiveStyle
 
 Add to `config/config.exs`:
 
@@ -45,7 +64,7 @@ config :live_style,
   # Optional: deprecation warnings
   deprecated?: &CSSCompatDataEx.deprecated?/1,
   default: [
-    output: "priv/static/assets/live.css",
+    output: "priv/static/assets/css/live.css",
     cd: Path.expand("..", __DIR__)
   ]
 
@@ -54,19 +73,20 @@ config :autoprefixer_ex,
   browserslist: ["defaults"]
 ```
 
-### 4. Add Development Watcher
+### 5. Add Development Watchers
 
 Add to `config/dev.exs`:
 
 ```elixir
 config :my_app, MyAppWeb.Endpoint,
   watchers: [
-    # ... other watchers
-    live_style: {LiveStyle.Compiler, :run, [:default, ~w(--watch)]}
+    esbuild: {Esbuild, :install_and_run, [:my_app, ~w(--sourcemap=inline --watch)]},
+    esbuild_css: {Esbuild, :install_and_run, [:css, ~w(--watch)]},
+    live_style: {LiveStyle.Compiler.Runner, :run, [:default, ~w(--watch)]}
   ]
 ```
 
-### 5. Update Build Aliases
+### 6. Update Build Aliases
 
 In `mix.exs`, update your aliases:
 
@@ -75,26 +95,28 @@ defp aliases do
   [
     setup: ["deps.get", "assets.setup", "assets.build"],
     "assets.setup": ["esbuild.install --if-missing"],
-    "assets.build": ["compile", "esbuild my_app", "live_style default"],
+    "assets.build": ["compile", "esbuild my_app", "esbuild css", "live_style default"],
     "assets.deploy": [
       "live_style default",
       "esbuild my_app --minify",
+      "esbuild css --minify",
       "phx.digest"
     ]
   ]
 end
 ```
 
-### 6. Include CSS in Layout
+### 7. Include CSS in Layout
 
-Add the LiveStyle CSS to your root layout (`lib/my_app_web/components/layouts/root.html.heex`):
+Add the stylesheets to your root layout (`lib/my_app_web/components/layouts/root.html.heex`):
 
 ```heex
-<link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
-<link phx-track-static rel="stylesheet" href={~p"/assets/live.css"} />
+<link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
+<link phx-track-static rel="stylesheet" href={~p"/assets/css/live.css"} />
+<script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}></script>
 ```
 
-### 7. Add CSS Reset (Optional but Recommended)
+### 8. Add CSS Reset (Optional but Recommended)
 
 Create a base CSS reset in `assets/css/app.css`:
 
@@ -139,7 +161,7 @@ Create a base CSS reset in `assets/css/app.css`:
 }
 ```
 
-### 8. Test Setup (If Needed)
+### 9. Test Setup (If Needed)
 
 If your tests define LiveStyle modules (e.g., test fixtures with `use LiveStyle`),
 add the test setup task to your aliases:
@@ -162,7 +184,6 @@ defmodule MyAppWeb.Components.Button do
   use Phoenix.Component
   use LiveStyle
 
-  # Define styles using keyword list syntax
   class :base,
     display: "flex",
     align_items: "center",
@@ -207,7 +228,7 @@ LiveStyle uses a module-as-namespace pattern. Each module defines its own tokens
 For centralized design tokens, create separate modules for each token type. Use `vars` for values that might be themed (colors) and `consts` for static values:
 
 ```elixir
-defmodule MyApp.Colors do
+defmodule MyAppWeb.Colors do
   use LiveStyle
 
   vars [
@@ -218,7 +239,7 @@ defmodule MyApp.Colors do
   ]
 end
 
-defmodule MyApp.Spacing do
+defmodule MyAppWeb.Spacing do
   use LiveStyle
 
   consts [
@@ -228,7 +249,7 @@ defmodule MyApp.Spacing do
   ]
 end
 
-defmodule MyApp.Radius do
+defmodule MyAppWeb.Radius do
   use LiveStyle
 
   consts [
@@ -238,7 +259,7 @@ defmodule MyApp.Radius do
   ]
 end
 
-defmodule MyApp.Animations do
+defmodule MyAppWeb.Animations do
   use LiveStyle
 
   keyframes :spin,
@@ -252,18 +273,18 @@ end
 For component-specific styles, use `var` for colors/themed values and `const` for static values:
 
 ```elixir
-defmodule MyApp.Button do
+defmodule MyAppWeb.Button do
   use Phoenix.Component
   use LiveStyle
 
   class :base,
     display: "inline-flex",
-    padding: const({MyApp.Spacing, :md}),
-    border_radius: const({MyApp.Radius, :md})
+    padding: const({MyAppWeb.Spacing, :md}),
+    border_radius: const({MyAppWeb.Radius, :md})
 
   class :primary,
-    background_color: var({MyApp.Colors, :indigo_600}),
-    color: var({MyApp.Colors, :white})
+    background_color: var({MyAppWeb.Colors, :indigo_600}),
+    color: var({MyAppWeb.Colors, :white})
 
   def button(assigns) do
     ~H"""

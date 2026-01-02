@@ -8,7 +8,7 @@ defmodule LiveStyle.Consts do
 
   ## Examples
 
-      defmodule MyApp.Tokens do
+      defmodule MyAppWeb.Tokens do
         use LiveStyle
 
         consts breakpoint_sm: "@media (max-width: 640px)",
@@ -18,11 +18,11 @@ defmodule LiveStyle.Consts do
       end
 
       # Reference in classes
-      defmodule MyApp.Components do
+      defmodule MyAppWeb.Components do
         use LiveStyle
 
         class :responsive,
-          const({MyApp.Tokens, :breakpoint_sm}) => [display: "none"]
+          const({MyAppWeb.Tokens, :breakpoint_sm}) => [display: "none"]
       end
   """
 

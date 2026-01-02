@@ -7,7 +7,7 @@ defmodule LiveStyle do
 
   ## Basic Usage
 
-      defmodule MyApp.Button do
+      defmodule MyAppWeb.Button do
         use Phoenix.Component
         use LiveStyle
 
@@ -62,11 +62,6 @@ defmodule LiveStyle do
 
   - `LiveStyle.default_marker/0` - Get the default marker class for contextual selectors
   - `LiveStyle.marker/1` - Get a custom marker class
-
-  For testing (see `LiveStyle.Compiler`):
-  - `LiveStyle.Compiler.get_css/2` - Get `%LiveStyle.Attrs{}` from a module's classes
-  - `LiveStyle.Compiler.get_css_class/2` - Get class string from a module's classes
-  - `LiveStyle.Compiler.generate_css/0` - Generate all CSS output
 
   See the README for comprehensive documentation and examples.
   """
@@ -188,7 +183,7 @@ defmodule LiveStyle do
 
   ## Cross-module reference
 
-      var({MyApp.Tokens, :white})
+      var({MyAppWeb.Tokens, :white})
 
   ## Using in keyframes (animating typed variables)
 
@@ -241,7 +236,7 @@ defmodule LiveStyle do
 
   ## Cross-module reference
 
-      const({MyApp.Tokens, :breakpoint_lg})
+      const({MyAppWeb.Tokens, :breakpoint_lg})
 
   Note: Requires the defining module to be compiled first.
   """
@@ -276,7 +271,7 @@ defmodule LiveStyle do
 
   ## Cross-module reference
 
-      keyframes({MyApp.Tokens, :spin})
+      keyframes({MyAppWeb.Tokens, :spin})
   """
   defmacro keyframes(name, frames) when is_atom(name) do
     {evaluated_frames, _} = Code.eval_quoted(frames, [], __CALLER__)
@@ -315,7 +310,7 @@ defmodule LiveStyle do
 
   ## Cross-module reference (1 arg tuple)
 
-      position_try({MyApp.Tokens, :bottom_fallback})
+      position_try({MyAppWeb.Tokens, :bottom_fallback})
   """
   defmacro position_try(name, declarations) when is_atom(name) do
     # Evaluate declarations at compile time for content-based hashing (StyleX behavior)
@@ -465,7 +460,7 @@ defmodule LiveStyle do
   ## With variable references
 
       class :themed,
-        color: var({MyApp.Tokens, :white})
+        color: var({MyAppWeb.Tokens, :white})
 
   ## Conditional styles (pseudo-classes, media queries)
 
@@ -754,7 +749,7 @@ defmodule LiveStyle do
 
   ## Cross-module reference
 
-      theme({MyApp.Tokens, :dark})
+      theme({MyAppWeb.Tokens, :dark})
   """
   defmacro theme(ref) when is_atom(ref) do
     # Local reference: :name

@@ -70,21 +70,21 @@ end
 Use `vars` for values that change (colors, themed tokens) and `consts` for static values:
 
 ```elixir
-defmodule MyApp.Colors do
+defmodule MyAppWeb.Colors do
   use LiveStyle
 
   vars primary: "#4f46e5",
        gray_900: "#111827"
 end
 
-defmodule MyApp.Spacing do
+defmodule MyAppWeb.Spacing do
   use LiveStyle
 
   consts sm: "8px",
          md: "16px"
 end
 
-defmodule MyApp.Animations do
+defmodule MyAppWeb.Animations do
   use LiveStyle
 
   keyframes :fade_in,
@@ -98,13 +98,13 @@ end
 Reference tokens with `var` for colors and `const` for static values:
 
 ```elixir
-defmodule MyApp.Card do
+defmodule MyAppWeb.Card do
   use LiveStyle
 
   class :card,
-    padding: const({MyApp.Spacing, :md}),
+    padding: const({MyAppWeb.Spacing, :md}),
     border_radius: "12px",
-    color: var({MyApp.Colors, :gray_900})
+    color: var({MyAppWeb.Colors, :gray_900})
 end
 ```
 
@@ -113,35 +113,35 @@ end
 Create theme variations (only works with `vars`):
 
 ```elixir
-defmodule MyApp.Semantic do
+defmodule MyAppWeb.Semantic do
   use LiveStyle
 
-  vars text_primary: var({MyApp.Colors, :gray_900}),
+  vars text_primary: var({MyAppWeb.Colors, :gray_900}),
        fill_page: "#ffffff"
 
   theme :dark,
     text_primary: "#ffffff",
-    fill_page: var({MyApp.Colors, :gray_900})
+    fill_page: var({MyAppWeb.Colors, :gray_900})
 end
 
 # In your template
-<html {css(@theme == :dark && theme({MyApp.Semantic, :dark}))}>
+<html {css(@theme == :dark && theme({MyAppWeb.Semantic, :dark}))}>
 ```
 
 ### Pseudo-classes & Media Queries
 
 ```elixir
 class :link,
-  color: %{
-    :default => "blue",
-    ":hover" => "darkblue"
-  }
+  color: [
+    default: "blue",
+    ":hover": "darkblue"
+  ]
 
 class :container,
-  padding: %{
-    :default => const({MyApp.Spacing, :md}),
-    "@media (min-width: 768px)" => "24px"
-  }
+  padding: [
+    default: const({MyAppWeb.Spacing, :md}),
+    "@media (min-width: 768px)": "24px"
+  ]
 ```
 
 ## Why LiveStyle?

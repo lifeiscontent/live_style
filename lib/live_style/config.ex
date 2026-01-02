@@ -15,7 +15,7 @@ defmodule LiveStyle.Config do
 
       config :live_style,
         default: [
-          output: "priv/static/assets/live.css",
+          output: "priv/static/assets/css/live.css",
           cd: Path.expand("..", __DIR__)
         ]
 
@@ -67,17 +67,17 @@ defmodule LiveStyle.Config do
       - `:ignore` - silently allow
 
     * `:prefix_css` - function to add vendor prefixes to CSS (default: nil)
-      - Example: `&MyApp.CSS.prefix/2` - should take `(property, value)` and return CSS string
+      - Example: `&MyAppWeb.CSS.prefix/2` - should take `(property, value)` and return CSS string
 
     * `:deprecated?` - function to check if a property is deprecated (default: nil)
-      - Example: `&MyApp.CSS.deprecated?/1` - should take property name and return boolean
+      - Example: `&MyAppWeb.CSS.deprecated?/1` - should take property name and return boolean
 
   ## Example Configuration
 
       # config/config.exs
       config :live_style,
         default: [
-          output: "priv/static/assets/live.css",
+          output: "priv/static/assets/css/live.css",
           cd: Path.expand("..", __DIR__)
         ]
 
@@ -120,7 +120,7 @@ defmodule LiveStyle.Config do
   ## Example
 
       LiveStyle.Config.config_for!(:default)
-      #=> [output: "priv/static/assets/live.css", cd: "/path/to/project"]
+      #=> [output: "priv/static/assets/css/live.css", cd: "/path/to/project"]
   """
   def config_for!(profile) when is_atom(profile) do
     Application.get_env(:live_style, profile) ||
@@ -129,7 +129,7 @@ defmodule LiveStyle.Config do
 
           config :live_style,
             #{profile}: [
-              output: "priv/static/assets/live.css",
+              output: "priv/static/assets/css/live.css",
               cd: Path.expand("..", __DIR__)
             ]
       """
@@ -144,8 +144,8 @@ defmodule LiveStyle.Config do
   def output_path do
     Overrides.get(:output_path) ||
       case Application.get_env(:live_style, :default) do
-        nil -> "priv/static/assets/live.css"
-        config -> Keyword.get(config, :output, "priv/static/assets/live.css")
+        nil -> "priv/static/assets/css/live.css"
+        config -> Keyword.get(config, :output, "priv/static/assets/css/live.css")
       end
   end
 
@@ -339,7 +339,7 @@ defmodule LiveStyle.Config do
 
   ## Configuration
 
-      config :live_style, deprecated?: &MyApp.CSS.deprecated?/1
+      config :live_style, deprecated?: &MyAppWeb.CSS.deprecated?/1
 
   ## Function Signature
 
@@ -389,7 +389,7 @@ defmodule LiveStyle.Config do
 
   ## Configuration
 
-      config :live_style, prefix_css: &MyApp.CSS.prefix/2
+      config :live_style, prefix_css: &MyAppWeb.CSS.prefix/2
 
   ## Function Signature
 

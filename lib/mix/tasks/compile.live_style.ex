@@ -22,7 +22,7 @@ defmodule Mix.Tasks.Compile.LiveStyle do
 
       config :live_style,
         default: [
-          output: "priv/static/assets/live.css",
+          output: "priv/static/assets/css/live.css",
           cd: Path.expand("..", __DIR__)
         ]
 
@@ -35,7 +35,7 @@ defmodule Mix.Tasks.Compile.LiveStyle do
 
   The compiler outputs a message like:
 
-      LiveStyle: 42 vars, 3 keyframes, 128 rules → priv/static/assets/live.css
+      LiveStyle: 42 vars, 3 keyframes, 128 rules → priv/static/assets/css/live.css
 
   ## Related Tasks
 

@@ -8,7 +8,7 @@ defmodule LiveStyle.Compiler.Class.Include do
 
   ## Usage
 
-      defmodule MyApp.Button do
+      defmodule MyAppWeb.Button do
         use LiveStyle
 
         class :base,
@@ -31,8 +31,8 @@ defmodule LiveStyle.Compiler.Class.Include do
   Include styles from other modules using a tuple:
 
       class :themed_button, [
-        include({MyApp.BaseStyles, :btn_base}),
-        color: var({MyApp.Tokens, :text_primary})
+        include({MyAppWeb.BaseStyles, :btn_base}),
+        color: var({MyAppWeb.Tokens, :text_primary})
       ]
 
   ## Multiple Includes

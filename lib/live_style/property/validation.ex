@@ -24,7 +24,7 @@ defmodule LiveStyle.Property.Validation do
       config :live_style, deprecated_property_level: :warn  # :warn | :ignore
 
       # Configure deprecation checking function (any function that returns boolean)
-      config :live_style, deprecated?: &MyApp.CSS.deprecated?/1
+      config :live_style, deprecated?: &MyAppWeb.CSS.deprecated?/1
 
   ## Examples
 

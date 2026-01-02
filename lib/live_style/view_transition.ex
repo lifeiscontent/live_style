@@ -15,7 +15,7 @@ defmodule LiveStyle.ViewTransition do
 
   Define view transitions in a tokens module:
 
-      defmodule MyApp.Transitions do
+      defmodule MyAppWeb.Transitions do
         use LiveStyle
 
         keyframes :scale_in,

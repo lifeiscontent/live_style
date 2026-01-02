@@ -16,7 +16,7 @@ defmodule LiveStyle.Dev do
       iex> LiveStyle.Dev.diff(MyComponent, [:button, :primary])
       %{merged_class: "...", properties: %{...}}
 
-      iex> LiveStyle.Dev.tokens(MyApp.Tokens)
+      iex> LiveStyle.Dev.tokens(MyAppWeb.Tokens)
       %{vars: %{...}, consts: %{...}, keyframes: [...], themes: [...]}
 
   For testing utilities, see `LiveStyle.Compiler`.

@@ -39,7 +39,7 @@ defmodule Mix.Tasks.LiveStyle.Gen.Css do
 
       config :live_style,
         default: [
-          output: "priv/static/assets/live.css",
+          output: "priv/static/assets/css/live.css",
           cd: Path.expand("..", __DIR__)
         ]
 
@@ -47,7 +47,7 @@ defmodule Mix.Tasks.LiveStyle.Gen.Css do
 
   Add the generated CSS to your root layout:
 
-      <link rel="stylesheet" href={~p"/assets/live.css"} />
+      <link rel="stylesheet" href={~p"/assets/css/live.css"} />
   """
 
   use Mix.Task

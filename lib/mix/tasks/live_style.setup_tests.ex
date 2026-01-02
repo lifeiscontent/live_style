@@ -16,7 +16,7 @@ defmodule Mix.Tasks.LiveStyle.SetupTests do
 
   Only add this task if your tests define LiveStyle modules. For example:
 
-      defmodule MyApp.ComponentTest do
+      defmodule MyAppWeb.ComponentTest do
         use ExUnit.Case
 
         # This module needs to be in the manifest before tests run

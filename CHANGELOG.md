@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.1] - 2026-01-02
+
+### Fixed
+
+- Updated all documentation examples to use `MyAppWeb` namespace (Phoenix convention)
+- Fixed `LiveStyle.CSS.Property` references to `LiveStyle.PropertyType` in design-tokens guide
+- Updated default output path to `priv/static/assets/css/live.css` (Phoenix-compatible structure)
+- Updated watcher configuration to use `LiveStyle.Compiler.Runner`
+- Fixed benchmark file reference to `LiveStyle.Compiler.CSS`
+
+### Documentation
+
+- Improved Getting Started guide with esbuild CSS configuration
+- Added development watcher setup instructions
+- Updated configuration guide with Phoenix-compatible paths
+- Standardized all code examples to keyword list syntax
+
 ## [0.11.0] - 2025-01-01
 
 ### Changed

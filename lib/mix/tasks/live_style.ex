@@ -20,7 +20,7 @@ defmodule Mix.Tasks.LiveStyle do
 
       config :live_style,
         default: [
-          output: "priv/static/assets/live.css",
+          output: "priv/static/assets/css/live.css",
           cd: Path.expand("..", __DIR__)
         ]
 
@@ -46,7 +46,7 @@ defmodule Mix.Tasks.LiveStyle do
       # config/dev.exs
       config :my_app, MyAppWeb.Endpoint,
         watchers: [
-          live_style: {LiveStyle.Compiler, :run, [:default, ~w(--watch)]}
+          live_style: {LiveStyle.Compiler.Runner, :run, [:default, ~w(--watch)]}
         ]
   """
 
@@ -100,7 +100,7 @@ defmodule Mix.Tasks.LiveStyle do
 
           config :live_style,
             #{profile}: [
-              output: "priv/static/assets/app.css",
+              output: "priv/static/assets/css/live.css",
               cd: Path.expand("..", __DIR__)
             ]
       """)

@@ -6,7 +6,7 @@ defmodule LiveStyle.Storage.Adapter do
 
   ## Implementing an Adapter
 
-      defmodule MyApp.InMemoryStorage do
+      defmodule MyAppWeb.InMemoryStorage do
         @behaviour LiveStyle.Storage.Adapter
 
         @impl true
@@ -28,7 +28,7 @@ defmodule LiveStyle.Storage.Adapter do
 
   ## Configuration
 
-      config :live_style, storage_adapter: MyApp.InMemoryStorage
+      config :live_style, storage_adapter: MyAppWeb.InMemoryStorage
   """
 
   alias LiveStyle.Manifest

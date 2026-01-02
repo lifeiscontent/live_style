@@ -7,7 +7,7 @@ defmodule LiveStyle.Compiler.CSS.Plugin do
 
   ## Implementing a Plugin
 
-      defmodule MyApp.CSS.CustomPlugin do
+      defmodule MyAppWeb.CSS.CustomPlugin do
         @behaviour LiveStyle.Compiler.CSS.Plugin
 
         @impl true
@@ -23,7 +23,7 @@ defmodule LiveStyle.Compiler.CSS.Plugin do
 
       config :live_style,
         css_plugins: [
-          {100, MyApp.CSS.CustomPlugin}
+          {100, MyAppWeb.CSS.CustomPlugin}
         ]
 
   The tuple format is `{priority, module}` where lower priority runs first.

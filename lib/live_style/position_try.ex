@@ -14,7 +14,7 @@ defmodule LiveStyle.PositionTry do
 
   Define position-try rules in a tokens module or inline:
 
-      defmodule MyApp.Positioning do
+      defmodule MyAppWeb.Positioning do
         use LiveStyle
 
         position_try :bottom_fallback,

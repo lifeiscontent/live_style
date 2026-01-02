@@ -18,7 +18,7 @@ This separation keeps color values in one place while allowing themes to swap wh
 Using the module-as-namespace pattern, define colors in one module and semantic tokens in another:
 
 ```elixir
-defmodule MyApp.Colors do
+defmodule MyAppWeb.Colors do
   use LiveStyle
 
   vars [
@@ -33,32 +33,32 @@ defmodule MyApp.Colors do
   ]
 end
 
-defmodule MyApp.Semantic do
+defmodule MyAppWeb.Semantic do
   use LiveStyle
 
   vars [
-    text_primary: var({MyApp.Colors, :gray_900}),
-    text_secondary: var({MyApp.Colors, :gray_800}),
-    text_inverse: var({MyApp.Colors, :white}),
-    fill_page: var({MyApp.Colors, :white}),
-    fill_surface: var({MyApp.Colors, :gray_50}),
-    fill_primary: var({MyApp.Colors, :indigo_600}),
-    fill_primary_hover: var({MyApp.Colors, :indigo_500})
+    text_primary: var({MyAppWeb.Colors, :gray_900}),
+    text_secondary: var({MyAppWeb.Colors, :gray_800}),
+    text_inverse: var({MyAppWeb.Colors, :white}),
+    fill_page: var({MyAppWeb.Colors, :white}),
+    fill_surface: var({MyAppWeb.Colors, :gray_50}),
+    fill_primary: var({MyAppWeb.Colors, :indigo_600}),
+    fill_primary_hover: var({MyAppWeb.Colors, :indigo_500})
   ]
 
   # Dark theme overrides
   theme :dark, [
-    text_primary: var({MyApp.Colors, :gray_50}),
-    text_secondary: var({MyApp.Colors, :gray_100}),
-    text_inverse: var({MyApp.Colors, :gray_900}),
-    fill_page: var({MyApp.Colors, :gray_900}),
-    fill_surface: var({MyApp.Colors, :gray_800}),
-    fill_primary: var({MyApp.Colors, :indigo_500}),
-    fill_primary_hover: var({MyApp.Colors, :indigo_600})
+    text_primary: var({MyAppWeb.Colors, :gray_50}),
+    text_secondary: var({MyAppWeb.Colors, :gray_100}),
+    text_inverse: var({MyAppWeb.Colors, :gray_900}),
+    fill_page: var({MyAppWeb.Colors, :gray_900}),
+    fill_surface: var({MyAppWeb.Colors, :gray_800}),
+    fill_primary: var({MyAppWeb.Colors, :indigo_500}),
+    fill_primary_hover: var({MyAppWeb.Colors, :indigo_600})
   ]
 end
 
-defmodule MyApp.Spacing do
+defmodule MyAppWeb.Spacing do
   use LiveStyle
 
   consts [
@@ -68,7 +68,7 @@ defmodule MyApp.Spacing do
   ]
 end
 
-defmodule MyApp.Radius do
+defmodule MyAppWeb.Radius do
   use LiveStyle
 
   consts [
@@ -83,28 +83,28 @@ end
 Components reference semantic tokens for colors, constants for static values:
 
 ```elixir
-defmodule MyApp.Card do
+defmodule MyAppWeb.Card do
   use LiveStyle
 
   class :card,
     # Colors use var (themed)
-    background_color: var({MyApp.Semantic, :fill_surface}),
-    color: var({MyApp.Semantic, :text_primary}),
+    background_color: var({MyAppWeb.Semantic, :fill_surface}),
+    color: var({MyAppWeb.Semantic, :text_primary}),
     # Static values use const (not themed)
-    padding: const({MyApp.Spacing, :md}),
-    border_radius: const({MyApp.Radius, :lg})
+    padding: const({MyAppWeb.Spacing, :md}),
+    border_radius: const({MyAppWeb.Radius, :lg})
 end
 
-defmodule MyApp.Button do
+defmodule MyAppWeb.Button do
   use LiveStyle
 
   class :primary,
-    background_color: var({MyApp.Semantic, :fill_primary}),
-    color: var({MyApp.Semantic, :text_inverse}),
-    padding: const({MyApp.Spacing, :md}),
-    border_radius: const({MyApp.Radius, :md}),
+    background_color: var({MyAppWeb.Semantic, :fill_primary}),
+    color: var({MyAppWeb.Semantic, :text_inverse}),
+    padding: const({MyAppWeb.Spacing, :md}),
+    border_radius: const({MyAppWeb.Radius, :md}),
     ":hover": [
-      background_color: var({MyApp.Semantic, :fill_primary_hover})
+      background_color: var({MyAppWeb.Semantic, :fill_primary_hover})
     ]
 end
 ```
@@ -116,7 +116,7 @@ Components don't need to know about themes - they just use semantic tokens for c
 Use `theme/1` to apply a theme to a subtree:
 
 ```heex
-<div class={theme({MyApp.Semantic, :dark})}>
+<div class={theme({MyAppWeb.Semantic, :dark})}>
   <!-- All children use dark theme colors -->
   <.card>
     <p>This card uses dark theme colors</p>
@@ -131,11 +131,11 @@ Apply the theme at the root level:
 
 ```heex
 <!-- In root.html.heex -->
-<html class={@theme == :dark && theme({MyApp.Semantic, :dark})}>
+<html class={@theme == :dark && theme({MyAppWeb.Semantic, :dark})}>
   <head>
     <!-- ... -->
   </head>
-  <body {css({MyApp.Layout, :body})}>
+  <body {css({MyAppWeb.Layout, :body})}>
     <%= @inner_content %>
   </body>
 </html>
@@ -159,7 +159,7 @@ Then apply the theme conditionally in your template.
 Define multiple themes for different contexts:
 
 ```elixir
-defmodule MyApp.Colors do
+defmodule MyAppWeb.Colors do
   use LiveStyle
 
   vars [
@@ -170,30 +170,30 @@ defmodule MyApp.Colors do
   ]
 end
 
-defmodule MyApp.Semantic do
+defmodule MyAppWeb.Semantic do
   use LiveStyle
 
   vars [
-    text_primary: var({MyApp.Colors, :gray_900}),
-    fill_page: var({MyApp.Colors, :white})
+    text_primary: var({MyAppWeb.Colors, :gray_900}),
+    fill_page: var({MyAppWeb.Colors, :white})
   ]
 
   # Dark theme
   theme :dark, [
-    text_primary: var({MyApp.Colors, :white}),
-    fill_page: var({MyApp.Colors, :gray_900})
+    text_primary: var({MyAppWeb.Colors, :white}),
+    fill_page: var({MyAppWeb.Colors, :gray_900})
   ]
 
   # High contrast theme
   theme :high_contrast, [
-    text_primary: var({MyApp.Colors, :black}),
-    fill_page: var({MyApp.Colors, :white})
+    text_primary: var({MyAppWeb.Colors, :black}),
+    fill_page: var({MyAppWeb.Colors, :white})
   ]
 
   # Special promotion theme
   theme :promo, [
-    text_primary: var({MyApp.Colors, :black}),
-    fill_page: var({MyApp.Colors, :yellow_400})
+    text_primary: var({MyAppWeb.Colors, :black}),
+    fill_page: var({MyAppWeb.Colors, :yellow_400})
   ]
 end
 ```
@@ -206,12 +206,12 @@ Use different themes in different parts of your app:
   <.hero />
 
   <!-- Promotional section -->
-  <section class={theme({MyApp.Semantic, :promo})}>
+  <section class={theme({MyAppWeb.Semantic, :promo})}>
     <.promo_banner />
   </section>
 
   <!-- Footer with dark theme -->
-  <footer class={theme({MyApp.Semantic, :dark})}>
+  <footer class={theme({MyAppWeb.Semantic, :dark})}>
     <.footer_content />
   </footer>
 </main>
@@ -222,36 +222,16 @@ Use different themes in different parts of your app:
 Themes can be nested - inner themes override outer ones:
 
 ```heex
-<div class={theme({MyApp.Semantic, :dark})}>
+<div class={theme({MyAppWeb.Semantic, :dark})}>
   <!-- Dark theme -->
   <.card>Dark card</.card>
 
-  <div class={theme({MyApp.Semantic, :high_contrast})}>
+  <div class={theme({MyAppWeb.Semantic, :high_contrast})}>
     <!-- High contrast theme (overrides dark) -->
     <.card>High contrast card</.card>
   </div>
 </div>
 ```
-
-## Generated CSS
-
-Themes generate CSS that overrides the base variables:
-
-```css
-/* Base semantic tokens */
-:root {
-  --v1abc123: var(--v2def456); /* text_primary references gray_900 */
-  --v3ghi789: var(--v4jkl012); /* fill_page references white */
-}
-
-/* Dark theme overrides */
-.x1dark2theme {
-  --v1abc123: var(--v5mno345); /* text_primary now references gray_50 */
-  --v3ghi789: var(--v2def456); /* fill_page now references gray_900 */
-}
-```
-
-When you apply `theme({MyApp.Semantic, :dark})`, it returns a class name like `x1dark2theme` that overrides the CSS variables for that element and all its descendants.
 
 ## Theme-Aware Components
 

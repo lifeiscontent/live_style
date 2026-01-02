@@ -94,7 +94,7 @@ defmodule LiveStyle.Config.Validation do
 
   ## Configuration
 
-      config :live_style, deprecated?: &MyApp.CSS.deprecated?/1
+      config :live_style, deprecated?: &MyAppWeb.CSS.deprecated?/1
 
   ## Function Signature
 

@@ -23,7 +23,7 @@ defmodule LiveStyle.Compiler.CSS do
 
       config :live_style,
         css_plugins: [
-          {250, MyApp.CSS.CustomPlugin}
+          {250, MyAppWeb.CSS.CustomPlugin}
         ]
 
   See `LiveStyle.Compiler.CSS.Plugin` for details.

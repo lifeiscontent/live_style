@@ -30,7 +30,7 @@ LiveStyle uses a module-as-namespace pattern for tokens:
 Define CSS custom properties with `vars`. Each module defines its own tokens:
 
 ```elixir
-defmodule MyApp.Colors do
+defmodule MyAppWeb.Colors do
   use LiveStyle
 
   vars [
@@ -43,25 +43,15 @@ defmodule MyApp.Colors do
   ]
 end
 
-defmodule MyApp.Semantic do
+defmodule MyAppWeb.Semantic do
   use LiveStyle
 
   vars [
-    text_primary: var({MyApp.Colors, :gray_900}),
-    text_inverse: var({MyApp.Colors, :white}),
-    fill_primary: var({MyApp.Colors, :indigo_600})
+    text_primary: var({MyAppWeb.Colors, :gray_900}),
+    text_inverse: var({MyAppWeb.Colors, :white}),
+    fill_primary: var({MyAppWeb.Colors, :indigo_600})
   ]
 end
-```
-
-This generates CSS like:
-
-```css
-:root {
-  --v1abc123: #ffffff;
-  --v2def456: #000000;
-  /* ... */
-}
 ```
 
 ### Referencing Variables
@@ -69,12 +59,12 @@ This generates CSS like:
 Use `var/1` to reference variables in your styles:
 
 ```elixir
-defmodule MyApp.Card do
+defmodule MyAppWeb.Card do
   use LiveStyle
 
   class :card,
-    background_color: var({MyApp.Colors, :white}),
-    color: var({MyApp.Semantic, :text_primary})
+    background_color: var({MyAppWeb.Colors, :white}),
+    color: var({MyAppWeb.Semantic, :text_primary})
 end
 ```
 
@@ -83,7 +73,7 @@ end
 Constants are compile-time values inlined directly into CSS. Define each category in its own module:
 
 ```elixir
-defmodule MyApp.Spacing do
+defmodule MyAppWeb.Spacing do
   use LiveStyle
 
   consts [
@@ -95,7 +85,7 @@ defmodule MyApp.Spacing do
   ]
 end
 
-defmodule MyApp.FontSize do
+defmodule MyAppWeb.FontSize do
   use LiveStyle
 
   consts [
@@ -106,7 +96,7 @@ defmodule MyApp.FontSize do
   ]
 end
 
-defmodule MyApp.Radius do
+defmodule MyAppWeb.Radius do
   use LiveStyle
 
   consts [
@@ -117,7 +107,7 @@ defmodule MyApp.Radius do
   ]
 end
 
-defmodule MyApp.Shadow do
+defmodule MyAppWeb.Shadow do
   use LiveStyle
 
   consts [
@@ -126,7 +116,7 @@ defmodule MyApp.Shadow do
   ]
 end
 
-defmodule MyApp.Breakpoints do
+defmodule MyAppWeb.Breakpoints do
   use LiveStyle
 
   consts [
@@ -137,7 +127,7 @@ defmodule MyApp.Breakpoints do
   ]
 end
 
-defmodule MyApp.ZIndex do
+defmodule MyAppWeb.ZIndex do
   use LiveStyle
 
   consts [
@@ -153,28 +143,28 @@ end
 Reference constants with `const/1`:
 
 ```elixir
-defmodule MyApp.Button do
+defmodule MyAppWeb.Button do
   use LiveStyle
 
   class :button,
-    padding: const({MyApp.Spacing, :md}),
-    font_size: const({MyApp.FontSize, :base}),
-    border_radius: const({MyApp.Radius, :md})
+    padding: const({MyAppWeb.Spacing, :md}),
+    font_size: const({MyAppWeb.FontSize, :base}),
+    border_radius: const({MyAppWeb.Radius, :md})
 end
 ```
 
 ### Constants in Media Queries
 
 ```elixir
-defmodule MyApp.Container do
+defmodule MyAppWeb.Container do
   use LiveStyle
 
   class :container,
-    padding: %{
-      :default => const({MyApp.Spacing, :md}),
-      const({MyApp.Breakpoints, :md}) => const({MyApp.Spacing, :lg}),
-      const({MyApp.Breakpoints, :lg}) => const({MyApp.Spacing, :xl})
-    }
+    padding: [
+      default: const({MyAppWeb.Spacing, :md}),
+      "@media #{const({MyAppWeb.Breakpoints, :md})}": const({MyAppWeb.Spacing, :lg}),
+      "@media #{const({MyAppWeb.Breakpoints, :lg})}": const({MyAppWeb.Spacing, :xl})
+    ]
 end
 ```
 
@@ -183,7 +173,7 @@ end
 Define CSS `@keyframes` animations:
 
 ```elixir
-defmodule MyApp.Animations do
+defmodule MyAppWeb.Animations do
   use LiveStyle
 
   keyframes :spin, [
@@ -215,54 +205,42 @@ end
 Reference keyframes with `keyframes/1`:
 
 ```elixir
-defmodule MyApp.Spinner do
+defmodule MyAppWeb.Spinner do
   use LiveStyle
 
   class :spinner,
-    animation: "#{keyframes({MyApp.Animations, :spin})} 1s linear infinite"
+    animation: "#{keyframes({MyAppWeb.Animations, :spin})} 1s linear infinite"
 
   class :pulsing,
-    animation: "#{keyframes({MyApp.Animations, :pulse})} 2s ease-in-out infinite"
+    animation: "#{keyframes({MyAppWeb.Animations, :pulse})} 2s ease-in-out infinite"
 end
 ```
 
 ## Typed Variables
 
-For animating CSS properties like gradients, specify the CSS type using `LiveStyle.CSS.Property`:
+For animating CSS properties like gradients, specify the CSS type using `LiveStyle.PropertyType`. This generates CSS `@property` rules that enable browsers to interpolate these values:
 
 ```elixir
-defmodule MyApp.Animation do
+defmodule MyAppWeb.Animation do
   use LiveStyle
-  alias LiveStyle.CSS.Property
+  import LiveStyle.PropertyType
 
-  vars [
-    rotation: Property.angle("0deg"),
-    progress: Property.percentage("0%")
-  ]
+  vars rotation: angle("0deg"),
+       progress: percentage("0%")
 end
-```
-
-This generates CSS `@property` rules that enable browsers to interpolate these values:
-
-```css
-@property --v1abc123 {
-  syntax: "<angle>";
-  inherits: true;
-  initial-value: 0deg;
-}
 ```
 
 ### Available Types
 
 | Function | CSS Syntax |
 |----------|------------|
-| `Property.color/1` | `<color>` |
-| `Property.length/1` | `<length>` |
-| `Property.angle/1` | `<angle>` |
-| `Property.integer/1` | `<integer>` |
-| `Property.number/1` | `<number>` |
-| `Property.time/1` | `<time>` |
-| `Property.percentage/1` | `<percentage>` |
+| `color/1` | `<color>` |
+| `length/1` | `<length>` |
+| `angle/1` | `<angle>` |
+| `integer/1` | `<integer>` |
+| `number/1` | `<number>` |
+| `time/1` | `<time>` |
+| `percentage/1` | `<percentage>` |
 
 ## Recommended Token Structure
 
@@ -270,21 +248,21 @@ A recommended structure for larger applications:
 
 ```
 lib/my_app/tokens/
-├── colors.ex          # MyApp.Colors - raw color palette
-├── semantic.ex        # MyApp.Semantic - themed semantic tokens
-├── spacing.ex         # MyApp.Spacing - spacing scale
-├── font_size.ex       # MyApp.FontSize - typography sizes
-├── radius.ex          # MyApp.Radius - border radii
-├── shadow.ex          # MyApp.Shadow - box shadows
-├── breakpoints.ex     # MyApp.Breakpoints - media queries
-├── z_index.ex         # MyApp.ZIndex - z-index values
-└── animations.ex      # MyApp.Animations - keyframes
+├── colors.ex          # MyAppWeb.Colors - raw color palette
+├── semantic.ex        # MyAppWeb.Semantic - themed semantic tokens
+├── spacing.ex         # MyAppWeb.Spacing - spacing scale
+├── font_size.ex       # MyAppWeb.FontSize - typography sizes
+├── radius.ex          # MyAppWeb.Radius - border radii
+├── shadow.ex          # MyAppWeb.Shadow - box shadows
+├── breakpoints.ex     # MyAppWeb.Breakpoints - media queries
+├── z_index.ex         # MyAppWeb.ZIndex - z-index values
+└── animations.ex      # MyAppWeb.Animations - keyframes
 ```
 
 Example Colors module:
 
 ```elixir
-defmodule MyApp.Colors do
+defmodule MyAppWeb.Colors do
   use LiveStyle
 
   vars [
@@ -302,23 +280,23 @@ end
 Example Semantic module with theme:
 
 ```elixir
-defmodule MyApp.Semantic do
+defmodule MyAppWeb.Semantic do
   use LiveStyle
 
   vars [
-    text_primary: var({MyApp.Colors, :gray_900}),
-    text_inverse: var({MyApp.Colors, :white}),
-    fill_page: var({MyApp.Colors, :white}),
-    fill_surface: var({MyApp.Colors, :gray_50}),
-    fill_primary: var({MyApp.Colors, :indigo_600})
+    text_primary: var({MyAppWeb.Colors, :gray_900}),
+    text_inverse: var({MyAppWeb.Colors, :white}),
+    fill_page: var({MyAppWeb.Colors, :white}),
+    fill_surface: var({MyAppWeb.Colors, :gray_50}),
+    fill_primary: var({MyAppWeb.Colors, :indigo_600})
   ]
 
   theme :dark, [
-    text_primary: var({MyApp.Colors, :gray_50}),
-    text_inverse: var({MyApp.Colors, :gray_900}),
-    fill_page: var({MyApp.Colors, :gray_900}),
-    fill_surface: var({MyApp.Colors, :gray_900}),
-    fill_primary: var({MyApp.Colors, :indigo_500})
+    text_primary: var({MyAppWeb.Colors, :gray_50}),
+    text_inverse: var({MyAppWeb.Colors, :gray_900}),
+    fill_page: var({MyAppWeb.Colors, :gray_900}),
+    fill_surface: var({MyAppWeb.Colors, :gray_900}),
+    fill_primary: var({MyAppWeb.Colors, :indigo_500})
   ]
 end
 ```

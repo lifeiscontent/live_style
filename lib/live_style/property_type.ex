@@ -10,7 +10,7 @@ defmodule LiveStyle.PropertyType do
 
   ## Example
 
-      defmodule MyApp.Colors do
+      defmodule MyAppWeb.Colors do
         use LiveStyle
         import LiveStyle.PropertyType
 
@@ -18,7 +18,7 @@ defmodule LiveStyle.PropertyType do
              accent: color([default: "blue", "@media (prefers-color-scheme: dark)": "lightblue"])
       end
 
-      defmodule MyApp.Animation do
+      defmodule MyAppWeb.Animation do
         use LiveStyle
         import LiveStyle.PropertyType
 
@@ -63,7 +63,7 @@ defmodule LiveStyle.PropertyType do
         to: [{var(:angle), "360deg"}]
 
       class :gradient,
-        background_image: "conic-gradient(from \#{var({MyApp.Animation, :angle})}, red, blue)",
+        background_image: "conic-gradient(from \#{var({MyAppWeb.Animation, :angle})}, red, blue)",
         animation: "\#{keyframes(:rotate)} 10s linear infinite"
 
   ### Simulating round()

@@ -16,7 +16,7 @@ defmodule LiveStyle.Keyframes do
 
   Define keyframes in a tokens module:
 
-      defmodule MyApp.Animations do
+      defmodule MyAppWeb.Animations do
         use LiveStyle
 
         keyframes :spin,
@@ -31,7 +31,7 @@ defmodule LiveStyle.Keyframes do
   Reference in a style class:
 
       class :spinner,
-        animation: "\#{keyframes({MyApp.Animations, :spin})} 1s linear infinite"
+        animation: "\#{keyframes({MyAppWeb.Animations, :spin})} 1s linear infinite"
   """
 
   alias LiveStyle.{CSSValue, Hash, Manifest}

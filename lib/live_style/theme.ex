@@ -20,7 +20,7 @@ defmodule LiveStyle.Theme do
 
   ## Examples
 
-      defmodule MyApp.Tokens do
+      defmodule MyAppWeb.Tokens do
         use LiveStyle
 
         # Define variables
@@ -38,12 +38,12 @@ defmodule LiveStyle.Theme do
   Use `theme/1` to get the theme class name:
 
       # Apply to a container
-      <div class={theme({MyApp.Tokens, :dark})}>
+      <div class={theme({MyAppWeb.Tokens, :dark})}>
         <!-- Children use dark theme -->
       </div>
 
       # Conditional theming
-      <div class={@dark_mode && theme({MyApp.Tokens, :dark})}>
+      <div class={@dark_mode && theme({MyAppWeb.Tokens, :dark})}>
         ...
       </div>
 

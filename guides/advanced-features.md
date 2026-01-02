@@ -4,25 +4,25 @@ This guide covers LiveStyle's advanced features: contextual selectors, view tran
 
 ## Contextual Selectors (LiveStyle.When)
 
-Style elements based on ancestor, descendant, or sibling state - similar to StyleX's `stylex.when.*` API.
+Style elements based on ancestor, descendant, or sibling state.
 
 ### Basic Usage
 
 ```elixir
-defmodule MyApp.Card do
+defmodule MyAppWeb.Card do
   use Phoenix.Component
   use LiveStyle
   alias LiveStyle.When
 
   class :card_content,
-    transform: %{
-      :default => "translateX(0)",
-      When.ancestor(":hover") => "translateX(10px)"
-    },
-    opacity: %{
-      :default => "1",
-      When.ancestor(":focus-within") => "0.8"
-    }
+    transform: [
+      {:default, "translateX(0)"},
+      {When.ancestor(":hover"), "translateX(10px)"}
+    ],
+    opacity: [
+      {:default, "1"},
+      {When.ancestor(":focus-within"), "0.8"}
+    ]
 
   def render(assigns) do
     ~H"""
@@ -36,7 +36,7 @@ defmodule MyApp.Card do
 end
 ```
 
-> **Note:** When using computed keys like `When.ancestor(":hover")`, you must use map syntax with `=>`.
+> **Note:** When using computed keys like `When.ancestor(":hover")`, you must use tuple syntax `{key, value}` instead of keyword syntax.
 
 ### Available Selectors
 
@@ -53,7 +53,7 @@ end
 Use custom markers to create independent sets of contextual selectors:
 
 ```elixir
-defmodule MyApp.Table do
+defmodule MyAppWeb.Table do
   use Phoenix.Component
   use LiveStyle
   alias LiveStyle.When
@@ -97,10 +97,10 @@ Combine pseudo-classes with contextual selectors:
 class :cell,
   background_color: [
     {:default, "transparent"},
-    {":nth-child(2)", %{
-      :default => nil,
-      When.ancestor(":has(td:nth-of-type(2):hover)") => "#e0e7ff"
-    }}
+    {":nth-child(2)", [
+      {:default, nil},
+      {When.ancestor(":has(td:nth-of-type(2):hover)"), "#e0e7ff"}
+    ]}
   ]
 ```
 
@@ -111,7 +111,7 @@ LiveStyle provides first-class support for the [View Transitions API](https://de
 ### Defining Transitions
 
 ```elixir
-defmodule MyApp.Animations do
+defmodule MyAppWeb.Animations do
   use LiveStyle
 
   # Define keyframes
@@ -155,17 +155,17 @@ defmodule MyApp.Animations do
     ]
 end
 
-defmodule MyApp.ViewTransitions do
+defmodule MyAppWeb.ViewTransitions do
   use LiveStyle
 
   view_transition_class :card,
     old: [
-      animation_name: keyframes({MyApp.Animations, :scale_out}),
+      animation_name: keyframes({MyAppWeb.Animations, :scale_out}),
       animation_duration: "200ms",
       animation_fill_mode: "both"
     ],
     new: [
-      animation_name: keyframes({MyApp.Animations, :scale_in}),
+      animation_name: keyframes({MyAppWeb.Animations, :scale_in}),
       animation_duration: "200ms",
       animation_fill_mode: "both"
     ]
@@ -188,17 +188,17 @@ end
 ```elixir
 view_transition_class :card,
   old: [
-    animation_name: %{
-      :default => keyframes(:scale_out),
-      "@media (prefers-reduced-motion: reduce)" => "none"
-    },
+    animation_name: [
+      default: keyframes(:scale_out),
+      "@media (prefers-reduced-motion: reduce)": "none"
+    ],
     animation_duration: "200ms"
   ],
   new: [
-    animation_name: %{
-      :default => keyframes(:scale_in),
-      "@media (prefers-reduced-motion: reduce)" => "none"
-    },
+    animation_name: [
+      default: keyframes(:scale_in),
+      "@media (prefers-reduced-motion: reduce)": "none"
+    ],
     animation_duration: "200ms"
   ]
 ```
@@ -494,13 +494,13 @@ LiveStyle supports [Scroll-Driven Animations](https://developer.mozilla.org/en-U
 Animate based on scroll position of the document or a scrollable container:
 
 ```elixir
-defmodule MyApp.ScrollProgress do
+defmodule MyAppWeb.ScrollProgress do
   use LiveStyle
 
   # Keyframes for the progress bar
   keyframes :grow_progress,
-    from: %{transform: "scaleX(0)"},
-    to: %{transform: "scaleX(1)"}
+    from: [transform: "scaleX(0)"],
+    to: [transform: "scaleX(1)"]
 
   # Reading progress bar at top of page
   class :progress_bar,
@@ -525,12 +525,12 @@ The `scroll()` function creates an anonymous scroll progress timeline that track
 Animate based on an element's visibility within the viewport:
 
 ```elixir
-defmodule MyApp.RevealOnScroll do
+defmodule MyAppWeb.RevealOnScroll do
   use LiveStyle
 
   keyframes :reveal,
-    from: %{opacity: "0", transform: "translateY(50px)"},
-    to: %{opacity: "1", transform: "translateY(0)"}
+    from: [opacity: "0", transform: "translateY(50px)"],
+    to: [opacity: "1", transform: "translateY(0)"]
 
   class :reveal_card,
     animation_name: keyframes(:reveal),
@@ -547,13 +547,13 @@ The `view()` function tracks when the element enters and exits the viewport.
 For parallax effects where a child animates based on its parent's visibility, use named view timelines:
 
 ```elixir
-defmodule MyApp.Parallax do
+defmodule MyAppWeb.Parallax do
   use LiveStyle
 
   # Parallax animation - shifts background position as container scrolls
   keyframes :parallax_shift,
-    from: %{background_position: "center 100%"},
-    to: %{background_position: "center 0%"}
+    from: [background_position: "center 100%"],
+    to: [background_position: "center 0%"]
 
   # Container defines the named view timeline
   class :parallax_container,
@@ -588,12 +588,12 @@ The `view()` function tracks when the **animated element itself** enters the vie
 Track horizontal scroll progress with named scroll timelines:
 
 ```elixir
-defmodule MyApp.HorizontalScroll do
+defmodule MyAppWeb.HorizontalScroll do
   use LiveStyle
 
   keyframes :grow_progress,
-    from: %{transform: "scaleX(0)"},
-    to: %{transform: "scaleX(1)"}
+    from: [transform: "scaleX(0)"],
+    to: [transform: "scaleX(1)"]
 
   class :horizontal_scroll_wrapper,
     overflow_x: "auto",
@@ -646,7 +646,7 @@ LiveStyle supports [CSS Anchor Positioning](https://developer.mozilla.org/en-US/
 ### Basic Usage
 
 ```elixir
-defmodule MyApp.Tooltip do
+defmodule MyAppWeb.Tooltip do
   use LiveStyle
 
   class :trigger,
@@ -666,7 +666,7 @@ end
 Use `position_try/2` for fallback positions when the preferred position doesn't fit:
 
 ```elixir
-defmodule MyApp.Tokens do
+defmodule MyAppWeb.Tokens do
   use LiveStyle
 
   position_try :flip_to_top,
@@ -678,7 +678,7 @@ defmodule MyApp.Tokens do
     top: "anchor(center)"
 end
 
-defmodule MyApp.Tooltip do
+defmodule MyAppWeb.Tooltip do
   use LiveStyle
 
   class :tooltip,
@@ -686,7 +686,7 @@ defmodule MyApp.Tooltip do
     position_anchor: "--trigger",
     top: "anchor(bottom)",
     left: "anchor(center)",
-    position_try_fallbacks: "#{position_try({MyApp.Tokens, :flip_to_top})}, #{position_try({MyApp.Tokens, :flip_to_left})}"
+    position_try_fallbacks: "#{position_try({MyAppWeb.Tokens, :flip_to_top})}, #{position_try({MyAppWeb.Tokens, :flip_to_left})}"
 end
 ```
 
@@ -724,7 +724,7 @@ CSS Anchor Positioning is available in Chromium 125+ (June 2024). Firefox and Sa
 These features can be combined for powerful effects:
 
 ```elixir
-defmodule MyApp.Dropdown do
+defmodule MyAppWeb.Dropdown do
   use Phoenix.Component
   use LiveStyle
   alias LiveStyle.When
@@ -735,14 +735,14 @@ defmodule MyApp.Dropdown do
     position: "absolute",
     position_anchor: "--dropdown-trigger",
     top: "anchor(bottom)",
-    opacity: %{
-      :default => "0",
-      When.sibling_before(":focus", @trigger_marker) => "1"
-    },
-    transform: %{
-      :default => "translateY(-10px)",
-      When.sibling_before(":focus", @trigger_marker) => "translateY(0)"
-    },
+    opacity: [
+      {:default, "0"},
+      {When.sibling_before(":focus", @trigger_marker), "1"}
+    ],
+    transform: [
+      {:default, "translateY(-10px)"},
+      {When.sibling_before(":focus", @trigger_marker), "translateY(0)"}
+    ],
     transition: "opacity 200ms, transform 200ms"
 
   def dropdown(assigns) do

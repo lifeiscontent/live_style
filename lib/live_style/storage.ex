@@ -10,7 +10,7 @@ defmodule LiveStyle.Storage do
   Configure a custom storage adapter:
 
       config :live_style,
-        storage_adapter: MyApp.CustomStorageAdapter
+        storage_adapter: MyAppWeb.CustomStorageAdapter
 
   The adapter must implement the `LiveStyle.Storage.Adapter` behaviour.
 

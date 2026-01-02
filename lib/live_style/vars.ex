@@ -10,7 +10,7 @@ defmodule LiveStyle.Vars do
 
   ## Examples
 
-      defmodule MyApp.Tokens do
+      defmodule MyAppWeb.Tokens do
         use LiveStyle
 
         vars primary: "#3b82f6",
@@ -19,12 +19,12 @@ defmodule LiveStyle.Vars do
       end
 
       # Reference in another module
-      defmodule MyApp.Components do
+      defmodule MyAppWeb.Components do
         use LiveStyle
 
         class :button,
-          color: var({MyApp.Tokens, :primary}),
-          padding: var({MyApp.Tokens, :spacing_sm})
+          color: var({MyAppWeb.Tokens, :primary}),
+          padding: var({MyAppWeb.Tokens, :spacing_sm})
       end
   """
 
@@ -94,7 +94,7 @@ defmodule LiveStyle.Vars do
   ## Examples
 
       class :themed,
-        color: Vars.var({MyApp.Tokens, :primary})
+        color: Vars.var({MyAppWeb.Tokens, :primary})
         # => "var(--vabc123)"
 
       # Within the defining module:

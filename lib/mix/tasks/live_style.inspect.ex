@@ -4,8 +4,8 @@ defmodule Mix.Tasks.LiveStyle.Inspect do
 
   ## Usage
 
-      mix live_style.inspect MyApp.Components.Button button
-      mix live_style.inspect MyApp.Components.Button button primary
+      mix live_style.inspect MyAppWeb.Components.Button button
+      mix live_style.inspect MyAppWeb.Components.Button button primary
 
   ## Options
 
@@ -36,7 +36,7 @@ defmodule Mix.Tasks.LiveStyle.Inspect do
     case args do
       [] ->
         Mix.shell().error("Usage: mix live_style.inspect Module class_name [class_name...]")
-        Mix.shell().error("Example: mix live_style.inspect MyApp.Button button")
+        Mix.shell().error("Example: mix live_style.inspect MyAppWeb.Button button")
 
       [module_string | class_names] when class_names != [] ->
         Mix.Task.run("app.start")
@@ -63,7 +63,7 @@ defmodule Mix.Tasks.LiveStyle.Inspect do
 
       [_module_string] ->
         Mix.shell().error("Please specify at least one class name")
-        Mix.shell().error("Example: mix live_style.inspect MyApp.Button button")
+        Mix.shell().error("Example: mix live_style.inspect MyAppWeb.Button button")
     end
   end
 

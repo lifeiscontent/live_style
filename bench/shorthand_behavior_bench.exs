@@ -84,7 +84,7 @@ defmodule BenchHelper do
 
     Code.compile_quoted(quoted)
     manifest = LiveStyle.Storage.read()
-    LiveStyle.CSS.Compiler.compile(manifest)
+    LiveStyle.Compiler.CSS.compile(manifest)
   end
 end
 

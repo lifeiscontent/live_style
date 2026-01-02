@@ -10,14 +10,14 @@ Configure LiveStyle in `config/config.exs`:
 config :live_style,
   # CSS output profile
   default: [
-    output: "priv/static/assets/live.css",
+    output: "priv/static/assets/css/live.css",
     cd: Path.expand("..", __DIR__)
   ],
-  
+
   # Optional integrations
   prefix_css: &AutoprefixerEx.prefix_css/2,
   deprecated?: &CSSCompatDataEx.deprecated?/1,
-  
+
   # Behavior options
   shorthand_behavior: :accept_shorthands,
   use_css_layers: false
@@ -94,38 +94,20 @@ LiveStyle uses CSS specificity techniques to ensure later styles always win, reg
 
 ### Default Behavior (`use_css_layers: false`)
 
-By default, LiveStyle uses the `:not(#\#)` specificity hack:
+By default, LiveStyle uses CSS specificity techniques to ensure later styles always win:
 
 ```elixir
 config :live_style,
   use_css_layers: false  # default
 ```
 
-Generated CSS:
-
-```css
-.x1abc123:not(#\#) { color: red }
-.x2def456:not(#\#):hover { color: blue }
-```
-
-The `:not(#\#)` selector adds specificity without affecting which elements match, ensuring atomic classes have consistent specificity.
-
 ### CSS Layers (`use_css_layers: true`)
 
-Alternatively, use CSS `@layer`:
+Alternatively, use CSS `@layer` to control cascade precedence:
 
 ```elixir
 config :live_style,
   use_css_layers: true
-```
-
-Generated CSS:
-
-```css
-@layer live_style {
-  .x1abc123 { color: red }
-  .x2def456:hover { color: blue }
-}
 ```
 
 This places all LiveStyle rules in a `live_style` layer. Make sure your reset/base styles are in a lower-priority layer:
@@ -161,8 +143,7 @@ LiveStyle will automatically add vendor prefixes based on your browser targets:
 # Input
 class :flex, display: "flex"
 
-# Output (with autoprefixing)
-# .x1abc123 { display: -webkit-box; display: -ms-flexbox; display: flex }
+# Output includes vendor prefixes like -webkit-box, -ms-flexbox, etc.
 ```
 
 ## Deprecation Warnings
@@ -201,11 +182,11 @@ Define multiple output profiles for different builds:
 ```elixir
 config :live_style,
   default: [
-    output: "priv/static/assets/live.css",
+    output: "priv/static/assets/css/live.css",
     cd: Path.expand("..", __DIR__)
   ],
   admin: [
-    output: "priv/static/assets/admin.css",
+    output: "priv/static/assets/css/admin.css",
     cd: Path.expand("..", __DIR__)
   ]
 ```
@@ -222,9 +203,10 @@ Or in aliases:
 defp aliases do
   [
     "assets.build": [
+      "esbuild my_app",
+      "esbuild css",
       "live_style default",
-      "live_style admin",
-      "esbuild my_app"
+      "live_style admin"
     ]
   ]
 end
@@ -238,7 +220,9 @@ Add the watcher to your Phoenix endpoint for automatic CSS regeneration:
 # config/dev.exs
 config :my_app, MyAppWeb.Endpoint,
   watchers: [
-    live_style: {LiveStyle.Compiler, :run, [:default, ~w(--watch)]}
+    esbuild: {Esbuild, :install_and_run, [:my_app, ~w(--sourcemap=inline --watch)]},
+    esbuild_css: {Esbuild, :install_and_run, [:css, ~w(--watch)]},
+    live_style: {LiveStyle.Compiler.Runner, :run, [:default, ~w(--watch)]}
   ]
 ```
 
@@ -290,31 +274,3 @@ config :live_style,
 |--------|------|-------------|
 | `output` | string | Path to write CSS file |
 | `cd` | string | Base directory for relative paths |
-
-## API Reference
-
-### Config Functions
-
-| Function | Description |
-|----------|-------------|
-| `LiveStyle.Config.output_path/0` | Get configured CSS output path |
-| `LiveStyle.Config.shorthand_behavior/0` | Get configured shorthand behavior |
-| `LiveStyle.Config.config_for!/1` | Get configuration for a profile |
-| `LiveStyle.Config.use_css_layers?/0` | Check if CSS layers are enabled |
-
-### Compiler Functions
-
-| Function | Description |
-|----------|-------------|
-| `LiveStyle.Compiler.generate_css/0` | Generate CSS from all registered styles |
-| `LiveStyle.Compiler.get_css/2` | Get CSS attrs from a module (for testing) |
-| `LiveStyle.Compiler.get_css_class/2` | Get class string from a module (for testing) |
-
-### Storage Functions
-
-| Function | Description |
-|----------|-------------|
-| `LiveStyle.Storage.path/0` | Get current manifest path |
-| `LiveStyle.Storage.read/0` | Read manifest from file |
-| `LiveStyle.Storage.write/1` | Write manifest to file |
-| `LiveStyle.Storage.update/1` | Update manifest atomically |

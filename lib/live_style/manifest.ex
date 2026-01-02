@@ -11,8 +11,8 @@ defmodule LiveStyle.Manifest do
   - classes: Style classes (atomic CSS)
   - themes: Variable override themes
 
-  Each entry is keyed by a fully-qualified name like "MyApp.Tokens.color.white"
-  for namespaced items or "MyApp.Tokens.spin" for non-namespaced items.
+  Each entry is keyed by a fully-qualified name like "MyAppWeb.Tokens.color.white"
+  for namespaced items or "MyAppWeb.Tokens.spin" for non-namespaced items.
   """
 
   # Increment this when the manifest format changes to trigger regeneration.
