@@ -52,6 +52,7 @@ defmodule LiveStyle.ThemeClass do
   Themes are scoped to their container and all descendants.
   """
 
+  alias LiveStyle.Config
   alias LiveStyle.Hash
   alias LiveStyle.Manifest
   alias LiveStyle.Utils
@@ -70,7 +71,7 @@ defmodule LiveStyle.ThemeClass do
   # Generate CSS var name for override keys (matches Vars.ident/2)
   defp var_ident(module, name) do
     input = "var:#{inspect(module)}.#{name}"
-    "--v" <> Hash.create_hash(input)
+    "--#{Config.class_name_prefix()}" <> Hash.create_hash(input)
   end
 
   @doc """

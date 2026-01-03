@@ -78,4 +78,48 @@ defmodule LiveStyle.ThemeClassesTest do
       assert attrs.class != ""
     end
   end
+
+  describe "theme variable prefix consistency" do
+    test "theme overrides use same variable names as base vars" do
+      css = LiveStyle.Compiler.generate_css()
+
+      # The dark theme overrides white: "#ffffff" -> "#1a1a1a"
+      # Find the variable name that has value #1a1a1a (unique to dark theme's white override)
+      theme_override_match =
+        Regex.run(~r/(--x[a-z0-9]+):#1a1a1a/, css, capture: :all_but_first)
+
+      assert theme_override_match,
+             "Should find theme override variable with #1a1a1a value"
+
+      [theme_var_name] = theme_override_match
+
+      # The base vars in :root should have the SAME variable name with #ffffff
+      [root_vars] = Regex.run(~r/:root\{([^}]+)\}/, css, capture: :all_but_first)
+
+      assert root_vars =~ "#{theme_var_name}:#ffffff",
+             "Base var #{theme_var_name} should exist in :root with #ffffff value. " <>
+               "If this fails with a different prefix (like --v), the theme is not " <>
+               "using the same variable names as the base vars."
+    end
+
+    test "theme variables use config prefix, not hardcoded prefix" do
+      css = LiveStyle.Compiler.generate_css()
+
+      # All theme variable overrides should use --x prefix (from Config.class_name_prefix)
+      # not --v prefix (which was the bug)
+      theme_class = LiveStyle.ThemeClass.ref({ThemeModule, :dark})
+
+      # Find the theme class block
+      theme_pattern = Regex.compile!("\\.#{theme_class}[^{]*\\{([^}]+)\\}")
+      [theme_vars] = Regex.run(theme_pattern, css, capture: :all_but_first)
+
+      # Should have --x prefixed variables
+      assert theme_vars =~ ~r/--x[a-z0-9]+:/,
+             "Theme variables should use --x prefix"
+
+      # Should NOT have --v prefixed variables (the old bug)
+      refute theme_vars =~ ~r/--v[a-z0-9]+:/,
+             "Theme variables should NOT use hardcoded --v prefix"
+    end
+  end
 end
