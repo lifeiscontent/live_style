@@ -17,12 +17,13 @@ defmodule LiveStyle.Storage do
   Configure the manifest path in your config:
 
       config :live_style,
-        manifest_path: "_build/live_style_manifest.etf"
+        manifest_path: "_build/live_style/manifest.etf"
 
-  The default path is `"_build/live_style_manifest.etf"`.
+  The default path is `"_build/live_style/manifest.etf"`.
   """
 
-  @default_path "_build/live_style_manifest.etf"
+  # Use dedicated subdirectory to avoid FileSystem noise from beam file writes
+  @default_path "_build/live_style/manifest.etf"
   @process_key :live_style_process_manifest
   @path_key :live_style_path
 
@@ -215,6 +216,8 @@ defmodule LiveStyle.Storage do
 
   defp with_lock(fun) when is_function(fun, 0) do
     lock = lock_path()
+    # Ensure directory exists
+    lock |> Path.dirname() |> File.mkdir_p!()
     # Clean stale locks before attempting to acquire
     maybe_clean_stale_lock(lock)
     acquire_lock(lock, @lock_timeout)

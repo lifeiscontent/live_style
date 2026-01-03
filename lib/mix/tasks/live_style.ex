@@ -46,7 +46,7 @@ defmodule Mix.Tasks.LiveStyle do
       # config/dev.exs
       config :my_app, MyAppWeb.Endpoint,
         watchers: [
-          live_style: {LiveStyle.Compiler.Runner, :run, [:default, ~w(--watch)]}
+          live_style: {LiveStyle, :install_and_run, [:default, ~w(--watch)]}
         ]
   """
 

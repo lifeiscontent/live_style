@@ -222,7 +222,7 @@ config :my_app, MyAppWeb.Endpoint,
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:my_app, ~w(--sourcemap=inline --watch)]},
     esbuild_css: {Esbuild, :install_and_run, [:css, ~w(--watch)]},
-    live_style: {LiveStyle.Compiler.Runner, :run, [:default, ~w(--watch)]}
+    live_style: {LiveStyle, :install_and_run, [:default, ~w(--watch)]}
   ]
 ```
 

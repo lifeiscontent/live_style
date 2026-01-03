@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-01-03
+
+### Added
+
+- `LiveStyle.install_and_run/2` for Phoenix endpoint watcher integration
+  - Follows the same pattern as Tailwind and esbuild
+  - Watches manifest file for changes and regenerates CSS automatically
+  - Configure in `config/dev.exs` under watchers
+  - See Getting Started guide for setup instructions
+
+### Changed
+
+- **BREAKING**: Default manifest path changed from `priv/live_style_manifest.etf` to `_build/live_style/manifest.etf`
+  - Manifest is now in dedicated subdirectory for faster file watching
+  - Automatically cleaned by `mix clean`
+  - No longer needs to be gitignored (already in `_build/`)
+  - Override with `config :live_style, manifest_path: "custom/path.etf"`
+
+- Consolidated storage modules into single `LiveStyle.Storage` module
+  - Removed: `Storage.Adapter`, `Storage.Cache`, `Storage.FileAdapter`, `Storage.IO`, `Storage.Lock`, `Storage.Path`, `Storage.ProcessState`, `Storage.TableOwner`
+  - Simpler architecture with direct file operations and directory-based locking
+
+### Fixed
+
+- File watcher now detects manifest changes on macOS
+  - Atomic writes use rename, which triggers `:renamed` events instead of `:modified`
+  - Watch mode now handles `:renamed` and `:moved` events in addition to `:modified`/`:created`
+  - Added 50ms debouncing to coalesce rapid file events into single rebuild
+
+- Theme variables now use correct CSS variable prefix from config
+  - Previously theme overrides used hardcoded `--v` prefix instead of `--x` (from `Config.class_name_prefix()`)
+  - This caused themes to define different variables than base vars, breaking theme switching
+
+- StyleX-compatible property merging behavior
+  - `default` condition now uses just the property name (e.g., `color`) instead of `color::default`
+  - Each property key is completely independent - only exact key matches conflict
+  - `color` and `color:::hover` are separate keys that coexist
+
 ## [0.11.1] - 2026-01-02
 
 ### Fixed
@@ -12,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated all documentation examples to use `MyAppWeb` namespace (Phoenix convention)
 - Fixed `LiveStyle.CSS.Property` references to `LiveStyle.PropertyType` in design-tokens guide
 - Updated default output path to `priv/static/assets/css/live.css` (Phoenix-compatible structure)
-- Updated watcher configuration to use `LiveStyle.Compiler.Runner`
+- Updated watcher configuration for development
 - Fixed benchmark file reference to `LiveStyle.Compiler.CSS`
 
 ### Documentation

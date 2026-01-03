@@ -11,7 +11,7 @@ Add `live_style` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:live_style, "~> 0.11.0"},
+    {:live_style, "~> 0.12.0"},
     # Optional: for automatic vendor prefixing
     {:autoprefixer_ex, "~> 0.1.0"},
     # Optional: for deprecation warnings
@@ -73,18 +73,24 @@ config :autoprefixer_ex,
   browserslist: ["defaults"]
 ```
 
-### 5. Add Development Watchers
+### 5. Add LiveStyle Watcher for Hot Reload
 
-Add to `config/dev.exs`:
+Add the LiveStyle watcher to your `config/dev.exs`. This follows the same pattern as esbuild and Tailwind:
 
 ```elixir
 config :my_app, MyAppWeb.Endpoint,
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:my_app, ~w(--sourcemap=inline --watch)]},
     esbuild_css: {Esbuild, :install_and_run, [:css, ~w(--watch)]},
-    live_style: {LiveStyle.Compiler.Runner, :run, [:default, ~w(--watch)]}
+    live_style: {LiveStyle, :install_and_run, [:default, ~w(--watch)]}
   ]
 ```
+
+The watcher monitors the manifest file for changes. When you save a file:
+1. Phoenix triggers recompilation
+2. The `@before_compile` hook updates the manifest
+3. The watcher detects the change and regenerates CSS
+4. Phoenix live_reload refreshes your browser
 
 ### 6. Update Build Aliases
 

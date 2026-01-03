@@ -1219,4 +1219,51 @@ defmodule LiveStyle do
       LiveStyle.Marker.ref({unquote(module), unquote(name)})
     end
   end
+
+  # ============================================================================
+  # Phoenix Watcher Integration
+  # ============================================================================
+
+  @doc """
+  Runs LiveStyle CSS generation.
+
+  This is typically called by the mix task or the watcher. Returns 0 on success.
+
+  ## Options
+
+    * `--watch` - Watch for manifest changes and regenerate CSS automatically
+
+  ## Examples
+
+      LiveStyle.run(:default, [])
+      LiveStyle.run(:default, ~w(--watch))
+
+  """
+  @spec run(atom(), [String.t()]) :: non_neg_integer()
+  defdelegate run(profile \\ :default, args \\ []), to: LiveStyle.Compiler.Runner
+
+  @doc """
+  Runs LiveStyle CSS generation, installing dependencies if needed.
+
+  This follows the same pattern as `Tailwind.install_and_run/2` and
+  `Esbuild.install_and_run/2`, making it suitable for use as a Phoenix
+  endpoint watcher.
+
+  ## Setup
+
+  Add to your `config/dev.exs`:
+
+      config :my_app, MyAppWeb.Endpoint,
+        watchers: [
+          esbuild: {Esbuild, :install_and_run, [:my_app, ~w(--sourcemap=inline --watch)]},
+          live_style: {LiveStyle, :install_and_run, [:default, ~w(--watch)]}
+        ]
+
+  ## Examples
+
+      LiveStyle.install_and_run(:default, ~w(--watch))
+
+  """
+  @spec install_and_run(atom(), [String.t()]) :: non_neg_integer()
+  defdelegate install_and_run(profile \\ :default, args \\ []), to: LiveStyle.Compiler.Runner
 end
