@@ -26,7 +26,7 @@ defmodule LiveStyle.ViewTransitionClass do
           from: [opacity: "1", transform: "scale(1)"],
           to: [opacity: "0", transform: "scale(0.8)"]
 
-        view_transition :card,
+        view_transition_class :card,
           old: [
             animation_name: keyframes(:scale_out),
             animation_duration: "200ms"
@@ -40,13 +40,13 @@ defmodule LiveStyle.ViewTransitionClass do
   Apply in templates using `css/2` with the `style` option:
 
       <div {css([:card_styles], style: [
-        view_transition_class: view_transition(:card),
+        view_transition_class: view_transition_class(:card),
         view_transition_name: "card-\#{@id}"
       ])}>
 
   Or directly in inline styles:
 
-      <div style={"view-transition-class: \#{view_transition(:card)}; view-transition-name: card-\#{@id}"}>
+      <div style={"view-transition-class: \#{view_transition_class(:card)}; view-transition-name: card-\#{@id}"}>
 
   ## Available Pseudo-element Keys
 

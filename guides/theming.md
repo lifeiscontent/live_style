@@ -11,7 +11,7 @@ The standard pattern uses two layers:
 
 This separation keeps color values in one place while allowing themes to swap which colors semantic tokens point to.
 
-> **Note:** Only values defined with `vars` can be themed. Many teams keep spacing/typography/radii as `consts`, but if you want themeable spacing scales (e.g. compact/cozy), define them with `vars` and override with `theme`.
+> **Note:** Only values defined with `vars` can be themed. Many teams keep spacing/typography/radii as `consts`, but if you want themeable spacing scales (e.g. compact/cozy), define them with `vars` and override with `theme_class`.
 
 ## Defining Themes
 
@@ -47,7 +47,7 @@ defmodule MyAppWeb.Semantic do
   ]
 
   # Dark theme overrides
-  theme :dark, [
+  theme_class :dark, [
     text_primary: var({MyAppWeb.Colors, :gray_50}),
     text_secondary: var({MyAppWeb.Colors, :gray_100}),
     text_inverse: var({MyAppWeb.Colors, :gray_900}),
@@ -113,10 +113,10 @@ Components don't need to know about themes - they just use semantic tokens for c
 
 ## Applying Themes
 
-Use `theme/1` to apply a theme to a subtree:
+Use `theme_class/1` to apply a theme to a subtree:
 
 ```heex
-<div class={theme({MyAppWeb.Semantic, :dark})}>
+<div class={theme_class({MyAppWeb.Semantic, :dark})}>
   <!-- All children use dark theme colors -->
   <.card>
     <p>This card uses dark theme colors</p>
@@ -131,7 +131,7 @@ Apply the theme at the root level:
 
 ```heex
 <!-- In root.html.heex -->
-<html class={@theme == :dark && theme({MyAppWeb.Semantic, :dark})}>
+<html class={@theme == :dark && theme_class({MyAppWeb.Semantic, :dark})}>
   <head>
     <!-- ... -->
   </head>
@@ -179,19 +179,19 @@ defmodule MyAppWeb.Semantic do
   ]
 
   # Dark theme
-  theme :dark, [
+  theme_class :dark, [
     text_primary: var({MyAppWeb.Colors, :white}),
     fill_page: var({MyAppWeb.Colors, :gray_900})
   ]
 
   # High contrast theme
-  theme :high_contrast, [
+  theme_class :high_contrast, [
     text_primary: var({MyAppWeb.Colors, :black}),
     fill_page: var({MyAppWeb.Colors, :white})
   ]
 
   # Special promotion theme
-  theme :promo, [
+  theme_class :promo, [
     text_primary: var({MyAppWeb.Colors, :black}),
     fill_page: var({MyAppWeb.Colors, :yellow_400})
   ]
@@ -206,12 +206,12 @@ Use different themes in different parts of your app:
   <.hero />
 
   <!-- Promotional section -->
-  <section class={theme({MyAppWeb.Semantic, :promo})}>
+  <section class={theme_class({MyAppWeb.Semantic, :promo})}>
     <.promo_banner />
   </section>
 
   <!-- Footer with dark theme -->
-  <footer class={theme({MyAppWeb.Semantic, :dark})}>
+  <footer class={theme_class({MyAppWeb.Semantic, :dark})}>
     <.footer_content />
   </footer>
 </main>
@@ -222,11 +222,11 @@ Use different themes in different parts of your app:
 Themes can be nested - inner themes override outer ones:
 
 ```heex
-<div class={theme({MyAppWeb.Semantic, :dark})}>
+<div class={theme_class({MyAppWeb.Semantic, :dark})}>
   <!-- Dark theme -->
   <.card>Dark card</.card>
 
-  <div class={theme({MyAppWeb.Semantic, :high_contrast})}>
+  <div class={theme_class({MyAppWeb.Semantic, :high_contrast})}>
     <!-- High contrast theme (overrides dark) -->
     <.card>High contrast card</.card>
   </div>

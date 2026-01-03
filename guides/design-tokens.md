@@ -218,12 +218,12 @@ end
 
 ## Typed Variables
 
-For animating CSS properties like gradients, specify the CSS type using `LiveStyle.PropertyType`. This generates CSS `@property` rules that enable browsers to interpolate these values:
+For animating CSS properties like gradients, specify the CSS type using `LiveStyle.Types`. This generates CSS `@property` rules that enable browsers to interpolate these values:
 
 ```elixir
 defmodule MyAppWeb.Animation do
   use LiveStyle
-  import LiveStyle.PropertyType
+  import LiveStyle.Types
 
   vars rotation: angle("0deg"),
        progress: percentage("0%")
@@ -291,7 +291,7 @@ defmodule MyAppWeb.Semantic do
     fill_primary: var({MyAppWeb.Colors, :indigo_600})
   ]
 
-  theme :dark, [
+  theme_class :dark, [
     text_primary: var({MyAppWeb.Colors, :gray_50}),
     text_inverse: var({MyAppWeb.Colors, :gray_900}),
     fill_page: var({MyAppWeb.Colors, :gray_900}),

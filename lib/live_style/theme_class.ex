@@ -28,7 +28,7 @@ defmodule LiveStyle.ThemeClass do
              fill_page: "#ffffff"
 
         # Create a dark theme that overrides those variables
-        theme :dark,
+        theme_class :dark,
           text_primary: "#f9fafb",
           fill_page: "#111827"
       end

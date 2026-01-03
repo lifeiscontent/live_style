@@ -1,6 +1,6 @@
 defmodule LiveStyle.ThemeClassesTest do
   @moduledoc """
-  Tests for the theme/2 macro and theme_class/1 reference.
+  Tests for the theme_class/2 macro and theme_class/1 reference.
   """
   use LiveStyle.TestCase
 
@@ -13,13 +13,13 @@ defmodule LiveStyle.ThemeClassesTest do
       background: "#f0f0f0"
     )
 
-    theme(:dark,
+    theme_class(:dark,
       white: "#1a1a1a",
       primary: "#60a5fa",
       background: "#0a0a0a"
     )
 
-    theme(:high_contrast,
+    theme_class(:high_contrast,
       white: "#ffffff",
       primary: "#0000ff",
       background: "#000000"
@@ -49,7 +49,7 @@ defmodule LiveStyle.ThemeClassesTest do
   end
 
   describe "theme reference" do
-    test "theme/1 returns class name string" do
+    test "theme_class/1 returns class name string" do
       # Theme references return the theme class name
       theme_class = LiveStyle.ThemeClass.ref({ThemeModule, :dark})
       assert is_binary(theme_class)

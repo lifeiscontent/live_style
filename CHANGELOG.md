@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.12.0] - 2026-01-03
+## [0.13.0] - 2026-01-03
 
 ### Added
 
@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - See Getting Started guide for setup instructions
 
 ### Changed
+
+- **BREAKING**: Renamed definition macros for consistency
+  - `theme/2` → `theme_class/2`
+  - `view_transition/2` → `view_transition_class/2`
+  - Both now match their reference forms (`theme_class/1`, `view_transition_class/1`)
 
 - **BREAKING**: Default manifest path changed from `priv/live_style_manifest.etf` to `_build/live_style/manifest.etf`
   - Manifest is now in dedicated subdirectory for faster file watching

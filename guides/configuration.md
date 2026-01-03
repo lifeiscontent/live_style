@@ -14,9 +14,9 @@ config :live_style,
     cd: Path.expand("..", __DIR__)
   ],
 
-  # Optional integrations
-  prefix_css: &AutoprefixerEx.prefix_css/2,
-  deprecated?: &CSSCompatDataEx.deprecated?/1,
+  # Optional integrations (use MFA tuples to avoid compile-order issues)
+  prefix_css: {AutoprefixerEx, :prefix_css},
+  deprecated?: {CSSCompatDataEx, :deprecated?},
 
   # Behavior options
   shorthand_behavior: :accept_shorthands,
@@ -131,7 +131,7 @@ Enable automatic vendor prefixing with `autoprefixer_ex`:
 
 # Configure
 config :live_style,
-  prefix_css: &AutoprefixerEx.prefix_css/2
+  prefix_css: {AutoprefixerEx, :prefix_css}
 
 config :autoprefixer_ex,
   browserslist: ["defaults"]
@@ -156,7 +156,7 @@ Enable deprecation warnings with `css_compat_data_ex`:
 
 # Configure
 config :live_style,
-  deprecated?: &CSSCompatDataEx.deprecated?/1
+  deprecated?: {CSSCompatDataEx, :deprecated?}
 ```
 
 You'll get compile-time warnings for deprecated CSS properties:

@@ -16,7 +16,7 @@ defmodule LiveStyle do
              white: "#ffffff"
 
         # Define a theme that overrides variables
-        theme :dark,
+        theme_class :dark,
           primary: "#60a5fa",
           white: "#1f2937"
 
@@ -51,7 +51,7 @@ defmodule LiveStyle do
   - `keyframes({Module, :name})` - Reference a keyframes animation
   - `theme_class({Module, :name})` - Reference a theme class
   - `position_try({Module, :name})` - Reference a position-try rule
-  - `view_transition({Module, :name})` - Reference a view transition
+  - `view_transition_class({Module, :name})` - Reference a view transition
 
   Local references (within the same module):
   - `var(:name)`
@@ -86,9 +86,9 @@ defmodule LiveStyle do
           consts: 1,
           keyframes: 2,
           position_try: 2,
-          view_transition: 2,
+          view_transition_class: 2,
           class: 2,
-          theme: 2,
+          theme_class: 2,
           # Reference macros
           var: 1,
           const: 1,
@@ -658,15 +658,15 @@ defmodule LiveStyle do
   end
 
   @doc """
-  Defines a view transition.
+  Defines a view transition class.
 
   ## Examples
 
-      view_transition :card_transition,
+      view_transition_class :card_transition,
         old: [animation_name: keyframes(:fade_out), animation_duration: "250ms"],
         new: [animation_name: keyframes(:fade_in), animation_duration: "250ms"]
   """
-  defmacro view_transition(name, styles) when is_atom(name) do
+  defmacro view_transition_class(name, styles) when is_atom(name) do
     # Evaluate styles at compile time to resolve keyframes references
     {evaluated_styles, _} = Code.eval_quoted(styles, [], __CALLER__)
     module = __CALLER__.module
@@ -738,7 +738,7 @@ defmodule LiveStyle do
         raise CompileError,
           description:
             "View transition class :#{ref} not found in #{inspect(caller_module)}. " <>
-              "Make sure `view_transition :#{ref}, ...` is defined before this reference.",
+              "Make sure `view_transition_class :#{ref}, ...` is defined before this reference.",
           file: __CALLER__.file,
           line: __CALLER__.line
     end
@@ -755,7 +755,7 @@ defmodule LiveStyle do
         raise CompileError,
           description:
             "View transition class :#{name} not found in #{inspect(module)}. " <>
-              "Make sure `view_transition :#{name}, ...` is defined in that module.",
+              "Make sure `view_transition_class :#{name}, ...` is defined in that module.",
           file: __CALLER__.file,
           line: __CALLER__.line
 
@@ -1003,7 +1003,7 @@ defmodule LiveStyle do
   end
 
   @doc """
-  Defines a theme (variable overrides).
+  Defines a theme class (variable overrides).
 
   Similar to StyleX's `createTheme`, this creates a class that overrides
   CSS variables defined with `vars`.
@@ -1015,11 +1015,11 @@ defmodule LiveStyle do
            primary: "#3b82f6"
 
       # Then create a theme that overrides those variables
-      theme :dark,
+      theme_class :dark,
         white: "#000000",
         primary: "#8ab4f8"
   """
-  defmacro theme(name, overrides) when is_atom(name) do
+  defmacro theme_class(name, overrides) when is_atom(name) do
     # Evaluate overrides at compile time
     {evaluated_overrides, _} = Code.eval_quoted(overrides, [], __CALLER__)
     module = __CALLER__.module
@@ -1061,7 +1061,7 @@ defmodule LiveStyle do
         raise CompileError,
           description:
             "Theme class :#{ref} not found in #{inspect(caller_module)}. " <>
-              "Make sure `theme :#{ref}, ...` is defined before this reference.",
+              "Make sure `theme_class :#{ref}, ...` is defined before this reference.",
           file: __CALLER__.file,
           line: __CALLER__.line
     end
@@ -1077,7 +1077,7 @@ defmodule LiveStyle do
         raise CompileError,
           description:
             "Theme class :#{name} not found in #{inspect(module)}. " <>
-              "Make sure `theme :#{name}, ...` is defined in that module.",
+              "Make sure `theme_class :#{name}, ...` is defined in that module.",
           file: __CALLER__.file,
           line: __CALLER__.line
 

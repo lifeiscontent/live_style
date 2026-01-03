@@ -19,7 +19,7 @@ Add `live_style` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:live_style, "~> 0.12.0"}
+    {:live_style, "~> 0.13.0"}
   ]
 end
 ```
@@ -119,13 +119,13 @@ defmodule MyAppWeb.Semantic do
   vars text_primary: var({MyAppWeb.Colors, :gray_900}),
        fill_page: "#ffffff"
 
-  theme :dark,
+  theme_class :dark,
     text_primary: "#ffffff",
     fill_page: var({MyAppWeb.Colors, :gray_900})
 end
 
 # In your template
-<html {css(@theme == :dark && theme({MyAppWeb.Semantic, :dark}))}>
+<html {css(@theme == :dark && theme_class({MyAppWeb.Semantic, :dark}))}>
 ```
 
 ### Pseudo-classes & Media Queries
@@ -174,7 +174,7 @@ LiveStyle brings Meta's StyleX philosophy to Phoenix LiveView:
 ```elixir
 def deps do
   [
-    {:live_style, "~> 0.12.0"},
+    {:live_style, "~> 0.13.0"},
     # Automatic vendor prefixing
     {:autoprefixer_ex, "~> 0.1.0"},
     # Deprecation warnings for CSS properties

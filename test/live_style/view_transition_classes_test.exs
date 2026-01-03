@@ -1,6 +1,6 @@
 defmodule LiveStyle.ViewTransitionClassesTest do
   @moduledoc """
-  Tests for view_transition/2 macro and view_transition_class/1 reference.
+  Tests for view_transition_class/2 macro and view_transition_class/1 reference.
   """
   use LiveStyle.TestCase
 
@@ -17,18 +17,18 @@ defmodule LiveStyle.ViewTransitionClassesTest do
       to: [opacity: "0"]
     )
 
-    view_transition(:card_transition,
+    view_transition_class(:card_transition,
       old: [animation_name: keyframes(:fade_out), animation_duration: "250ms"],
       new: [animation_name: keyframes(:fade_in), animation_duration: "250ms"]
     )
 
-    view_transition(:slide_transition,
+    view_transition_class(:slide_transition,
       group: [animation_duration: "300ms"],
       image_pair: [isolation: "isolate"]
     )
   end
 
-  describe "view_transition definition" do
+  describe "view_transition_class definition" do
     test "generates ::view-transition CSS" do
       css = LiveStyle.Compiler.generate_css()
       assert css =~ "::view-transition"

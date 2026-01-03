@@ -11,7 +11,7 @@ Add `live_style` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:live_style, "~> 0.12.0"},
+    {:live_style, "~> 0.13.0"},
     # Optional: for automatic vendor prefixing
     {:autoprefixer_ex, "~> 0.1.0"},
     # Optional: for deprecation warnings
@@ -58,11 +58,12 @@ Add to `config/config.exs`:
 
 ```elixir
 # Configure LiveStyle
+# Use MFA tuples instead of function captures to avoid compile-order issues
 config :live_style,
   # Optional: automatic vendor prefixing
-  prefix_css: &AutoprefixerEx.prefix_css/2,
+  prefix_css: {AutoprefixerEx, :prefix_css},
   # Optional: deprecation warnings
-  deprecated?: &CSSCompatDataEx.deprecated?/1,
+  deprecated?: {CSSCompatDataEx, :deprecated?},
   default: [
     output: "priv/static/assets/css/live.css",
     cd: Path.expand("..", __DIR__)
