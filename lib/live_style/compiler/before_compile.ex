@@ -66,11 +66,14 @@ defmodule LiveStyle.Compiler.BeforeCompile do
 
   defp build_conditional_entry(prop, {condition, entry}) when is_list(entry) do
     class = Keyword.get(entry, :class)
+    # StyleX behavior: "default" condition uses just the property name
+    # Other conditions (":hover", "@media...", etc.) use "prop::condition" format
+    key = if condition == :default, do: prop, else: "#{prop}::#{condition}"
 
     if class == nil do
-      [{"#{prop}::#{condition}", :__unset__}]
+      [{key, :__unset__}]
     else
-      [{"#{prop}::#{condition}", class}]
+      [{key, class}]
     end
   end
 
