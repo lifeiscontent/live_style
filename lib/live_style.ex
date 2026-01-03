@@ -235,6 +235,26 @@ defmodule LiveStyle do
         end
       end
 
+    # Generate class lookup function clauses (for cross-module includes)
+    # We need to look up class entries from the manifest for each class
+    class_clauses =
+      for class_entry <- all_classes do
+        name = elem(class_entry, 0)
+        key = LiveStyle.Manifest.key(module, name)
+
+        case LiveStyle.Manifest.get_class(manifest, key) do
+          entry when is_list(entry) ->
+            quote do
+              def __live_style__(:class, unquote(name)), do: unquote(Macro.escape(entry))
+            end
+
+          nil ->
+            quote do
+              def __live_style__(:class, unquote(name)), do: nil
+            end
+        end
+      end
+
     quote do
       @__class_strings__ unquote(Macro.escape(class_strings))
       @__property_classes__ unquote(Macro.escape(property_classes))
@@ -253,6 +273,7 @@ defmodule LiveStyle do
       unquote_splicing(theme_class_clauses)
       unquote_splicing(view_transition_class_clauses)
       unquote_splicing(position_try_clauses)
+      unquote_splicing(class_clauses)
 
       @doc false
       def __live_style__(:class_strings), do: @__class_strings__
@@ -272,6 +293,7 @@ defmodule LiveStyle do
       def __live_style__(:theme_class, _name), do: nil
       def __live_style__(:view_transition_class, _name), do: nil
       def __live_style__(:position_try, _name), do: nil
+      def __live_style__(:class, _name), do: nil
     end
   end
 

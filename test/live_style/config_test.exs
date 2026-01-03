@@ -10,6 +10,14 @@ defmodule LiveStyle.ConfigTest do
 
   alias LiveStyle.Config
 
+  # Define a test class in this module to ensure we have atomic classes
+  # This makes the test self-contained and doesn't depend on other test files
+  defmodule TestStyles do
+    use LiveStyle
+
+    class(:test_color, color: "red")
+  end
+
   describe "class_name_prefix" do
     test "returns configured prefix" do
       # Default is "x"

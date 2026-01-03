@@ -17,11 +17,11 @@ defmodule LiveStyle.TestCase do
 
   ## How Test Isolation Works
 
-  Each test process receives its own copy of the manifest via `ProcessState.fork/0`.
+  Each test process receives its own copy of the manifest via `Storage.fork/0`.
   This ensures:
 
   1. Tests can modify the manifest without affecting other tests
-  2. The shared ETS cache remains pristine for module compilation
+  2. The shared manifest file remains pristine for module compilation
   3. No race conditions between test execution and test file loading
 
   ## Options
@@ -42,8 +42,6 @@ defmodule LiveStyle.TestCase do
   use ExUnit.CaseTemplate
 
   alias LiveStyle.Storage
-  alias LiveStyle.Storage.IO, as: StorageIO
-  alias LiveStyle.Storage.ProcessState
 
   using opts do
     async = Keyword.get(opts, :async, true)
@@ -60,8 +58,7 @@ defmodule LiveStyle.TestCase do
   @doc false
   def setup_test do
     # Fork the shared manifest into this process
-    # This creates a per-process copy that won't affect the shared cache
-    ProcessState.fork()
+    Storage.fork()
 
     # Generate a unique manifest path for this test process
     unique_id = :erlang.unique_integer([:positive, :monotonic])
@@ -71,15 +68,11 @@ defmodule LiveStyle.TestCase do
     Storage.set_path(manifest_path)
 
     # Write the forked manifest to the test's unique file
-    # This ensures file-based reads work correctly
-    manifest = ProcessState.get()
-    File.mkdir_p!(Path.dirname(manifest_path))
-    StorageIO.write(manifest, manifest_path)
+    Storage.write(Storage.read())
 
     # Cleanup on test exit
     ExUnit.Callbacks.on_exit(fn ->
       File.rm(manifest_path)
-      ProcessState.delete()
       Storage.clear_path()
     end)
 

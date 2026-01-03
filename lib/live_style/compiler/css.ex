@@ -7,12 +7,12 @@ defmodule LiveStyle.Compiler.CSS do
 
   ## Generated CSS Structure
 
-  The CSS output includes (in order):
+  The CSS output includes (in order, matching StyleX):
 
   1. **@property rules** - For typed CSS variables
   2. **@property rules** - For dynamic CSS variables (with `inherits: false`)
-  3. **CSS custom properties** - `:root { --var: value; }`
-  4. **@keyframes animations** - With RTL variants when needed
+  3. **@keyframes animations** - With RTL variants when needed
+  4. **CSS custom properties** - `:root { --var: value; }`
   5. **@position-try rules** - For CSS Anchor Positioning
   6. **View transition rules** - `::view-transition-*` pseudo-elements
   7. **Atomic style rules** - Sorted by priority, with RTL overrides

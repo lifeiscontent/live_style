@@ -64,6 +64,16 @@ defmodule LiveStyle.Compiler.CSS.Plugin do
 
   @doc """
   Returns the default plugin pipeline.
+
+  The order matches StyleX:
+  1. @property rules (typed vars)
+  2. @property rules (dynamic vars)
+  3. @keyframes animations
+  4. :root variables
+  5. @position-try rules
+  6. View transition rules
+  7. Atomic style rules
+  8. Theme override rules
   """
   @spec default_plugins() :: [{integer(), {module(), atom()}}]
   def default_plugins do
@@ -80,8 +90,8 @@ defmodule LiveStyle.Compiler.CSS.Plugin do
     [
       {100, {Vars, :generate_properties}},
       {150, {DynamicProperties, :generate}},
-      {200, {Vars, :generate_vars}},
-      {300, {Keyframes, :generate}},
+      {200, {Keyframes, :generate}},
+      {300, {Vars, :generate_vars}},
       {400, {PositionTry, :generate}},
       {500, {ViewTransitionClasses, :generate}},
       {600, {Classes, :generate}},

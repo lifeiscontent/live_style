@@ -92,7 +92,7 @@ defmodule LiveStyle.Class.Include do
 
   defp fetch_included_style({module, rule_name}, _caller_module, _manifest)
        when is_atom(module) and is_atom(rule_name) do
-    # External references always use storage (external module should be compiled)
+    # External references use __live_style__(:class, name) directly from the module
     fetch_external_style(module, rule_name)
   end
 
@@ -122,21 +122,31 @@ defmodule LiveStyle.Class.Include do
   defp fetch_external_style(module, class_name) do
     Code.ensure_loaded!(module)
 
-    key = Manifest.key(module, class_name)
-    manifest = LiveStyle.Storage.read()
-
-    case Manifest.get_class(manifest, key) do
+    # First try module.__live_style__(:class, name) directly
+    # This creates an automatic compile-time dependency and avoids file I/O race conditions
+    # Fall back to storage for nested module compilation (same-file cross-module refs)
+    case module.__live_style__(:class, class_name) do
       entry when is_list(entry) ->
         Keyword.fetch!(entry, :declarations)
 
       nil ->
-        raise CompileError,
-          description: """
-          LiveStyle: Class :#{class_name} not found in #{inspect(module)}.
+        # Fallback: try storage (for nested modules in same file during compilation)
+        key = Manifest.key(module, class_name)
+        manifest = LiveStyle.Storage.read()
 
-          Make sure #{inspect(module)} is compiled before this module
-          and defines class(:#{class_name}, ...).
-          """
+        case Manifest.get_class(manifest, key) do
+          entry when is_list(entry) ->
+            Keyword.fetch!(entry, :declarations)
+
+          nil ->
+            raise CompileError,
+              description: """
+              LiveStyle: Class :#{class_name} not found in #{inspect(module)}.
+
+              Make sure #{inspect(module)} is compiled before this module
+              and defines class(:#{class_name}, ...).
+              """
+        end
     end
   end
 end

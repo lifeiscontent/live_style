@@ -17,12 +17,12 @@ defmodule LiveStyle.Storage do
   Configure the manifest path in your config:
 
       config :live_style,
-        manifest_path: "priv/live_style_manifest.etf"
+        manifest_path: "_build/live_style_manifest.etf"
 
-  The default path is `"priv/live_style_manifest.etf"`.
+  The default path is `"_build/live_style_manifest.etf"`.
   """
 
-  @default_path "priv/live_style_manifest.etf"
+  @default_path "_build/live_style_manifest.etf"
   @process_key :live_style_process_manifest
   @path_key :live_style_path
 

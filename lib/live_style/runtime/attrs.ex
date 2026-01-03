@@ -12,23 +12,8 @@ defmodule LiveStyle.Runtime.Attrs do
     {merged_props, var_styles, extra_classes} =
       refs
       |> List.flatten()
-      |> Enum.reject(&(&1 == nil or &1 == false or &1 == ""))
-      |> Enum.reduce({[], [], []}, fn ref, {props_acc, vars_acc, extra_acc} ->
-        case ref do
-          %Marker{class: class} ->
-            {props_acc, vars_acc, [class | extra_acc]}
-
-          binary when is_binary(binary) ->
-            {props_acc, vars_acc, [binary | extra_acc]}
-
-          _ ->
-            {new_props, new_vars} =
-              RefResolver.resolve(module, ref, property_classes_map)
-              |> merge_resolved_ref(props_acc, vars_acc)
-
-            {new_props, new_vars, extra_acc}
-        end
-      end)
+      |> Enum.reject(&falsy?/1)
+      |> Enum.reduce({[], [], []}, &process_ref(&1, &2, module, property_classes_map))
 
     class_list = PropertyMerger.to_class_list(merged_props)
 
@@ -40,8 +25,72 @@ defmodule LiveStyle.Runtime.Attrs do
     extra_styles = extract_extra_styles(opts)
     style_string = build_style_string(var_styles, extra_styles)
 
-    %LiveStyle.Attrs{class: class_string, style: style_string}
+    # Return Attrs with prop_classes for component merging
+    %LiveStyle.Attrs{class: class_string, style: style_string, prop_classes: merged_props}
   end
+
+  defp falsy?(nil), do: true
+  defp falsy?(false), do: true
+  defp falsy?(""), do: true
+  defp falsy?(_), do: false
+
+  defp process_ref(%Marker{class: class}, {props_acc, vars_acc, extra_acc}, _module, _map) do
+    {props_acc, vars_acc, [class | extra_acc]}
+  end
+
+  defp process_ref(%LiveStyle.Attrs{} = attrs, {props_acc, vars_acc, extra_acc}, _module, _map) do
+    process_attrs_ref(attrs, props_acc, vars_acc, extra_acc)
+  end
+
+  defp process_ref(binary, {props_acc, vars_acc, extra_acc}, _module, _map)
+       when is_binary(binary) do
+    {props_acc, vars_acc, [binary | extra_acc]}
+  end
+
+  defp process_ref(ref, {props_acc, vars_acc, extra_acc}, module, property_classes_map) do
+    {new_props, new_vars} =
+      RefResolver.resolve(module, ref, property_classes_map)
+      |> merge_resolved_ref(props_acc, vars_acc)
+
+    {new_props, new_vars, extra_acc}
+  end
+
+  defp process_attrs_ref(
+         %LiveStyle.Attrs{prop_classes: prop_classes, class: class},
+         props_acc,
+         vars_acc,
+         extra_acc
+       )
+       when is_list(prop_classes) and prop_classes != [] do
+    # Merge the property classes from the Attrs struct
+    new_props = PropertyMerger.merge(prop_classes, props_acc)
+
+    # Also preserve any extra classes (like markers) that aren't in prop_classes
+    extra_from_attrs = extract_extra_classes(class, prop_classes)
+    new_extra = extra_from_attrs ++ extra_acc
+
+    {new_props, vars_acc, new_extra}
+  end
+
+  defp process_attrs_ref(%LiveStyle.Attrs{class: class}, props_acc, vars_acc, extra_acc)
+       when is_binary(class) and class != "" do
+    # No property classes - treat as extra class string
+    {props_acc, vars_acc, [class | extra_acc]}
+  end
+
+  defp process_attrs_ref(%LiveStyle.Attrs{}, props_acc, vars_acc, extra_acc) do
+    {props_acc, vars_acc, extra_acc}
+  end
+
+  defp extract_extra_classes(class, prop_classes) when is_binary(class) and class != "" do
+    prop_class_values = MapSet.new(Enum.map(prop_classes, fn {_prop, cls} -> cls end))
+
+    class
+    |> String.split(" ", trim: true)
+    |> Enum.reject(&MapSet.member?(prop_class_values, &1))
+  end
+
+  defp extract_extra_classes(_, _), do: []
 
   defp extract_extra_styles(nil), do: nil
   defp extract_extra_styles([]), do: nil

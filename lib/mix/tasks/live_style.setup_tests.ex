@@ -108,11 +108,6 @@ defmodule Mix.Tasks.LiveStyle.SetupTests do
     files_str = inspect(test_files)
 
     script = """
-    # Initialize ETS cache in the main process BEFORE parallel compilation
-    # This ensures the table survives when worker processes exit
-    LiveStyle.Storage.Cache.init()
-    LiveStyle.Storage.Cache.mark_initialized()
-
     Code.compiler_options(ignore_module_conflict: true)
 
     # Load test support files first
@@ -122,9 +117,6 @@ defmodule Mix.Tasks.LiveStyle.SetupTests do
 
     files = #{files_str}
     Kernel.ParallelCompiler.compile(files)
-
-    # Persist the ETS cache to file so main process can read it
-    LiveStyle.Storage.FileAdapter.persist()
     """
 
     # Run in a subprocess using mix run

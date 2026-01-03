@@ -28,6 +28,8 @@ defmodule LiveStyle.Compiler.CSS.Keyframes do
   def generate(manifest) do
     manifest.keyframes
     |> Enum.sort_by(fn {_key, entry} -> Keyword.fetch!(entry, :ident) end)
+    # Deduplicate by ident (same keyframes defined in multiple modules get same hash)
+    |> Enum.uniq_by(fn {_key, entry} -> Keyword.fetch!(entry, :ident) end)
     |> Enum.flat_map(fn {_key, entry} ->
       ident = Keyword.fetch!(entry, :ident)
       frames = Keyword.fetch!(entry, :frames)

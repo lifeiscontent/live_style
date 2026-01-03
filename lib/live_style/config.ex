@@ -24,7 +24,7 @@ defmodule LiveStyle.Config do
   There are several global configurations for the LiveStyle application:
 
     * `:manifest_path` - path where the manifest file is stored
-      (default: `"priv/live_style_manifest.etf"`)
+      (default: `"_build/live_style_manifest.etf"`)
 
     * `:shorthand_behavior` - the shorthand expansion behavior
       (default: `LiveStyle.ShorthandBehavior.AcceptShorthands`)

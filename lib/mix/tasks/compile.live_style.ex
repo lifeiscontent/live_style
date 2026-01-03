@@ -46,13 +46,9 @@ defmodule Mix.Tasks.Compile.LiveStyle do
   use Mix.Task.Compiler
 
   alias LiveStyle.Compiler.Writer
-  alias LiveStyle.Storage.FileAdapter
 
   @impl true
   def run(_args) do
-    # Persist manifest to disk for incremental compilation
-    FileAdapter.persist()
-
     case Writer.write_css(log: &log_write/1) do
       :ok -> {:ok, []}
       {:error, reason} -> {:error, [reason]}
