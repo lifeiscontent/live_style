@@ -55,8 +55,7 @@ defmodule LiveStyle.MixProject do
       {:ex_doc, "~> 0.31", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
-      {:benchee, "~> 1.0", only: :dev, optional: true},
-      {:snapshy, "~> 0.4", only: :test}
+      {:benchee, "~> 1.0", only: :dev, optional: true}
     ]
   end
 
