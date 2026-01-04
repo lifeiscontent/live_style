@@ -21,7 +21,29 @@ defmodule LiveStyle.Selector.Condition do
   end
 
   def parse_combined(selector) do
-    {selector, nil}
+    # Check if a pseudo-selector is followed by an at-rule
+    # e.g., ":not([data-theme])@media (prefers-color-scheme: dark)"
+    case find_at_rule_after_pseudo(selector) do
+      nil ->
+        {selector, nil}
+
+      {pseudo, at_rule} ->
+        {pseudo, at_rule}
+    end
+  end
+
+  # Find @-rule that follows a pseudo-selector
+  # e.g., ":hover@media ..." -> {":hover", "@media ..."}
+  defp find_at_rule_after_pseudo(selector) do
+    case :binary.match(selector, "@") do
+      :nomatch ->
+        nil
+
+      {pos, _len} ->
+        pseudo = binary_part(selector, 0, pos)
+        at_rule = binary_part(selector, pos, byte_size(selector) - pos)
+        {pseudo, at_rule}
+    end
   end
 
   defp find_pseudo_in_at_rule(selector) do
