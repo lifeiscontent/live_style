@@ -18,7 +18,7 @@ defmodule LiveStyle.Compiler.CSS.Classes.Renderer do
   defp render_with_layers(classes) do
     grouped =
       classes
-      |> Enum.group_by(fn {_, priority, _, _} -> div(priority, 1000) end)
+      |> Enum.group_by(fn {_, _property, priority, _, _} -> div(priority, 1000) end)
       |> Enum.sort_by(fn {level, _} -> level end)
 
     if Enum.empty?(grouped) do
@@ -53,7 +53,8 @@ defmodule LiveStyle.Compiler.CSS.Classes.Renderer do
   # Concatenate pre-built LTR and RTL CSS rules
   defp render_ltr_rtl_css(classes) do
     {ltr_rules, rtl_rules} =
-      Enum.reduce(classes, {[], []}, fn {_class, _priority, ltr, rtl}, {ltr_acc, rtl_acc} ->
+      Enum.reduce(classes, {[], []}, fn {_class, _property, _priority, ltr, rtl},
+                                        {ltr_acc, rtl_acc} ->
         rtl_acc = if rtl, do: [rtl | rtl_acc], else: rtl_acc
         {[ltr | ltr_acc], rtl_acc}
       end)

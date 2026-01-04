@@ -222,6 +222,61 @@ defmodule LiveStyle.CSSOrderingTest do
   end
 
   # ============================================================================
+  # Same Priority Property Ordering Tests (StyleX-compatible)
+  # ============================================================================
+
+  describe "same priority property ordering" do
+    test "properties with same priority are sorted alphabetically by property name" do
+      css = LiveStyle.Compiler.generate_css()
+
+      # Find positions of border-bottom and border-color rules
+      # Both have priority 2000 (shorthands-of-longhands)
+      border_bottom_pos = find_first_position(css, "border-bottom:")
+      border_color_pos = find_first_position(css, "border-color:")
+
+      if border_bottom_pos && border_color_pos do
+        # border-bottom should come BEFORE border-color alphabetically
+        # This ensures border-color wins for overlapping properties (border-bottom-color)
+        assert border_bottom_pos < border_color_pos,
+               "border-bottom should come before border-color in CSS output. " <>
+                 "This ensures proper cascade where border-color overrides border-bottom's implicit color. " <>
+                 "border-bottom pos: #{border_bottom_pos}, border-color pos: #{border_color_pos}"
+      end
+    end
+
+    test "CSS cascade is correct for overlapping shorthand properties" do
+      # This test verifies the fix for the border-bottom + border-color collision bug.
+      # When both properties are used:
+      # - border-bottom: "1px solid" sets border-bottom-color to currentColor
+      # - border-color: "red" should override border-bottom-color to red
+      #
+      # For this to work correctly, border-bottom must appear BEFORE border-color
+      # in the CSS output (alphabetical order within same priority).
+      css = LiveStyle.Compiler.generate_css()
+
+      # Extract all rules at priority 2000 (shorthands-of-longhands)
+      # These include: border-bottom, border-color, border-top, border-left, etc.
+      shorthand_rules =
+        Regex.scan(
+          ~r/\.(x[a-z0-9]+)\{(border-(?:bottom|top|left|right|color|style|width)[^}]*)\}/,
+          css
+        )
+        |> Enum.map(fn [_, _class, decl] ->
+          [prop, _] = String.split(decl, ":", parts: 2)
+          prop
+        end)
+
+      # Verify they're in alphabetical order
+      sorted_rules = Enum.sort(shorthand_rules)
+
+      # The rules should already be sorted
+      assert shorthand_rules == sorted_rules,
+             "Shorthand properties at same priority should be sorted alphabetically. " <>
+               "Got: #{inspect(shorthand_rules)}, Expected: #{inspect(sorted_rules)}"
+    end
+  end
+
+  # ============================================================================
   # Helper Functions
   # ============================================================================
 
