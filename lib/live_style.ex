@@ -102,7 +102,10 @@ defmodule LiveStyle do
           # Composition
           include: 1,
           # Utilities
-          fallback: 1
+          fallback: 1,
+          # Markers for contextual selectors (When)
+          default_marker: 0,
+          marker: 1
         ]
 
       @before_compile LiveStyle
