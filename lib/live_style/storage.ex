@@ -90,7 +90,8 @@ defmodule LiveStyle.Storage do
       Process.put(@process_key, manifest)
     end
 
-    write_to_file(manifest)
+    # Always use lock when writing to file for safety against concurrent access
+    with_lock(fn -> write_to_file(manifest) end)
     :ok
   end
 
@@ -103,10 +104,11 @@ defmodule LiveStyle.Storage do
   @spec update((LiveStyle.Manifest.t() -> LiveStyle.Manifest.t())) :: :ok
   def update(fun) do
     if process_active?() do
+      # Use process-local cache for reads, but still lock file writes
       current = Process.get(@process_key) || LiveStyle.Manifest.empty()
       updated = fun.(current)
       Process.put(@process_key, updated)
-      write_to_file(updated)
+      with_lock(fn -> write_to_file(updated) end)
     else
       # Use file locking for concurrent access during compilation
       with_lock(fn ->
@@ -130,10 +132,8 @@ defmodule LiveStyle.Storage do
       Process.put(@process_key, empty)
     end
 
-    file_path = path()
-    if File.exists?(file_path), do: File.rm!(file_path)
-
-    write_to_file(empty)
+    # Write empty manifest (overwrites existing file atomically)
+    with_lock(fn -> write_to_file(empty) end)
     :ok
   end
 

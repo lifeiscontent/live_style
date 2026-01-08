@@ -33,17 +33,21 @@ defmodule LiveStyle.Compiler.Watch do
 
     Logger.info("LiveStyle watching for changes...")
 
-    watch_loop(output, manifest_path, run_once_fun, _pending = false)
+    watch_loop(output, manifest_path, run_once_fun, :idle)
   end
 
   # When no changes pending, wait indefinitely for events
-  defp watch_loop(output, manifest_path, run_once_fun, false = _pending) do
+  defp watch_loop(output, manifest_path, run_once_fun, :idle) do
     receive do
       {:file_event, _pid, {path, events}} ->
         if manifest_event?(path, manifest_path, events) do
-          watch_loop(output, manifest_path, run_once_fun, _pending = true)
+          require Logger
+          Logger.debug("LiveStyle: manifest changed, regenerating CSS...")
+          # Start debounce with deadline
+          deadline = System.monotonic_time(:millisecond) + @debounce_ms
+          watch_loop(output, manifest_path, run_once_fun, {:pending, deadline})
         else
-          watch_loop(output, manifest_path, run_once_fun, _pending = false)
+          watch_loop(output, manifest_path, run_once_fun, :idle)
         end
 
       {:file_event, _pid, :stop} ->
@@ -51,29 +55,41 @@ defmodule LiveStyle.Compiler.Watch do
     end
   end
 
-  # When changes pending, use timeout to debounce
-  defp watch_loop(output, manifest_path, run_once_fun, true = _pending) do
+  # When changes pending, use absolute deadline to debounce
+  # Only manifest events reset the deadline; other events are consumed without affecting timing
+  defp watch_loop(output, manifest_path, run_once_fun, {:pending, deadline}) do
+    remaining = max(0, deadline - System.monotonic_time(:millisecond))
+
     receive do
       {:file_event, _pid, {path, events}} ->
         if manifest_event?(path, manifest_path, events) do
-          # Reset debounce timer
-          watch_loop(output, manifest_path, run_once_fun, _pending = true)
+          # Reset debounce deadline for manifest events only
+          new_deadline = System.monotonic_time(:millisecond) + @debounce_ms
+          watch_loop(output, manifest_path, run_once_fun, {:pending, new_deadline})
         else
-          watch_loop(output, manifest_path, run_once_fun, _pending = true)
+          # Non-manifest event: consume but keep same deadline
+          watch_loop(output, manifest_path, run_once_fun, {:pending, deadline})
         end
 
       {:file_event, _pid, :stop} ->
         0
     after
-      @debounce_ms ->
+      remaining ->
         _ = run_once_fun.(output)
-        watch_loop(output, manifest_path, run_once_fun, _pending = false)
+        watch_loop(output, manifest_path, run_once_fun, :idle)
     end
   end
 
   defp manifest_event?(path, manifest_path, events) do
-    Path.expand(path) == Path.expand(manifest_path) and
-      Enum.any?(events, &(&1 in [:modified, :created, :renamed, :moved]))
+    # Normalize both paths to absolute form for comparison
+    # FileSystem may send absolute paths while manifest_path might be relative
+    normalized_path = Path.expand(path)
+    normalized_manifest = Path.expand(manifest_path)
+
+    path_matches = normalized_path == normalized_manifest
+    valid_event = Enum.any?(events, &(&1 in [:modified, :created, :renamed, :moved]))
+
+    path_matches and valid_event
   end
 
   defp return_error, do: 1

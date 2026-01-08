@@ -23,6 +23,7 @@ defmodule LiveStyle.Compiler.Writer do
         :ok
 
       {:ok, :unchanged} ->
+        if log_fn, do: log_fn.({:unchanged, output})
         :ok
 
       {:error, reason} ->
@@ -44,5 +45,10 @@ defmodule LiveStyle.Compiler.Writer do
     Logger.info(
       "LiveStyle: #{stats[:vars]} vars, #{stats[:keyframes]} keyframes, #{stats[:classes]} rules → #{output_path}"
     )
+  end
+
+  defp log_run({:unchanged, output_path}) do
+    require Logger
+    Logger.debug("LiveStyle: CSS unchanged, skipping write → #{output_path}")
   end
 end

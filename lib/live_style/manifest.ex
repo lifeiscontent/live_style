@@ -93,6 +93,15 @@ defmodule LiveStyle.Manifest do
     if current?(manifest) do
       struct_merge(empty(), manifest)
     else
+      old_version = Map.get(manifest, :version, "unknown")
+
+      require Logger
+
+      Logger.warning(
+        "LiveStyle: Manifest version mismatch (found v#{old_version}, expected v#{@current_version}). " <>
+          "Discarding old manifest and regenerating CSS."
+      )
+
       empty()
     end
   end

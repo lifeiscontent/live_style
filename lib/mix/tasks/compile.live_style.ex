@@ -49,10 +49,50 @@ defmodule Mix.Tasks.Compile.LiveStyle do
 
   @impl true
   def run(_args) do
-    case Writer.write_css(log: &log_write/1) do
-      :ok -> {:ok, []}
-      {:error, reason} -> {:error, [reason]}
+    # Check if manifest is empty/missing - if so, we need to force recompilation
+    # of modules that use LiveStyle to repopulate it
+    manifest = LiveStyle.Storage.read()
+
+    if manifest_empty?(manifest) and not recompiling?() do
+      # Manifest is empty but modules exist - need to recompile
+      # Set flag to prevent infinite loop, then rerun elixir compiler
+      Process.put(:live_style_recompiling, true)
+
+      Mix.shell().info([
+        :yellow,
+        "LiveStyle: ",
+        :reset,
+        "manifest empty, forcing recompilation..."
+      ])
+
+      # Force recompile by running mix compile with --force
+      Mix.Task.rerun("compile.elixir", ["--force"])
+
+      # Now write CSS with the repopulated manifest
+      case Writer.write_css(log: &log_write/1) do
+        :ok -> {:ok, []}
+        {:error, reason} -> {:error, [reason]}
+      end
+    else
+      case Writer.write_css(log: &log_write/1) do
+        :ok -> {:ok, []}
+        {:error, reason} -> {:error, [reason]}
+      end
     end
+  end
+
+  defp manifest_empty?(manifest) do
+    manifest.vars == [] and
+      manifest.consts == [] and
+      manifest.keyframes == [] and
+      manifest.position_try == [] and
+      manifest.view_transition_classes == [] and
+      manifest.classes == [] and
+      manifest.theme_classes == []
+  end
+
+  defp recompiling? do
+    Process.get(:live_style_recompiling, false)
   end
 
   defp log_write({:written, stats, output_path}) do
@@ -64,6 +104,11 @@ defmodule Mix.Tasks.Compile.LiveStyle do
       :cyan,
       output_path
     ])
+  end
+
+  defp log_write({:unchanged, _output_path}) do
+    # CSS unchanged, no need to log during compilation
+    :ok
   end
 
   @impl true
