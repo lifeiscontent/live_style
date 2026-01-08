@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.1] - 2026-01-08
+
+### Added
+
+- Auto-recompile when manifest is empty: Mix compiler now detects empty manifests and automatically triggers `mix compile.elixir --force` to repopulate them
+- Debug logging for unchanged CSS output in watch mode (`LiveStyle: CSS unchanged, skipping write → path`)
+
+### Fixed
+
+- Add consistent file locking in `Storage.write/update/clear` to prevent race conditions when `process_active?` is true
+- Fix `manifest_empty?` to check all 7 collections, not just 3
+- Add warning log when manifest version mismatch causes data discard
+- Fix CSS writer to distinguish read errors from missing files
+- Fix watcher debounce to use absolute deadline so non-manifest events don't reset the timer
+- Remove redundant file delete in `Storage.clear()` (atomic write already overwrites)
+
 ## [0.13.0] - 2026-01-03
 
 ### Added
