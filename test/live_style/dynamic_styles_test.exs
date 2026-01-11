@@ -20,6 +20,34 @@ defmodule LiveStyle.DynamicStylesTest do
     class(:static_base, display: "block")
   end
 
+  defmodule VarOverrideModule do
+    @moduledoc """
+    Test module for CSS variable override via dynamic classes.
+    This tests the pattern where you use var() references as property keys
+    to override CSS variables defined elsewhere.
+    """
+    use LiveStyle
+
+    # Define some CSS variables
+    vars primary: "#3b82f6",
+         secondary: "#10b981"
+
+    # Dynamic class that overrides CSS variables
+    # This is the key pattern: using var({Module, :name}) as the property key
+    class(:theme_override, fn primary, secondary ->
+      [
+        {var(:primary), primary},
+        {var(:secondary), secondary}
+      ]
+    end)
+
+    # A class that uses these variables
+    class(:themed,
+      color: var(:primary),
+      background_color: var(:secondary)
+    )
+  end
+
   describe "dynamic class CSS output" do
     test "generates CSS with var() references for single param" do
       css = LiveStyle.Compiler.generate_css()
@@ -91,6 +119,102 @@ defmodule LiveStyle.DynamicStylesTest do
       # Only the last value should be in style
       assert attrs.style =~ "0.9"
       refute attrs.style =~ "0.3"
+    end
+  end
+
+  # A separate module for cross-module dynamic class testing
+  defmodule CrossModuleConsumer do
+    use LiveStyle
+
+    # Just a static class for this module
+    class(:consumer_class, display: "flex")
+  end
+
+  describe "cross-module dynamic class resolution" do
+    test "can resolve dynamic class from another module" do
+      # Use DynamicModule's dynamic class from CrossModuleConsumer's context
+      attrs =
+        LiveStyle.Compiler.get_css(CrossModuleConsumer, [
+          {{DynamicModule, :dynamic_opacity}, "0.75"}
+        ])
+
+      assert is_binary(attrs.class)
+      assert attrs.class != ""
+      assert is_binary(attrs.style)
+      assert attrs.style =~ "0.75"
+    end
+
+    test "can combine local and cross-module dynamic classes" do
+      attrs =
+        LiveStyle.Compiler.get_css(CrossModuleConsumer, [
+          :consumer_class,
+          {{DynamicModule, :dynamic_size}, ["50px", "100px"]}
+        ])
+
+      assert is_binary(attrs.class)
+      classes = String.split(attrs.class, " ")
+      # Should have consumer_class + the dynamic class(es)
+      assert length(classes) >= 2
+      assert is_binary(attrs.style)
+      assert attrs.style =~ "50px"
+      assert attrs.style =~ "100px"
+    end
+
+    test "cross-module static class reference still works" do
+      attrs =
+        LiveStyle.Compiler.get_css(CrossModuleConsumer, [
+          {DynamicModule, :static_base}
+        ])
+
+      assert is_binary(attrs.class)
+      assert attrs.class != ""
+      # Static classes have no inline style
+      assert is_nil(attrs.style)
+    end
+  end
+
+  describe "CSS variable override via dynamic classes" do
+    test "theme_override class returns valid attrs" do
+      attrs =
+        LiveStyle.Compiler.get_css(VarOverrideModule, [
+          {:theme_override, ["#ff0000", "#00ff00"]}
+        ])
+
+      assert is_binary(attrs.class)
+      assert attrs.class != ""
+      assert is_binary(attrs.style)
+    end
+
+    test "inline style sets CSS variables directly (no extra prefix)" do
+      attrs =
+        LiveStyle.Compiler.get_css(VarOverrideModule, [
+          {:theme_override, ["#ff0000", "#00ff00"]}
+        ])
+
+      # The inline style should set the CSS variables directly using their hashed names
+      # e.g., "--x1abc123: #ff0000" NOT "--x---x1abc123: #ff0000"
+      assert is_binary(attrs.style)
+
+      # Should contain the values we passed
+      assert attrs.style =~ "#ff0000"
+      assert attrs.style =~ "#00ff00"
+
+      # Should NOT have double dashes from incorrect prefixing (--x---x...)
+      refute attrs.style =~ "--x---"
+    end
+
+    test "can combine themed class with theme_override" do
+      attrs =
+        LiveStyle.Compiler.get_css(VarOverrideModule, [
+          :themed,
+          {:theme_override, ["#ff0000", "#00ff00"]}
+        ])
+
+      # Should have both class names and inline style
+      assert is_binary(attrs.class)
+      classes = String.split(attrs.class, " ")
+      assert length(classes) >= 1
+      assert is_binary(attrs.style)
     end
   end
 end

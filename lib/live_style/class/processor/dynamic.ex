@@ -30,7 +30,17 @@ defmodule LiveStyle.Class.Processor.Dynamic do
     atomic =
       Enum.map(props, fn prop ->
         css_prop = CSSValue.to_css_property(prop)
-        css_var = "--#{prefix}-#{css_prop}"
+
+        # If the property is already a CSS variable (starts with --), use it directly
+        # This handles the case where var({Module, :name}) is used as a property key
+        # to override CSS variables defined elsewhere
+        css_var =
+          if String.starts_with?(css_prop, "--") do
+            css_prop
+          else
+            "--#{prefix}-#{css_prop}"
+          end
+
         css_value = "var(#{css_var})"
 
         # Use Builder to create entry with pre-built CSS

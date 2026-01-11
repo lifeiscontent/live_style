@@ -59,6 +59,29 @@ defmodule LiveStyle.Runtime.RefResolver do
     end
   end
 
+  # Cross-module dynamic class: {{OtherModule, :name}, args}
+  def resolve(_module, {{other_module, name}, args}, _property_classes)
+      when is_atom(other_module) and is_atom(name) do
+    case Atom.to_string(other_module) do
+      <<"Elixir.", _::binary>> ->
+        other_prop_classes = other_module.__live_style__(:property_classes)
+        prop_classes = Keyword.get(other_prop_classes, name, [])
+
+        dynamic_names = other_module.__live_style__(:dynamic_names)
+
+        if name in dynamic_names do
+          fn_name = :"__dynamic_#{name}__"
+          var_list = apply(other_module, fn_name, [args])
+          {:dynamic, prop_classes, var_list || []}
+        else
+          {:static, prop_classes}
+        end
+
+      _ ->
+        :skip
+    end
+  end
+
   def resolve(module, {name, args}, property_classes) when is_atom(name) do
     dynamic_names = module.__live_style__(:dynamic_names)
 

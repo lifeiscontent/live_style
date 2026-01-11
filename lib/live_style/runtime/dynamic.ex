@@ -27,14 +27,27 @@ defmodule LiveStyle.Runtime.Dynamic do
       declarations = apply(module, compute_fn_name, [values_list])
 
       Enum.map(declarations, fn {prop, value} ->
-        {"--#{prefix}-#{CSSValue.to_css_property(prop)}", format_css_value(value)}
+        {to_css_var_name(prop, prefix), format_css_value(value)}
       end)
     else
       all_props
       |> Enum.zip(values_list)
       |> Enum.map(fn {prop, value} ->
-        {"--#{prefix}-#{CSSValue.to_css_property(prop)}", format_css_value(value)}
+        {to_css_var_name(prop, prefix), format_css_value(value)}
       end)
+    end
+  end
+
+  # Converts a property key to a CSS variable name.
+  # If the property is already a CSS variable (starts with --), use it directly.
+  # Otherwise, add the dynamic class prefix (--{prefix}-{property}).
+  defp to_css_var_name(prop, prefix) do
+    css_prop = CSSValue.to_css_property(prop)
+
+    if String.starts_with?(css_prop, "--") do
+      css_prop
+    else
+      "--#{prefix}-#{css_prop}"
     end
   end
 
