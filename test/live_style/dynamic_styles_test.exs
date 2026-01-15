@@ -29,8 +29,10 @@ defmodule LiveStyle.DynamicStylesTest do
     use LiveStyle
 
     # Define some CSS variables
-    vars primary: "#3b82f6",
-         secondary: "#10b981"
+    vars(
+      primary: "#3b82f6",
+      secondary: "#10b981"
+    )
 
     # Dynamic class that overrides CSS variables
     # This is the key pattern: using var({Module, :name}) as the property key
@@ -213,7 +215,7 @@ defmodule LiveStyle.DynamicStylesTest do
       # Should have both class names and inline style
       assert is_binary(attrs.class)
       classes = String.split(attrs.class, " ")
-      assert length(classes) >= 1
+      assert classes != []
       assert is_binary(attrs.style)
     end
   end
