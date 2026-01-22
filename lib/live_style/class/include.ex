@@ -92,11 +92,17 @@ defmodule LiveStyle.Class.Include do
 
   defp fetch_included_style({module, rule_name}, _caller_module, _manifest)
        when is_atom(module) and is_atom(rule_name) do
+    # Record usage of the included external class for tree shaking
+    record_include_usage(module, rule_name)
+
     # External references use __live_style__(:class, name) directly from the module
     fetch_external_style(module, rule_name)
   end
 
   defp fetch_included_style(class_name, caller_module, manifest) when is_atom(class_name) do
+    # Record usage of the included local class for tree shaking
+    record_include_usage(caller_module, class_name)
+
     # Local reference - look up in provided manifest first, then storage
     key = Manifest.key(caller_module, class_name)
 
@@ -148,5 +154,12 @@ defmodule LiveStyle.Class.Include do
               """
         end
     end
+  end
+
+  # Record usage of an included class for tree shaking
+  defp record_include_usage(module, class_name) do
+    LiveStyle.Storage.update_usage(fn usage ->
+      LiveStyle.UsageManifest.record_usage(usage, module, class_name)
+    end)
   end
 end

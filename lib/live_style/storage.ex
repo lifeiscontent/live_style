@@ -24,8 +24,11 @@ defmodule LiveStyle.Storage do
 
   # Use dedicated subdirectory to avoid FileSystem noise from beam file writes
   @default_path "_build/live_style/manifest.etf"
+  @default_usage_path "_build/live_style/usage.etf"
   @process_key :live_style_process_manifest
+  @process_usage_key :live_style_process_usage
   @path_key :live_style_path
+  @usage_path_key :live_style_usage_path
 
   # Lock configuration
   @lock_retry_interval 10
@@ -160,6 +163,118 @@ defmodule LiveStyle.Storage do
   def process_active?, do: Process.get(@process_key) != nil
 
   # ===========================================================================
+  # Usage Manifest Operations
+  # ===========================================================================
+
+  @doc """
+  Returns the current usage manifest path.
+  """
+  @spec usage_path() :: String.t()
+  def usage_path do
+    Process.get(@usage_path_key) ||
+      Application.get_env(:live_style, :usage_path, @default_usage_path)
+  end
+
+  @doc """
+  Sets the usage manifest path for the current process.
+  """
+  @spec set_usage_path(String.t()) :: :ok
+  def set_usage_path(path) do
+    Process.put(@usage_path_key, path)
+    :ok
+  end
+
+  @doc """
+  Clears the per-process usage path override.
+  """
+  @spec clear_usage_path() :: :ok
+  def clear_usage_path do
+    Process.delete(@usage_path_key)
+    :ok
+  end
+
+  @doc """
+  Reads the usage manifest from storage.
+
+  Returns an empty usage manifest if storage is empty or uninitialized.
+  """
+  @spec read_usage() :: LiveStyle.UsageManifest.t()
+  def read_usage do
+    case Process.get(@process_usage_key) do
+      nil -> read_usage_from_file()
+      usage -> usage
+    end
+  end
+
+  @doc """
+  Writes the usage manifest to storage.
+  """
+  @spec write_usage(LiveStyle.UsageManifest.t()) :: :ok
+  def write_usage(usage) do
+    if usage_process_active?() do
+      Process.put(@process_usage_key, usage)
+    end
+
+    with_usage_lock(fn -> write_usage_to_file(usage) end)
+    :ok
+  end
+
+  @doc """
+  Atomically updates the usage manifest.
+
+  The update function receives the current usage and returns the new usage.
+  Uses file locking to prevent race conditions during parallel compilation.
+  """
+  @spec update_usage((LiveStyle.UsageManifest.t() -> LiveStyle.UsageManifest.t())) :: :ok
+  def update_usage(fun) do
+    if usage_process_active?() do
+      current = Process.get(@process_usage_key) || LiveStyle.UsageManifest.empty()
+      updated = fun.(current)
+      Process.put(@process_usage_key, updated)
+      with_usage_lock(fn -> write_usage_to_file(updated) end)
+    else
+      with_usage_lock(fn ->
+        current = read_usage_from_file()
+        updated = fun.(current)
+        write_usage_to_file(updated)
+      end)
+    end
+
+    :ok
+  end
+
+  @doc """
+  Clears the usage manifest, resetting to empty state.
+  """
+  @spec clear_usage() :: :ok
+  def clear_usage do
+    empty = LiveStyle.UsageManifest.empty()
+
+    if usage_process_active?() do
+      Process.put(@process_usage_key, empty)
+    end
+
+    with_usage_lock(fn -> write_usage_to_file(empty) end)
+    :ok
+  end
+
+  @doc """
+  Forks the current usage manifest into this process for test isolation.
+  """
+  @spec fork_usage() :: :ok
+  def fork_usage do
+    usage = read_usage_from_file()
+    Process.put(@process_usage_key, usage)
+    :ok
+  end
+
+  @doc """
+  Returns whether this process has an active local usage manifest.
+  """
+  @spec usage_process_active?() :: boolean()
+  def usage_process_active?, do: Process.get(@process_usage_key) != nil
+
+  # ===========================================================================
   # File Operations
   # ===========================================================================
 
@@ -272,4 +387,70 @@ defmodule LiveStyle.Storage do
   end
 
   defp release_lock(lock), do: File.rm_rf(lock)
+
+  # ===========================================================================
+  # Usage File Operations
+  # ===========================================================================
+
+  defp read_usage_from_file do
+    file_path = usage_path()
+
+    if File.exists?(file_path) do
+      case File.read(file_path) do
+        {:ok, binary} ->
+          parse_usage(binary, file_path)
+
+        {:error, reason} ->
+          require Logger
+          Logger.warning("LiveStyle: Failed to read usage manifest: #{inspect(reason)}")
+          LiveStyle.UsageManifest.empty()
+      end
+    else
+      LiveStyle.UsageManifest.empty()
+    end
+  end
+
+  defp parse_usage(binary, file_path) do
+    :erlang.binary_to_term(binary)
+  catch
+    :error, :badarg ->
+      require Logger
+      Logger.warning("LiveStyle: Corrupt usage manifest at #{file_path}, starting fresh")
+      LiveStyle.UsageManifest.empty()
+  end
+
+  defp write_usage_to_file(usage) do
+    file_path = usage_path()
+    file_path |> Path.dirname() |> File.mkdir_p!()
+
+    temp_path = file_path <> ".tmp.#{:erlang.unique_integer([:positive])}"
+
+    try do
+      File.write!(temp_path, :erlang.term_to_binary(usage))
+      File.rename!(temp_path, file_path)
+    rescue
+      error ->
+        File.rm(temp_path)
+        reraise error, __STACKTRACE__
+    end
+  end
+
+  # ===========================================================================
+  # Usage File Locking
+  # ===========================================================================
+
+  defp usage_lock_path, do: usage_path() <> ".lock"
+
+  defp with_usage_lock(fun) when is_function(fun, 0) do
+    lock = usage_lock_path()
+    lock |> Path.dirname() |> File.mkdir_p!()
+    maybe_clean_stale_lock(lock)
+    acquire_lock(lock, @lock_timeout)
+
+    try do
+      fun.()
+    after
+      release_lock(lock)
+    end
+  end
 end

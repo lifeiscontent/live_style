@@ -961,6 +961,11 @@ defmodule LiveStyle do
   # Single atom reference: css(:button)
   # Returns Attrs struct for spreading in templates
   defmacro css(name) when is_atom(name) do
+    module = __CALLER__.module
+
+    # Record usage at compile time for tree shaking
+    record_class_usage(module, name)
+
     quote do
       %LiveStyle.Attrs{
         class: Keyword.get(__MODULE__.__live_style__(:class_strings), unquote(name), ""),
@@ -972,6 +977,12 @@ defmodule LiveStyle do
   # List of refs: css([:base, :primary, @active && :active])
   # Resolves and merges multiple refs at runtime, returns Attrs struct
   defmacro css(refs) when is_list(refs) do
+    module = __CALLER__.module
+
+    # Extract and record all static class refs at compile time
+    extract_class_refs(refs, module)
+    |> Enum.each(fn {mod, class_name} -> record_class_usage(mod, class_name) end)
+
     quote do
       LiveStyle.resolve_attrs(__MODULE__, unquote(refs), nil)
     end
@@ -1000,9 +1011,90 @@ defmodule LiveStyle do
       <div {css([:base], style: [opacity: "0.5", transform: "scale(1.1)"])}>
   """
   defmacro css(refs, opts) when is_list(opts) do
+    module = __CALLER__.module
+
+    # Extract and record all static class refs at compile time
+    # Handle both single ref and list of refs
+    refs_list = if is_list(refs), do: refs, else: [refs]
+
+    extract_class_refs(refs_list, module)
+    |> Enum.each(fn {mod, class_name} -> record_class_usage(mod, class_name) end)
+
     quote do
       LiveStyle.resolve_attrs(__MODULE__, unquote(refs), unquote(opts))
     end
+  end
+
+  # Records a class usage for tree shaking
+  @doc false
+  def record_class_usage(module, class_name) when is_atom(module) and is_atom(class_name) do
+    LiveStyle.Storage.update_usage(fn usage ->
+      LiveStyle.UsageManifest.record_usage(usage, module, class_name)
+    end)
+  end
+
+  # Extracts static class references from a list of refs (for usage tracking)
+  # Returns list of {module, class_name} tuples
+  @doc false
+  def extract_class_refs(refs, caller_module) when is_list(refs) do
+    refs
+    |> Enum.flat_map(fn ref -> extract_single_ref(ref, caller_module) end)
+    |> Enum.uniq()
+  end
+
+  defp extract_single_ref(ref, caller_module) when is_atom(ref) do
+    # Simple atom ref like :button
+    [{caller_module, ref}]
+  end
+
+  defp extract_single_ref({module, class_name}, _caller_module)
+       when is_atom(module) and is_atom(class_name) do
+    # Cross-module ref like {OtherModule, :btn}
+    [{module, class_name}]
+  end
+
+  defp extract_single_ref({class_name, _value}, caller_module) when is_atom(class_name) do
+    # Dynamic tuple like {:dynamic_color, @color} - track the class name
+    [{caller_module, class_name}]
+  end
+
+  defp extract_single_ref(ast, caller_module) do
+    # Complex expression like @active && :primary
+    # Use Macro.prewalk to find all atom literals (potential class refs)
+    {_, refs} =
+      Macro.prewalk(ast, [], fn
+        # Atom literals that could be class names
+        name, acc when is_atom(name) and name not in [nil, true, false] ->
+          # Skip common Elixir special atoms
+          if atom_is_class_name?(name) do
+            {name, [{caller_module, name} | acc]}
+          else
+            {name, acc}
+          end
+
+        # Cross-module tuple refs inside expressions
+        {{:__aliases__, _, _} = module_ast, class_name} = node, acc
+        when is_atom(class_name) ->
+          case Macro.expand(module_ast, __ENV__) do
+            module when is_atom(module) ->
+              {node, [{module, class_name} | acc]}
+
+            _ ->
+              {node, acc}
+          end
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    refs
+  end
+
+  # Check if an atom looks like a class name (not a special form or operator)
+  defp atom_is_class_name?(atom) do
+    name = Atom.to_string(atom)
+    # Class names are lowercase identifiers, not operators or special forms
+    String.match?(name, ~r/^[a-z_][a-zA-Z0-9_]*$/)
   end
 
   @doc """

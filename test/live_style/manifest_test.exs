@@ -31,12 +31,12 @@ defmodule LiveStyle.ManifestTest do
   describe "key/2" do
     test "creates dotted key from module and name" do
       key = Manifest.key(MyApp.Tokens, :primary)
-      assert key == "MyApp.Tokens.primary"
+      assert key == "Elixir.MyApp.Tokens.primary"
     end
 
     test "handles nested modules" do
       key = Manifest.key(MyApp.Web.Components.Button, :base)
-      assert key == "MyApp.Web.Components.Button.base"
+      assert key == "Elixir.MyApp.Web.Components.Button.base"
     end
   end
 

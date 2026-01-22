@@ -141,18 +141,126 @@ Apply the theme at the root level:
 </html>
 ```
 
-### Respecting System Preference
+### JavaScript Integration
 
-For automatic system preference, use JavaScript to detect and set a class on the `<html>` element:
+Since theme class names are generated at compile time, you need to bridge them to JavaScript for runtime theme switching. Use data attributes to pass the class names:
 
-```javascript
-// Check system preference
-if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-  document.documentElement.classList.add('dark-theme');
-}
+```heex
+<!-- In root.html.heex -->
+<html
+  lang="en"
+  data-theme-dark={theme_class({MyAppWeb.Semantic, :dark})}
+  data-theme-light={theme_class({MyAppWeb.Semantic, :light})}
+>
 ```
 
-Then apply the theme conditionally in your template.
+Then in a blocking `<script>` tag in `<head>` (to prevent flash of unstyled content):
+
+```heex
+<script>
+  (function() {
+    const html = document.documentElement;
+    const themes = {
+      dark: html.dataset.themeDark,
+      light: html.dataset.themeLight
+    };
+
+    const getStoredTheme = () => localStorage.getItem("theme");
+    const getSystemTheme = () =>
+      window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+
+    const applyTheme = (theme) => {
+      // Remove all theme classes
+      Object.values(themes).forEach(cls => cls && html.classList.remove(cls));
+
+      // Apply the appropriate theme class
+      if (theme === "system") {
+        const systemTheme = getSystemTheme();
+        if (themes[systemTheme]) html.classList.add(themes[systemTheme]);
+      } else if (themes[theme]) {
+        html.classList.add(themes[theme]);
+      }
+    };
+
+    // Apply theme immediately on page load
+    const stored = getStoredTheme();
+    applyTheme(stored || "system");
+
+    // Listen for system preference changes
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+      if (!getStoredTheme() || getStoredTheme() === "system") {
+        applyTheme("system");
+      }
+    });
+
+    // Expose setTheme for UI controls
+    window.setTheme = (theme) => {
+      if (theme === "system") {
+        localStorage.removeItem("theme");
+      } else {
+        localStorage.setItem("theme", theme);
+      }
+      applyTheme(theme);
+    };
+  })();
+</script>
+```
+
+### Theme Toggle Component
+
+Create a theme toggle that works with the JavaScript bridge:
+
+```elixir
+defmodule MyAppWeb.ThemeToggle do
+  use Phoenix.Component
+
+  def toggle(assigns) do
+    ~H"""
+    <div>
+      <button type="button" onclick="setTheme('system')">System</button>
+      <button type="button" onclick="setTheme('light')">Light</button>
+      <button type="button" onclick="setTheme('dark')">Dark</button>
+    </div>
+    """
+  end
+end
+```
+
+For LiveView integration, use `JS.dispatch/1`:
+
+```elixir
+def toggle(assigns) do
+  ~H"""
+  <div>
+    <button type="button" phx-click={JS.dispatch("phx:set-theme", detail: %{theme: "system"})}>
+      System
+    </button>
+    <button type="button" phx-click={JS.dispatch("phx:set-theme", detail: %{theme: "light"})}>
+      Light
+    </button>
+    <button type="button" phx-click={JS.dispatch("phx:set-theme", detail: %{theme: "dark"})}>
+      Dark
+    </button>
+  </div>
+  """
+end
+```
+
+And handle the event in JavaScript:
+
+```javascript
+window.addEventListener("phx:set-theme", (e) => {
+  window.setTheme(e.detail.theme);
+});
+```
+
+### Why Data Attributes?
+
+You might wonder why we pass class names via data attributes instead of hardcoding them. LiveStyle generates hashed class names (like `x1a2b3c4`) at compile time. By using data attributes:
+
+1. **No duplication** - The class name is defined once in Elixir
+2. **No sync issues** - JS always reads the current class name
+3. **Refactor-safe** - Changing theme definitions won't break JS
 
 ## Multiple Themes
 

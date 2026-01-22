@@ -57,23 +57,36 @@ defmodule LiveStyle.TestCase do
 
   @doc false
   def setup_test do
-    # Fork the shared manifest into this process
+    # Fork the shared manifest and usage into this process BEFORE changing paths
+    # This ensures we get the compile-time recorded data
     Storage.fork()
+    Storage.fork_usage()
 
-    # Generate a unique manifest path for this test process
+    # Generate unique manifest paths for this test process
     unique_id = :erlang.unique_integer([:positive, :monotonic])
     manifest_path = Path.join(System.tmp_dir!(), "live_style_test_#{unique_id}.etf")
+    usage_path = Path.join(System.tmp_dir!(), "live_style_usage_test_#{unique_id}.etf")
 
-    # Set this test's unique manifest path
+    # Set this test's unique manifest and usage paths
     Storage.set_path(manifest_path)
+    Storage.set_usage_path(usage_path)
 
     # Write the forked manifest to the test's unique file
-    Storage.write(Storage.read())
+    manifest = Storage.read()
+    Storage.write(manifest)
+
+    # Mark all classes as used for testing (like StyleX's treeshakeCompensation)
+    # This ensures CSS is generated for all defined classes in tests
+    usage = Storage.read_usage()
+    usage = LiveStyle.UsageManifest.mark_all_used(usage, manifest)
+    Storage.write_usage(usage)
 
     # Cleanup on test exit
     ExUnit.Callbacks.on_exit(fn ->
       File.rm(manifest_path)
+      File.rm(usage_path)
       Storage.clear_path()
+      Storage.clear_usage_path()
     end)
 
     :ok

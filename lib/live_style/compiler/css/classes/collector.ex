@@ -11,7 +11,13 @@ defmodule LiveStyle.Compiler.CSS.Classes.Collector do
 
   @spec collect(LiveStyle.Manifest.t()) :: [class_tuple()]
   def collect(manifest) do
+    usage = LiveStyle.Storage.read_usage()
+
     manifest.classes
+    # Filter by usage (StyleX-style tree shaking)
+    |> Enum.filter(fn {key, _entry} ->
+      key_used?(key, usage)
+    end)
     # Already sorted by key in manifest (sorted list storage)
     |> Enum.flat_map(fn {_key, entry} ->
       # Sort atomic_classes by property name for deterministic order
@@ -26,6 +32,11 @@ defmodule LiveStyle.Compiler.CSS.Classes.Collector do
     |> Enum.sort_by(fn {class_name, property, priority, _, _} ->
       {priority, property, class_name}
     end)
+  end
+
+  # Check if a class key is used (for tree shaking)
+  defp key_used?(key, usage) do
+    LiveStyle.UsageManifest.key_used?(usage, key)
   end
 
   # Extract class tuples from atomic_classes entries

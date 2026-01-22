@@ -37,7 +37,7 @@ defmodule LiveStyle.Manifest do
 
   # Increment this when the manifest format changes to trigger regeneration.
   # This ensures stale manifests from previous versions are cleared.
-  @current_version 7
+  @current_version 8
 
   @type var_entry :: VarEntry.t()
   @type const_entry :: String.t()
@@ -109,7 +109,7 @@ defmodule LiveStyle.Manifest do
   def ensure_keys(_manifest), do: empty()
 
   @spec key(module(), atom()) :: String.t()
-  def key(module, name), do: "#{inspect(module)}.#{name}"
+  def key(module, name), do: "#{to_string(module)}.#{name}"
 
   defp struct_merge(base, updates) when is_map(base) and is_map(updates) do
     Enum.reduce(updates, base, fn {k, v}, acc ->

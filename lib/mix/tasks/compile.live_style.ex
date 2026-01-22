@@ -48,10 +48,17 @@ defmodule Mix.Tasks.Compile.LiveStyle do
   alias LiveStyle.Compiler.Writer
 
   @impl true
-  def run(_args) do
+  def run(args) do
     # Check if manifest is empty/missing - if so, we need to force recompilation
     # of modules that use LiveStyle to repopulate it
     manifest = LiveStyle.Storage.read()
+
+    # Only clear usage manifest when explicitly forcing recompilation.
+    # Don't clear on manifest version mismatch - usage was already recorded
+    # during this compile run by css/1 macros before this task runs.
+    if "--force" in args do
+      LiveStyle.Storage.clear_usage()
+    end
 
     if manifest_empty?(manifest) and not recompiling?() do
       # Manifest is empty but modules exist - need to recompile
@@ -113,12 +120,13 @@ defmodule Mix.Tasks.Compile.LiveStyle do
 
   @impl true
   def manifests do
-    [LiveStyle.Storage.path()]
+    [LiveStyle.Storage.path(), LiveStyle.Storage.usage_path()]
   end
 
   @impl true
   def clean do
     File.rm(LiveStyle.Storage.path())
+    File.rm(LiveStyle.Storage.usage_path())
     File.rm(LiveStyle.Config.output_path())
     :ok
   end
