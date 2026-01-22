@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0] - 2026-01-23
+
+### Added
+
+- StyleX-style tree shaking: Only emit CSS for classes that are actually used via `css/1` macro calls
+- New `UsageManifest` module for tracking class usage at compile time
+- Usage tracking in `get_css/2` and `get_css_class/2` runtime functions
+- `mark_all_used/2` helper for test environments (similar to StyleX's `treeshakeCompensation`)
+
+### Changed
+
+- Manifest version bumped to 8 (module keys now use canonical `Elixir.` prefix format)
+- `Manifest.key/2` now uses `to_string(module)` instead of `inspect(module)` for consistent key format
+
+### Fixed
+
+- Fix compile task clearing usage manifest after elixir compiler records it
+- Cross-module includes now properly record usage for tree shaking
+
 ## [0.13.2] - 2026-01-15
 
 ### Added

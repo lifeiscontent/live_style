@@ -11,7 +11,7 @@ Add `live_style` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:live_style, "~> 0.13.0"},
+    {:live_style, "~> 0.14.0"},
     # Optional: for automatic vendor prefixing
     {:autoprefixer_ex, "~> 0.1.0"},
     # Optional: for deprecation warnings
