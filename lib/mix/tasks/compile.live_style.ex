@@ -48,17 +48,14 @@ defmodule Mix.Tasks.Compile.LiveStyle do
   alias LiveStyle.Compiler.Writer
 
   @impl true
-  def run(args) do
+  def run(_args) do
     # Check if manifest is empty/missing - if so, we need to force recompilation
     # of modules that use LiveStyle to repopulate it
     manifest = LiveStyle.Storage.read()
 
-    # Only clear usage manifest when explicitly forcing recompilation.
-    # Don't clear on manifest version mismatch - usage was already recorded
-    # during this compile run by css/1 macros before this task runs.
-    if "--force" in args do
-      LiveStyle.Storage.clear_usage()
-    end
+    # Note: We don't clear usage on --force because this task runs AFTER the
+    # elixir compiler. Usage has already been re-recorded during elixir compile.
+    # Use `mix clean` or `mix compile.live_style --clean` to clear usage.
 
     if manifest_empty?(manifest) and not recompiling?() do
       # Manifest is empty but modules exist - need to recompile
