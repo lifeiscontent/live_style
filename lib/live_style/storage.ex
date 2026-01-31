@@ -12,19 +12,23 @@ defmodule LiveStyle.Storage do
   - Atomic file operations (write to temp, rename) prevent corruption
   - Per-process state provides test isolation
 
+  ## Storage Location
+
+  Manifests are stored under the Mix build path following the same pattern as
+  phoenix-colocated: `_build/{env}/live_style/{app}/manifest.etf`
+
+  This ensures:
+  - `mix clean` automatically removes manifests
+  - Different environments have separate manifests
+  - Multiple apps in an umbrella don't conflict
+
   ## Configuration
 
-  Configure the manifest path in your config:
+  Override the manifest path in your config (rarely needed):
 
       config :live_style,
-        manifest_path: "_build/live_style/manifest.etf"
-
-  The default path is `"_build/live_style/manifest.etf"`.
+        manifest_path: "custom/path/manifest.etf"
   """
-
-  # Use dedicated subdirectory to avoid FileSystem noise from beam file writes
-  @default_path "_build/live_style/manifest.etf"
-  @default_usage_path "_build/live_style/usage.etf"
   @process_key :live_style_process_manifest
   @process_usage_key :live_style_process_usage
   @path_key :live_style_path
@@ -42,11 +46,21 @@ defmodule LiveStyle.Storage do
 
   @doc """
   Returns the current manifest path.
+
+  Default: `_build/{env}/live_style/{app}/manifest.etf`
   """
   @spec path() :: String.t()
   def path do
     Process.get(@path_key) ||
-      Application.get_env(:live_style, :manifest_path, @default_path)
+      Application.get_env(:live_style, :manifest_path) ||
+      default_path("manifest.etf")
+  end
+
+  defp default_path(filename) do
+    build_path = Mix.Project.build_path()
+    app = Mix.Project.config()[:app] || :live_style
+
+    Path.join([build_path, "live_style", to_string(app), filename])
   end
 
   @doc """
@@ -172,7 +186,8 @@ defmodule LiveStyle.Storage do
   @spec usage_path() :: String.t()
   def usage_path do
     Process.get(@usage_path_key) ||
-      Application.get_env(:live_style, :usage_path, @default_usage_path)
+      Application.get_env(:live_style, :usage_path) ||
+      default_path("usage.etf")
   end
 
   @doc """
@@ -275,6 +290,128 @@ defmodule LiveStyle.Storage do
   def usage_process_active?, do: Process.get(@process_usage_key) != nil
 
   # ===========================================================================
+  # Module Data Merging
+  # ===========================================================================
+
+  @doc """
+  Merges all per-module data files into the manifest.
+
+  This is called by the `:live_style` compiler after Elixir compilation completes.
+  It can also be called manually (e.g., in test_helper.exs) to ensure the manifest
+  is populated before tests run.
+
+  Returns the number of modules merged.
+  """
+  @spec merge_module_data() :: non_neg_integer()
+  def merge_module_data do
+    alias LiveStyle.Compiler.ModuleData
+    alias LiveStyle.Manifest
+
+    module_data = ModuleData.list_all()
+    active_modules = MapSet.new(module_data, fn {module, _data} -> module end)
+
+    # Build manifest from per-module data
+    manifest =
+      Enum.reduce(module_data, Manifest.empty(), fn {module, data}, acc ->
+        merge_module_into_manifest(acc, module, data)
+      end)
+
+    # Write merged manifest
+    write(manifest)
+
+    # Clean up outdated module files (modules that no longer use LiveStyle)
+    ModuleData.cleanup_outdated(active_modules)
+
+    length(module_data)
+  end
+
+  defp merge_module_into_manifest(manifest, module, data) do
+    alias LiveStyle.Manifest
+
+    manifest
+    |> merge_vars(module, data)
+    |> merge_consts(module, data)
+    |> merge_keyframes(module, data)
+    |> merge_theme_classes(module, data)
+    |> merge_view_transition_classes(module, data)
+    |> merge_position_try(module, data)
+    |> merge_classes(data)
+    |> merge_module_hash(module, data)
+  end
+
+  defp merge_vars(manifest, module, data) do
+    alias LiveStyle.Manifest
+
+    Enum.reduce(data[:vars] || [], manifest, fn {name, entry}, acc ->
+      key = Manifest.key(module, name)
+      Manifest.put_var(acc, key, entry)
+    end)
+  end
+
+  defp merge_consts(manifest, module, data) do
+    alias LiveStyle.Manifest
+
+    Enum.reduce(data[:consts] || [], manifest, fn {name, value}, acc ->
+      key = Manifest.key(module, name)
+      Manifest.put_const(acc, key, value)
+    end)
+  end
+
+  defp merge_keyframes(manifest, module, data) do
+    alias LiveStyle.Manifest
+
+    Enum.reduce(data[:keyframes] || [], manifest, fn {name, entry}, acc ->
+      key = Manifest.key(module, name)
+      Manifest.put_keyframes(acc, key, entry)
+    end)
+  end
+
+  defp merge_theme_classes(manifest, module, data) do
+    alias LiveStyle.Manifest
+
+    Enum.reduce(data[:theme_classes] || [], manifest, fn {name, entry}, acc ->
+      key = Manifest.key(module, name)
+      Manifest.put_theme_class(acc, key, entry)
+    end)
+  end
+
+  defp merge_view_transition_classes(manifest, module, data) do
+    alias LiveStyle.Manifest
+
+    Enum.reduce(data[:view_transition_classes] || [], manifest, fn {name, entry}, acc ->
+      key = Manifest.key(module, name)
+      Manifest.put_view_transition_class(acc, key, entry)
+    end)
+  end
+
+  defp merge_position_try(manifest, module, data) do
+    alias LiveStyle.Manifest
+
+    Enum.reduce(data[:position_try] || [], manifest, fn {name, entry}, acc ->
+      key = Manifest.key(module, name)
+      Manifest.put_position_try(acc, key, entry)
+    end)
+  end
+
+  defp merge_classes(manifest, data) do
+    alias LiveStyle.Manifest
+
+    # Classes are already stored as a map in the module data
+    Enum.reduce(data[:classes] || %{}, manifest, fn {key, entry}, acc ->
+      Manifest.put_class(acc, key, entry)
+    end)
+  end
+
+  defp merge_module_hash(manifest, module, data) do
+    alias LiveStyle.Manifest
+
+    case data[:module_hash] do
+      nil -> manifest
+      hash -> Manifest.put_module_hash(manifest, module, hash)
+    end
+  end
+
+  # ===========================================================================
   # File Operations
   # ===========================================================================
 
@@ -308,10 +445,14 @@ defmodule LiveStyle.Storage do
 
   defp write_to_file(manifest) do
     file_path = path()
-    file_path |> Path.dirname() |> File.mkdir_p!()
+    dir = Path.dirname(file_path)
+    File.mkdir_p!(dir)
+
+    # Clean up any stale temp files from previous writes
+    cleanup_temp_files(dir, Path.basename(file_path))
 
     # Write to temp file and rename for atomicity
-    temp_path = file_path <> ".tmp.#{:erlang.unique_integer([:positive])}"
+    temp_path = file_path <> ".tmp"
 
     try do
       File.write!(temp_path, :erlang.term_to_binary(manifest))
@@ -320,6 +461,20 @@ defmodule LiveStyle.Storage do
       error ->
         File.rm(temp_path)
         reraise error, __STACKTRACE__
+    end
+  end
+
+  defp cleanup_temp_files(dir, base_name) do
+    prefix = base_name <> ".tmp"
+
+    case File.ls(dir) do
+      {:ok, files} ->
+        files
+        |> Enum.filter(&String.starts_with?(&1, prefix))
+        |> Enum.each(fn file -> File.rm(Path.join(dir, file)) end)
+
+      {:error, _} ->
+        :ok
     end
   end
 
@@ -421,9 +576,14 @@ defmodule LiveStyle.Storage do
 
   defp write_usage_to_file(usage) do
     file_path = usage_path()
-    file_path |> Path.dirname() |> File.mkdir_p!()
+    dir = Path.dirname(file_path)
+    File.mkdir_p!(dir)
 
-    temp_path = file_path <> ".tmp.#{:erlang.unique_integer([:positive])}"
+    # Clean up any stale temp files from previous writes
+    cleanup_temp_files(dir, Path.basename(file_path))
+
+    # Write to temp file and rename for atomicity
+    temp_path = file_path <> ".tmp"
 
     try do
       File.write!(temp_path, :erlang.term_to_binary(usage))

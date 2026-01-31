@@ -257,9 +257,26 @@ Use dynamic styles with `css/1`:
 ```
 
 The list can contain:
-- Atoms (static style names)
+- Atoms (static style names like `:card`)
 - `{atom, args}` tuples (dynamic styles with arguments)
+- Strings (pass-through CSS classes like `"my-custom-class"`)
 - `nil` or `false` (ignored, useful for conditionals)
+
+## Pass-through CSS Classes
+
+Raw class strings are passed through unchanged, making it easy to mix LiveStyle with existing CSS or migrate incrementally from Tailwind:
+
+```heex
+<div {css([
+  :card,
+  "my-legacy-class",
+  "another-class"
+])}>
+  Content
+</div>
+```
+
+This outputs: `class="x1abc123 x2def456 my-legacy-class another-class"`
 
 ## Fallback Values
 

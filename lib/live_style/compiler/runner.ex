@@ -7,7 +7,8 @@ defmodule LiveStyle.Compiler.Runner do
   @spec run(atom(), [String.t()]) :: non_neg_integer()
   def run(profile, extra_args) when is_atom(profile) and is_list(extra_args) do
     config = Config.config_for!(profile)
-    output = Keyword.get(config, :output, Config.output_path())
+    output = Keyword.fetch!(config, :output)
+    input = Keyword.fetch!(config, :input)
     cd = Keyword.get(config, :cd, File.cwd!())
 
     original_cwd = File.cwd!()
@@ -16,9 +17,9 @@ defmodule LiveStyle.Compiler.Runner do
       if cd != original_cwd, do: File.cd!(cd)
 
       if "--watch" in extra_args do
-        Watch.run_watch_mode(output, LiveStyle.Storage.path(), &Writer.run_once/1)
+        Watch.run_watch_mode(output, input, LiveStyle.Storage.path(), &Writer.run_once/2)
       else
-        Writer.run_once(output)
+        Writer.run_once(output, input)
       end
     after
       if cd != original_cwd, do: File.cd!(original_cwd)

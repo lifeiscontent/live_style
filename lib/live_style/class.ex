@@ -40,32 +40,22 @@ defmodule LiveStyle.Class do
 
   ## Parameters
 
-    * `module` - The module defining the class
-    * `name` - The class name (atom)
+    * `module` - The module defining the class (for resolving includes)
     * `declarations` - Keyword list of CSS property declarations
     * `opts` - Options including `:file` and `:line` for validation warnings
 
   ## Example
 
-      LiveStyle.Class.define(MyModule, :button, [display: "flex"])
+      LiveStyle.Class.define(MyModule, [display: "flex"])
   """
-  @spec define(module(), atom(), keyword(), keyword()) :: :ok
-  def define(module, name, declarations, opts \\ []) do
-    key = Manifest.key(module, name)
-
+  @spec define(module(), keyword(), keyword()) :: :ok
+  def define(module, declarations, opts \\ []) do
     # Resolve __include__ entries first
     resolved_declarations = Include.resolve(declarations, module)
 
     # Process declarations into atomic classes
-    {atomic_classes, class_string} = process_declarations(resolved_declarations, opts)
+    {_atomic_classes, _class_string} = process_declarations(resolved_declarations, opts)
 
-    entry = [
-      class_string: class_string,
-      atomic_classes: atomic_classes,
-      declarations: resolved_declarations
-    ]
-
-    store_entry(key, entry)
     :ok
   end
 
@@ -76,29 +66,18 @@ defmodule LiveStyle.Class do
 
   ## Parameters
 
-    * `module` - The module defining the class
-    * `name` - The class name (atom)
     * `all_props` - List of all CSS properties in the class
 
   ## Example
 
-      LiveStyle.Class.define_dynamic(MyModule, :opacity, [:opacity])
+      LiveStyle.Class.define_dynamic([:opacity])
   """
-  @spec define_dynamic(module(), atom(), [atom()]) :: :ok
-  def define_dynamic(module, name, all_props) do
-    key = Manifest.key(module, name)
-
+  @spec define_dynamic([atom()]) :: :ok
+  def define_dynamic(all_props) do
     # For dynamic rules, generate CSS classes that use var(--x-prop) references
     # The actual values are set at runtime via inline styles
-    {atomic_classes, class_string} = Processor.Dynamic.transform(all_props)
+    {_atomic_classes, _class_string} = Processor.Dynamic.transform(all_props)
 
-    entry = [
-      class_string: class_string,
-      atomic_classes: atomic_classes,
-      all_props: all_props
-    ]
-
-    store_entry(key, entry)
     :ok
   end
 

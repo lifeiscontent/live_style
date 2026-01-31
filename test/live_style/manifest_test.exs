@@ -25,6 +25,7 @@ defmodule LiveStyle.ManifestTest do
       assert manifest.view_transition_classes == []
       assert manifest.classes == []
       assert manifest.theme_classes == []
+      assert manifest.module_hashes == []
     end
   end
 

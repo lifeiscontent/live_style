@@ -28,12 +28,16 @@ defmodule LiveStyle.Compiler.CSS.Pipeline do
   alias LiveStyle.Storage
 
   @doc """
-  Generates CSS content from the manifest.
+  Generates CSS content from the manifest, optionally injecting into an input file.
 
   ## Options
 
     * `:manifest` - Use a specific manifest (default: reads from storage)
     * `:stats` - Include stats comment header (default: true)
+    * `:input` - Optional input file path with `@import "live_style"` directive
+
+  When `:input` option is provided, reads the input file and replaces
+  `@import "live_style"` with the generated CSS.
 
   ## Returns
 
@@ -43,13 +47,40 @@ defmodule LiveStyle.Compiler.CSS.Pipeline do
   def generate(opts \\ []) do
     manifest = Keyword.get_lazy(opts, :manifest, &Storage.read/0)
     include_stats = Keyword.get(opts, :stats, true)
+    input_path = Keyword.get(opts, :input)
 
     css = CSS.compile(manifest)
 
-    if include_stats do
-      Stats.comment(manifest) <> "\n\n" <> css
-    else
-      css
+    css =
+      if include_stats do
+        Stats.comment(manifest) <> "\n\n" <> css
+      else
+        css
+      end
+
+    case input_path do
+      nil -> css
+      path -> inject_into_input(path, css)
+    end
+  end
+
+  @import_pattern ~r/@import\s+["']live_style["']\s*;?/
+
+  defp inject_into_input(path, css) do
+    input = File.read!(path)
+
+    case Regex.split(@import_pattern, input, parts: 2) do
+      [before, after_import] ->
+        before <> css <> after_import
+
+      [_no_match] ->
+        raise ArgumentError, """
+        Could not find @import "live_style" directive in #{path}.
+
+        Add this line where you want LiveStyle CSS to be injected:
+
+            @import "live_style";
+        """
     end
   end
 

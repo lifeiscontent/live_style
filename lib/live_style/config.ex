@@ -10,14 +10,16 @@ defmodule LiveStyle.Config do
 
   ## Profiles
 
-  You can define multiple LiveStyle profiles. By default, there is a
-  profile called `:default` which you can configure:
+  Define a profile named after your app (matching Tailwind/esbuild conventions):
 
       config :live_style,
-        default: [
-          output: "priv/static/assets/css/live.css",
-          cd: Path.expand("..", __DIR__)
+        my_app: [
+          input: "assets/css/app.css",
+          output: "priv/static/assets/css/app.css"
         ]
+
+  The `input` file is read, `@import "live_style"` is replaced with generated CSS,
+  and the result is written to `output`.
 
   ## Global Configuration
 
@@ -76,16 +78,12 @@ defmodule LiveStyle.Config do
 
       # config/config.exs
       config :live_style,
-        default: [
-          output: "priv/static/assets/css/live.css",
-          cd: Path.expand("..", __DIR__)
+        my_app: [
+          input: "assets/css/app.css",
+          output: "priv/static/assets/css/app.css"
         ]
 
-      # Custom manifest path
-      config :live_style,
-        manifest_path: "custom/manifest.etf"
-
-      # config/dev.exs
+      # config/dev.exs - debug class names
       config :live_style,
         debug_class_names: true
 
@@ -140,15 +138,10 @@ defmodule LiveStyle.Config do
   @doc """
   Returns the configured output path for CSS.
 
-  This is a convenience function that returns the default profile's output path.
-  For profile-specific paths, use `config_for!/1`.
+  This is primarily used for testing overrides.
   """
   def output_path do
-    Overrides.get(:output_path) ||
-      case Application.get_env(:live_style, :default) do
-        nil -> "priv/static/assets/css/live.css"
-        config -> Keyword.get(config, :output, "priv/static/assets/css/live.css")
-      end
+    Overrides.get(:output_path)
   end
 
   # ===========================================================================

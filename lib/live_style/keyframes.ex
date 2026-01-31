@@ -90,17 +90,10 @@ defmodule LiveStyle.Keyframes do
 
   `{name, entry}` tuple for storage in module attributes.
   """
-  @spec define(module(), atom(), keyword()) :: {atom(), keyword()}
-  def define(module, name, frames) when is_list(frames) do
-    key = Manifest.key(module, name)
+  @spec define(atom(), keyword()) :: {atom(), keyword()}
+  def define(name, frames) when is_list(frames) do
     keyframes_ident = ident(frames)
     entry = [ident: keyframes_ident, frames: frames]
-
-    # Store in manifest for CSS generation
-    LiveStyle.Storage.update(fn manifest ->
-      Manifest.put_keyframes(manifest, key, entry)
-    end)
-
     {name, entry}
   end
 

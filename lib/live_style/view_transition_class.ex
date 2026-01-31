@@ -113,16 +113,14 @@ defmodule LiveStyle.ViewTransitionClass do
 
   Returns `{name, entry}` tuple for storage in module attributes.
   """
-  @spec define(module(), atom(), keyword()) :: {atom(), keyword()}
-  def define(module, name, styles) do
-    key = Manifest.key(module, name)
+  @spec define(atom(), keyword()) :: {atom(), keyword()}
+  def define(name, styles) do
     transition_ident = ident(styles)
 
     # Keep keyword lists as-is to preserve insertion order (StyleX parity)
     # View transitions preserve the order of pseudo-elements and declarations
     entry = [ident: transition_ident, styles: styles]
 
-    store_entry(key, entry)
     {name, entry}
   end
 
