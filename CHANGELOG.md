@@ -5,6 +5,15 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.15.0](https://github.com/lifeiscontent/live_style/compare/v0.14.0...v0.15.0) (2026-01-31)
+
+
+
+
+### Features:
+
+* improve compilation, watcher, and add @import directive support by Aaron Reisman
+
 ## [v0.14.0](https://github.com/lifeiscontent/live_style/compare/v0.13.2...v0.14.0) (2026-01-23)
 
 ### Features:
