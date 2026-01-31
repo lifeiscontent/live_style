@@ -56,9 +56,7 @@ defmodule LiveStyle.Vars do
     vars = Utils.validate_keyword_list!(vars)
 
     Enum.map(vars, fn {name, value} ->
-      key = Manifest.key(module, name)
       entry = build_entry(module, name, value)
-      store_entry(key, entry)
       {name, entry}
     end)
   end

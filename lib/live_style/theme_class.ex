@@ -83,7 +83,6 @@ defmodule LiveStyle.ThemeClass do
   """
   @spec define(module(), atom(), keyword()) :: {atom(), keyword()}
   def define(module, name, overrides) do
-    key = Manifest.key(module, name)
     overrides = Utils.validate_keyword_list!(overrides)
 
     theme_ident = ident(module, name)
@@ -100,7 +99,6 @@ defmodule LiveStyle.ThemeClass do
 
     entry = [ident: theme_ident, overrides: css_overrides]
 
-    store_entry(key, entry)
     {name, entry}
   end
 end

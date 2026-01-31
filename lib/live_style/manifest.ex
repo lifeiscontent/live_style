@@ -37,7 +37,7 @@ defmodule LiveStyle.Manifest do
 
   # Increment this when the manifest format changes to trigger regeneration.
   # This ensures stale manifests from previous versions are cleared.
-  @current_version 8
+  @current_version 9
 
   @type var_entry :: VarEntry.t()
   @type const_entry :: String.t()
@@ -56,7 +56,8 @@ defmodule LiveStyle.Manifest do
           position_try: [{String.t(), position_try_entry()}],
           view_transition_classes: [{String.t(), view_transition_class_entry()}],
           classes: [{String.t(), class_entry()}],
-          theme_classes: [{String.t(), theme_class_entry()}]
+          theme_classes: [{String.t(), theme_class_entry()}],
+          module_hashes: [{module(), binary()}]
         }
 
   @doc """
@@ -75,7 +76,8 @@ defmodule LiveStyle.Manifest do
       position_try: [],
       view_transition_classes: [],
       classes: [],
-      theme_classes: []
+      theme_classes: [],
+      module_hashes: []
     }
   end
 
@@ -141,6 +143,30 @@ defmodule LiveStyle.Manifest do
 
   def put_theme_class(manifest, key, entry), do: put_entry(manifest, :theme_classes, key, entry)
   def get_theme_class(manifest, key), do: get_entry(manifest, :theme_classes, key)
+
+  @doc """
+  Stores a module's content hash in the manifest.
+
+  The hash is used by `__mix_recompile__?/0` to detect when a module's
+  LiveStyle definitions have changed and it needs to be recompiled.
+  """
+  @spec put_module_hash(t(), module(), binary()) :: t()
+  def put_module_hash(manifest, module, hash) when is_atom(module) and is_binary(hash) do
+    list = Map.get(manifest, :module_hashes, [])
+    updated = sorted_list_put(list, module, hash)
+    Map.put(manifest, :module_hashes, updated)
+  end
+
+  @doc """
+  Gets the stored content hash for a module.
+
+  Returns `nil` if no hash is stored for the module.
+  """
+  @spec get_module_hash(t(), module()) :: binary() | nil
+  def get_module_hash(manifest, module) when is_atom(module) do
+    list = Map.get(manifest, :module_hashes, [])
+    sorted_list_get(list, module)
+  end
 
   # Private helpers for sorted list operations
 

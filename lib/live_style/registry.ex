@@ -29,9 +29,8 @@ defmodule LiveStyle.Registry do
     manifest_type = Keyword.fetch!(opts, :manifest_type)
     ref_field = Keyword.fetch!(opts, :ref_field)
 
-    # Build the getter/putter function names dynamically
+    # Build the getter function name dynamically
     getter = :"get_#{manifest_type}"
-    putter = :"put_#{manifest_type}"
 
     quote do
       alias LiveStyle.Manifest
@@ -79,16 +78,6 @@ defmodule LiveStyle.Registry do
       def ref({module, name}) do
         entry = fetch!({module, name})
         Keyword.fetch!(entry, unquote(ref_field))
-      end
-
-      @doc false
-      defp store_entry(key, entry) do
-        LiveStyle.Storage.update(fn manifest ->
-          case Manifest.unquote(getter)(manifest, key) do
-            ^entry -> manifest
-            _ -> Manifest.unquote(putter)(manifest, key, entry)
-          end
-        end)
       end
 
       # Allow modules to override generated functions

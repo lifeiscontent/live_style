@@ -130,26 +130,68 @@ defmodule LiveStyle do
 
     alias LiveStyle.Class
     alias LiveStyle.Compiler.BeforeCompile
+    alias LiveStyle.Compiler.ModuleHash
 
-    # BATCH WRITE: Define all classes in a single manifest update
-    # This dramatically reduces lock contention during compilation
-    LiveStyle.Storage.update(fn manifest ->
-      # Define all static classes
-      manifest =
-        Enum.reduce(static_classes, manifest, fn class_entry, acc ->
-          {name, declarations, opts} = BeforeCompile.normalize_class_entry(class_entry)
-          Class.batch_define(acc, module, name, declarations, opts)
-        end)
+    # Get all accumulated entries for hash computation
+    vars = Module.get_attribute(env.module, :__live_style_vars__) || []
+    consts = Module.get_attribute(env.module, :__live_style_consts__) || []
+    keyframes = Module.get_attribute(env.module, :__live_style_keyframes__) || []
+    theme_classes = Module.get_attribute(env.module, :__live_style_theme_classes__) || []
 
-      # Define all dynamic classes
-      Enum.reduce(dynamic_classes, manifest, fn {name, {:__dynamic__, all_props, _has_computed}},
-                                                acc ->
+    view_transition_classes =
+      Module.get_attribute(env.module, :__live_style_view_transition_classes__) || []
+
+    position_try = Module.get_attribute(env.module, :__live_style_position_try__) || []
+
+    # Compute module hash for __mix_recompile__? detection
+    module_hash =
+      ModuleHash.compute(
+        module,
+        classes,
+        vars,
+        consts,
+        keyframes,
+        theme_classes,
+        view_transition_classes,
+        position_try
+      )
+
+    # Build a local manifest for this module's classes (no file I/O, no locks)
+    # This eliminates lock contention during parallel compilation
+    local_manifest = LiveStyle.Manifest.empty()
+
+    # Define all static classes in local manifest
+    local_manifest =
+      Enum.reduce(static_classes, local_manifest, fn class_entry, acc ->
+        {name, declarations, opts} = BeforeCompile.normalize_class_entry(class_entry)
+        Class.batch_define(acc, module, name, declarations, opts)
+      end)
+
+    # Define all dynamic classes in local manifest
+    local_manifest =
+      Enum.reduce(dynamic_classes, local_manifest, fn {name,
+                                                       {:__dynamic__, all_props, _has_computed}},
+                                                      acc ->
         Class.batch_define_dynamic(acc, module, name, all_props)
       end)
-    end)
 
-    # Now read the updated manifest to build class maps
-    manifest = LiveStyle.Storage.read()
+    # Write module data to per-module file (no lock needed - each module has its own file)
+    alias LiveStyle.Compiler.ModuleData
+
+    ModuleData.write(module, %{
+      module: module,
+      module_hash: module_hash,
+      vars: vars,
+      consts: consts,
+      keyframes: keyframes,
+      theme_classes: theme_classes,
+      view_transition_classes: view_transition_classes,
+      position_try: position_try,
+      classes: local_manifest.classes
+    })
+
+    # Use local manifest to build class maps (no file read needed)
+    manifest = local_manifest
 
     # Build class_strings and property_classes for ALL classes (static + dynamic)
     # This matches StyleX behavior where dynamic classes also have property-based merging
@@ -163,30 +205,12 @@ defmodule LiveStyle do
 
     dynamic_names = Enum.map(dynamic_classes, fn {name, _} -> name end)
 
-    # Get accumulated var entries
-    vars = Module.get_attribute(env.module, :__live_style_vars__) || []
+    # Build maps from already-fetched entries (fetched earlier for hash computation)
     vars_map = Map.new(vars)
-
-    # Get accumulated const entries
-    consts = Module.get_attribute(env.module, :__live_style_consts__) || []
     consts_map = Map.new(consts)
-
-    # Get accumulated keyframes entries
-    keyframes = Module.get_attribute(env.module, :__live_style_keyframes__) || []
     keyframes_map = Map.new(keyframes)
-
-    # Get accumulated theme_class entries
-    theme_classes = Module.get_attribute(env.module, :__live_style_theme_classes__) || []
     theme_classes_map = Map.new(theme_classes)
-
-    # Get accumulated view_transition_class entries
-    view_transition_classes =
-      Module.get_attribute(env.module, :__live_style_view_transition_classes__) || []
-
     view_transition_classes_map = Map.new(view_transition_classes)
-
-    # Get accumulated position_try entries
-    position_try = Module.get_attribute(env.module, :__live_style_position_try__) || []
     position_try_map = Map.new(position_try)
 
     # Generate var lookup function clauses
@@ -259,6 +283,12 @@ defmodule LiveStyle do
       end
 
     quote do
+      # Store the module hash computed at compile time for recompilation detection
+      # Note: We intentionally do NOT use @external_resource for the manifest file
+      # because the manifest is written AFTER modules compile (by the :live_style compiler),
+      # which would cause infinite recompilation loops.
+      @__live_style_module_hash__ unquote(module_hash)
+
       @__class_strings__ unquote(Macro.escape(class_strings))
       @__property_classes__ unquote(Macro.escape(property_classes))
       @__dynamic_names__ unquote(dynamic_names)
@@ -277,6 +307,15 @@ defmodule LiveStyle do
       unquote_splicing(view_transition_class_clauses)
       unquote_splicing(position_try_clauses)
       unquote_splicing(class_clauses)
+
+      @doc false
+      def __mix_recompile__? do
+        # Check if the stored hash in the manifest matches our compile-time hash
+        # Returns true if we need to recompile (hash missing or different)
+        # credo:disable-for-next-line Credo.Check.Design.AliasUsage
+        stored = LiveStyle.Compiler.ModuleHash.get_stored_hash(__MODULE__)
+        stored == nil or @__live_style_module_hash__ != stored
+      end
 
       @doc false
       def __live_style__(:class_strings), do: @__class_strings__
@@ -417,7 +456,7 @@ defmodule LiveStyle do
     module = __CALLER__.module
 
     # Store in manifest (for CSS generation) and get entries back
-    entries = LiveStyle.Consts.define(module, evaluated_consts)
+    entries = LiveStyle.Consts.define(evaluated_consts)
 
     # Store entries in module attribute IMMEDIATELY during macro expansion
     # so that subsequent const/1 calls in the same module can find them
@@ -508,7 +547,7 @@ defmodule LiveStyle do
     module = __CALLER__.module
 
     # Define keyframes and store in manifest, get entry back
-    {^name, entry} = LiveStyle.Keyframes.define(module, name, evaluated_frames)
+    {^name, entry} = LiveStyle.Keyframes.define(name, evaluated_frames)
 
     # Store in module attribute IMMEDIATELY during macro expansion
     Module.put_attribute(module, :__live_style_keyframes__, {name, entry})
@@ -586,7 +625,7 @@ defmodule LiveStyle do
       Enum.map(normalized, fn {k, v} -> {k, LiveStyle.PositionTry.normalize_value(v)} end)
 
     # Define position_try and store in manifest, get entry back
-    {^name, entry} = LiveStyle.PositionTry.define(module, name, normalized_values)
+    {^name, entry} = LiveStyle.PositionTry.define(name, normalized_values)
 
     # Store in module attribute IMMEDIATELY during macro expansion
     Module.put_attribute(module, :__live_style_position_try__, {name, entry})
@@ -639,14 +678,13 @@ defmodule LiveStyle do
   # Inline anonymous position-try: position_try(top: "0", left: "0")
   # Returns a content-hashed dashed-ident name (like StyleX positionTry)
   defmacro position_try(declarations) when is_list(declarations) do
-    module = __CALLER__.module
     {evaluated, _} = Code.eval_quoted(declarations, [], __CALLER__)
     normalized = LiveStyle.Utils.validate_keyword_list!(evaluated)
 
     # Validate and normalize declarations
     case LiveStyle.PositionTry.validate_declarations(normalized) do
       {:ok, normalized_values} ->
-        LiveStyle.PositionTry.define_anonymous(module, normalized_values)
+        LiveStyle.PositionTry.define_anonymous(normalized_values)
 
       {:error, invalid_props} ->
         allowed = LiveStyle.PositionTry.allowed_properties()
@@ -689,7 +727,7 @@ defmodule LiveStyle do
     end
 
     # Define view transition and store in manifest, get entry back
-    {^name, entry} = LiveStyle.ViewTransitionClass.define(module, name, evaluated_styles)
+    {^name, entry} = LiveStyle.ViewTransitionClass.define(name, evaluated_styles)
 
     # Store in module attribute IMMEDIATELY during macro expansion
     Module.put_attribute(module, :__live_style_view_transition_classes__, {name, entry})

@@ -1,6 +1,6 @@
 # Configuration
 
-This guide covers LiveStyle's configuration options, including shorthand behaviors, CSS layers, and other settings.
+This guide covers LiveStyle's configuration options.
 
 ## Basic Configuration
 
@@ -8,229 +8,230 @@ Configure LiveStyle in `config/config.exs`:
 
 ```elixir
 config :live_style,
-  # CSS output profile
-  default: [
-    output: "priv/static/assets/css/live.css",
-    cd: Path.expand("..", __DIR__)
-  ],
-
-  # Optional integrations (use MFA tuples to avoid compile-order issues)
-  prefix_css: {AutoprefixerEx, :prefix_css},
-  deprecated?: {CSSCompatDataEx, :deprecated?},
-
-  # Behavior options
-  shorthand_behavior: :accept_shorthands,
-  use_css_layers: false
-```
-
-## Shorthand Behaviors
-
-LiveStyle supports three behaviors for handling CSS shorthand properties like `margin`, `padding`, `border`, etc.
-
-### `:accept_shorthands` (Default)
-
-Keeps shorthands intact and allows all shorthand properties. Uses internal nil resets for cascade control:
-
-```elixir
-config :live_style,
-  shorthand_behavior: :accept_shorthands
-```
-
-```elixir
-# This works as expected
-class :card,
-  margin: "16px",
-  margin_top: "8px"  # Overrides only top margin
-```
-
-This is the recommended setting for most projects. It matches how CSS naturally works - later declarations override earlier ones.
-
-### `:flatten_shorthands`
-
-Expands shorthand properties to their longhand equivalents:
-
-```elixir
-config :live_style,
-  shorthand_behavior: :flatten_shorthands
-```
-
-```elixir
-# This:
-class :card, margin: "16px"
-
-# Becomes:
-class :card,
-  margin_top: "16px",
-  margin_right: "16px",
-  margin_bottom: "16px",
-  margin_left: "16px"
-```
-
-Use this mode when you need maximum predictability in how styles compose, at the cost of more verbose CSS output.
-
-### `:forbid_shorthands`
-
-Raises compile-time errors for certain disallowed shorthands:
-
-```elixir
-config :live_style,
-  shorthand_behavior: :forbid_shorthands
-```
-
-```elixir
-# These raise compile errors:
-class :button, border: "1px solid red"
-# Error: Use border_width, border_style, border_color instead
-
-class :card, background: "red url(...)"
-# Error: Use background_color, background_image instead
-```
-
-Use this mode for large codebases where you want to enforce explicit property declarations.
-
-## CSS Layers
-
-LiveStyle uses CSS specificity techniques to ensure later styles always win, regardless of declaration order.
-
-### Default Behavior (`use_css_layers: false`)
-
-By default, LiveStyle uses CSS specificity techniques to ensure later styles always win:
-
-```elixir
-config :live_style,
-  use_css_layers: false  # default
-```
-
-### CSS Layers (`use_css_layers: true`)
-
-Alternatively, use CSS `@layer` to control cascade precedence:
-
-```elixir
-config :live_style,
-  use_css_layers: true
-```
-
-This places all LiveStyle rules in a `live_style` layer. Make sure your reset/base styles are in a lower-priority layer:
-
-```css
-/* app.css */
-@layer reset, live_style;
-
-@layer reset {
-  * { box-sizing: border-box; }
-}
-```
-
-## CSS Prefixing
-
-Enable automatic vendor prefixing with `autoprefixer_ex`:
-
-```elixir
-# Add to deps
-{:autoprefixer_ex, "~> 0.1.0"}
-
-# Configure
-config :live_style,
-  prefix_css: {AutoprefixerEx, :prefix_css}
-
-config :autoprefixer_ex,
-  browserslist: ["defaults"]
-```
-
-LiveStyle will automatically add vendor prefixes based on your browser targets:
-
-```elixir
-# Input
-class :flex, display: "flex"
-
-# Output includes vendor prefixes like -webkit-box, -ms-flexbox, etc.
-```
-
-## Deprecation Warnings
-
-Enable deprecation warnings with `css_compat_data_ex`:
-
-```elixir
-# Add to deps
-{:css_compat_data_ex, "~> 0.1.0"}
-
-# Configure
-config :live_style,
-  deprecated?: {CSSCompatDataEx, :deprecated?}
-```
-
-You'll get compile-time warnings for deprecated CSS properties:
-
-```
-warning: CSS property "box-align" is deprecated
-  lib/my_app_web/components/button.ex:15
-```
-
-## CSS Validation
-
-LiveStyle validates CSS property names at compile time with "did you mean?" suggestions:
-
-```elixir
-class :card, backgorund_color: "red"
-# Error: Unknown CSS property "backgorund_color". Did you mean "background_color"?
-```
-
-## Output Profiles
-
-Define multiple output profiles for different builds:
-
-```elixir
-config :live_style,
-  default: [
-    output: "priv/static/assets/css/live.css",
-    cd: Path.expand("..", __DIR__)
-  ],
-  admin: [
-    output: "priv/static/assets/css/admin.css",
-    cd: Path.expand("..", __DIR__)
+  my_app: [
+    input: "assets/css/app.css",
+    output: "priv/static/assets/css/app.css"
   ]
 ```
 
-Generate CSS for a specific profile:
+With optional integrations:
+
+```elixir
+config :live_style,
+  # Automatic vendor prefixing
+  prefix_css: {AutoprefixerEx, :prefix_css},
+  # Deprecation warnings
+  deprecated?: {CSSCompatDataEx, :deprecated?},
+  # Profile (name it after your app)
+  my_app: [
+    input: "assets/css/app.css",
+    output: "priv/static/assets/css/app.css"
+  ]
+```
+
+## Import Directive
+
+LiveStyle uses `@import "live_style"` to inject CSS into your stylesheet—the same pattern as Tailwind 4's `@import "tailwindcss"`.
+
+```css
+/* assets/css/app.css */
+
+/* Your reset styles */
+@layer reset {
+  *, *::before, *::after { box-sizing: border-box; }
+  * { margin: 0; padding: 0; }
+}
+
+/* LiveStyle output injected here */
+@import "live_style";
+
+/* Your custom overrides */
+.my-override { color: red; }
+```
+
+LiveStyle reads the input file, replaces the directive with generated CSS, and writes to the output path.
+
+### Directive Variants
+
+All of these work:
+
+- `@import "live_style";`
+- `@import "live_style"`
+- `@import 'live_style';`
+- `@import 'live_style'`
+
+### Missing Directive Error
+
+If the directive isn't found:
+
+```
+** (ArgumentError) Could not find @import "live_style" directive in assets/css/app.css.
+
+Add this line where you want LiveStyle CSS to be injected:
+
+    @import "live_style";
+```
+
+## Multiple Profiles
+
+Define profiles for different outputs:
+
+```elixir
+config :live_style,
+  my_app: [
+    input: "assets/css/app.css",
+    output: "priv/static/assets/css/app.css"
+  ],
+  admin: [
+    input: "assets/css/admin.css",
+    output: "priv/static/assets/css/admin.css"
+  ]
+```
+
+Generate for a specific profile:
 
 ```bash
+mix live_style my_app
 mix live_style admin
 ```
 
-Or in aliases:
+In aliases:
 
 ```elixir
 defp aliases do
   [
-    "assets.build": [
-      "esbuild my_app",
-      "esbuild css",
-      "live_style default",
-      "live_style admin"
-    ]
+    "assets.build": ["compile", "live_style my_app", "live_style admin", "esbuild my_app"]
   ]
 end
 ```
 
 ## Development Watcher
 
-Add the watcher to your Phoenix endpoint for automatic CSS regeneration:
+Add to `config/dev.exs`:
 
 ```elixir
-# config/dev.exs
 config :my_app, MyAppWeb.Endpoint,
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:my_app, ~w(--sourcemap=inline --watch)]},
-    esbuild_css: {Esbuild, :install_and_run, [:css, ~w(--watch)]},
-    live_style: {LiveStyle, :install_and_run, [:default, ~w(--watch)]}
+    live_style: {LiveStyle, :install_and_run, [:my_app, ~w(--watch)]}
   ]
 ```
 
-The watcher monitors the LiveStyle manifest and regenerates CSS when styles change. Requires the `file_system` dependency (included with `phoenix_live_reload`).
+The watcher monitors:
+- Per-module style data files
+- The input CSS file (when configured)
+
+### Live Reload
+
+Watch style modules in your `live_reload` patterns:
+
+```elixir
+config :my_app, MyAppWeb.Endpoint,
+  live_reload: [
+    patterns: [
+      ~r"priv/static/(?!uploads/).*\.(js|css|png|jpeg|jpg|gif|svg)$",
+      ~r"lib/my_app_web/(controllers|live|components)/.*\.(ex|heex)$",
+      ~r"lib/my_app_web/style/.*\.ex$"
+    ]
+  ]
+```
+
+## Shorthand Behaviors
+
+Control how CSS shorthand properties are handled.
+
+### `:accept_shorthands` (Default)
+
+Keeps shorthands intact:
+
+```elixir
+config :live_style, shorthand_behavior: :accept_shorthands
+```
+
+```elixir
+class :card,
+  margin: "16px",
+  margin_top: "8px"  # Overrides only top
+```
+
+### `:flatten_shorthands`
+
+Expands to longhands:
+
+```elixir
+config :live_style, shorthand_behavior: :flatten_shorthands
+```
+
+```elixir
+# margin: "16px" becomes:
+# margin_top: "16px", margin_right: "16px", ...
+```
+
+### `:forbid_shorthands`
+
+Raises compile errors for disallowed shorthands:
+
+```elixir
+config :live_style, shorthand_behavior: :forbid_shorthands
+```
+
+## CSS Layers
+
+### Default (Specificity Hack)
+
+Uses `:not(#\#)` selector hack for specificity:
+
+```elixir
+config :live_style, use_css_layers: false  # default
+```
+
+### CSS `@layer`
+
+Groups rules by priority in `@layer` blocks:
+
+```elixir
+config :live_style, use_css_layers: true
+```
+
+## Vendor Prefixing
+
+```elixir
+# mix.exs
+{:autoprefixer_ex, "~> 0.1"}
+
+# config/config.exs
+config :live_style, prefix_css: {AutoprefixerEx, :prefix_css}
+
+config :autoprefixer_ex, browserslist: ["defaults"]
+```
+
+## Deprecation Warnings
+
+```elixir
+# mix.exs
+{:css_compat_data_ex, "~> 0.1"}
+
+# config/config.exs
+config :live_style, deprecated?: {CSSCompatDataEx, :deprecated?}
+```
+
+```
+warning: CSS property "box-align" is deprecated
+  lib/my_app_web/components/button.ex:15
+```
+
+## Property Validation
+
+LiveStyle validates CSS property names with suggestions:
+
+```elixir
+class :card, backgorund_color: "red"
+# Error: Unknown CSS property "backgorund_color". Did you mean "background_color"?
+```
 
 ## Test Configuration
 
-For tests that define LiveStyle modules, add the setup task:
+For tests with LiveStyle modules:
 
 ```elixir
 defp aliases do
@@ -240,37 +241,21 @@ defp aliases do
 end
 ```
 
-This ensures test modules are compiled and registered before tests run.
+## All Options
 
-## Environment-Specific Configuration
-
-Override settings per environment:
-
-```elixir
-# config/dev.exs
-config :live_style,
-  # More verbose output in dev
-  shorthand_behavior: :accept_shorthands
-
-# config/prod.exs  
-config :live_style,
-  # Stricter in production
-  shorthand_behavior: :forbid_shorthands
-```
-
-## All Configuration Options
+### Global Options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `default` | keyword | required | Default output profile |
 | `shorthand_behavior` | atom | `:accept_shorthands` | How to handle CSS shorthands |
-| `use_css_layers` | boolean | `false` | Use CSS `@layer` instead of specificity hack |
-| `prefix_css` | function | `nil` | Function for vendor prefixing |
-| `deprecated?` | function | `nil` | Function to check property deprecation |
+| `use_css_layers` | boolean | `false` | Use CSS `@layer` for specificity |
+| `prefix_css` | mfa | `nil` | Vendor prefixing function |
+| `deprecated?` | mfa | `nil` | Deprecation check function |
 
 ### Profile Options
 
 | Option | Type | Description |
 |--------|------|-------------|
-| `output` | string | Path to write CSS file |
+| `input` | string | Source CSS file with `@import "live_style"` |
+| `output` | string | Destination path for generated CSS |
 | `cd` | string | Base directory for relative paths |

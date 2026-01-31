@@ -66,28 +66,22 @@ defmodule LiveStyle.PositionTry do
 
   Returns `{name, entry}` tuple for storage in module attributes.
   """
-  @spec define(module(), atom(), keyword()) :: {atom(), keyword()}
-  def define(module, name, declarations) do
-    key = Manifest.key(module, name)
+  @spec define(atom(), keyword()) :: {atom(), keyword()}
+  def define(name, declarations) do
     position_ident = ident(declarations)
     entry = [ident: position_ident, declarations: declarations]
-    store_entry(key, entry)
     {name, entry}
   end
 
   @doc """
-  Defines an anonymous position-try rule and stores it in the manifest.
+  Defines an anonymous position-try rule.
   Called from the position_try/1 macro with inline declarations.
 
   Returns the generated ident (CSS dashed-ident name).
   """
-  @spec define_anonymous(module(), keyword()) :: String.t()
-  def define_anonymous(module, declarations) do
-    position_ident = ident(declarations)
-    key = "#{module}:__anon_position_try__:#{position_ident}"
-    entry = [ident: position_ident, declarations: declarations]
-    store_entry(key, entry)
-    position_ident
+  @spec define_anonymous(keyword()) :: String.t()
+  def define_anonymous(declarations) do
+    ident(declarations)
   end
 
   # Content-based CSS name generation (private)

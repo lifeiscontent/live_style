@@ -40,14 +40,11 @@ defmodule LiveStyle.Consts do
   Called internally by the `consts` macro.
   Returns a list of `{name, value}` tuples for storage in module attributes.
   """
-  @spec define(module(), keyword()) :: [{atom(), String.t()}]
-  def define(module, consts) do
+  @spec define(keyword()) :: [{atom(), String.t()}]
+  def define(consts) do
     consts = Utils.validate_keyword_list!(consts)
 
     Enum.map(consts, fn {name, value} ->
-      key = Manifest.key(module, name)
-      # Store the value directly - consts are just strings
-      store_entry(key, value)
       {name, value}
     end)
   end

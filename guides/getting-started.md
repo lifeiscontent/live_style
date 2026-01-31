@@ -1,30 +1,108 @@
 # Getting Started
 
-This guide walks you through setting up LiveStyle in a Phoenix application.
+LiveStyle is a compile-time CSS-in-Elixir library for Phoenix.
 
-## Installation
+## Migrating from Tailwind
 
-### 1. Add Dependencies
+It's a find-and-replace:
 
-Add `live_style` to your dependencies in `mix.exs`:
+| Find | Replace |
+|------|---------|
+| `@import "tailwindcss"` | `@import "live_style"` |
+| `{:tailwind, ...}` | `{:live_style, "~> 0.0"}` |
+| `config :tailwind, my_app: [...]` | `config :live_style, my_app: [...]` |
+| `tailwind my_app` | `live_style my_app` |
+| `Tailwind` | `LiveStyle` |
+
+Plus add the compiler to `mix.exs`:
 
 ```elixir
+compilers: [:phoenix_live_view] ++ Mix.compilers() ++ [:live_style]
+```
+
+### Full Example
+
+**`assets/css/app.css`** — replace the import:
+```css
+@import "live_style";
+```
+
+**`mix.exs`** — swap dep and add compiler:
+```elixir
+def project do
+  [
+    compilers: [:phoenix_live_view] ++ Mix.compilers() ++ [:live_style],
+    ...
+  ]
+end
+
 def deps do
   [
-    {:live_style, "~> 0.14.0"},
-    # Optional: for automatic vendor prefixing
-    {:autoprefixer_ex, "~> 0.1.0"},
-    # Optional: for deprecation warnings
-    {:css_compat_data_ex, "~> 0.1.0"}
+    {:live_style, "~> 0.0"},
+    ...
+  ]
+end
+
+defp aliases do
+  [
+    "assets.setup": ["esbuild.install --if-missing"],
+    "assets.build": ["compile", "live_style my_app", "esbuild my_app"],
+    "assets.deploy": ["live_style my_app", "esbuild my_app --minify", "phx.digest"],
+    ...
   ]
 end
 ```
 
-### 2. Add the LiveStyle Compiler
+**`config/config.exs`** — same pattern as Tailwind:
+```elixir
+config :live_style,
+  my_app: [
+    input: "assets/css/app.css",
+    output: "priv/static/assets/css/app.css"
+  ]
+```
 
-In `mix.exs`, add `:live_style` to your compilers:
+**`config/dev.exs`** — swap the watcher:
+```elixir
+watchers: [
+  esbuild: {Esbuild, :install_and_run, [:my_app, ~w(--sourcemap=inline --watch)]},
+  live_style: {LiveStyle, :install_and_run, [:my_app, ~w(--watch)]}
+]
+```
+
+Run `mix deps.get` and you're done.
+
+### Incremental Migration
+
+Mix LiveStyle with existing CSS classes—strings pass through unchanged:
+
+```heex
+<div {css([:card, "existing-tailwind-class"])}>
+  Content
+</div>
+```
+
+---
+
+## New Project Setup
+
+For new Phoenix projects without Tailwind:
+
+### 1. Add Dependency
 
 ```elixir
+# mix.exs
+def deps do
+  [
+    {:live_style, "~> 0.0"}
+  ]
+end
+```
+
+### 2. Add Compiler
+
+```elixir
+# mix.exs
 def project do
   [
     # ...
@@ -33,158 +111,67 @@ def project do
 end
 ```
 
-### 3. Configure Esbuild for CSS
-
-Phoenix uses esbuild for JavaScript. Add a separate profile for CSS bundling in `config/config.exs`:
+### 3. Configure LiveStyle
 
 ```elixir
-config :esbuild,
-  version: "0.25.4",
-  my_app: [
-    args:
-      ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/*),
-    cd: Path.expand("../assets", __DIR__),
-    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
-  ],
-  css: [
-    args: ~w(css/app.css --bundle --outdir=../priv/static/assets/css),
-    cd: Path.expand("../assets", __DIR__)
-  ]
-```
-
-### 4. Configure LiveStyle
-
-Add to `config/config.exs`:
-
-```elixir
-# Configure LiveStyle
-# Use MFA tuples instead of function captures to avoid compile-order issues
+# config/config.exs
 config :live_style,
-  # Optional: automatic vendor prefixing
-  prefix_css: {AutoprefixerEx, :prefix_css},
-  # Optional: deprecation warnings
-  deprecated?: {CSSCompatDataEx, :deprecated?},
-  default: [
-    output: "priv/static/assets/css/live.css",
-    cd: Path.expand("..", __DIR__)
+  my_app: [
+    input: "assets/css/app.css",
+    output: "priv/static/assets/css/app.css"
   ]
-
-# Optional: configure browser targets for autoprefixing
-config :autoprefixer_ex,
-  browserslist: ["defaults"]
 ```
 
-### 5. Add LiveStyle Watcher for Hot Reload
+### 4. Add Import Directive
 
-Add the LiveStyle watcher to your `config/dev.exs`. This follows the same pattern as esbuild and Tailwind:
+```css
+/* assets/css/app.css */
+@layer reset {
+  *, *::before, *::after { box-sizing: border-box; }
+  * { margin: 0; padding: 0; }
+  body { line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  img, picture, video, canvas, svg { display: block; max-width: 100%; }
+  input, button, textarea, select { font: inherit; }
+}
+
+@import "live_style";
+```
+
+### 5. Add Watcher
 
 ```elixir
+# config/dev.exs
 config :my_app, MyAppWeb.Endpoint,
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:my_app, ~w(--sourcemap=inline --watch)]},
-    esbuild_css: {Esbuild, :install_and_run, [:css, ~w(--watch)]},
-    live_style: {LiveStyle, :install_and_run, [:default, ~w(--watch)]}
+    live_style: {LiveStyle, :install_and_run, [:my_app, ~w(--watch)]}
   ]
 ```
 
-The watcher monitors the manifest file for changes. When you save a file:
-1. Phoenix triggers recompilation
-2. The `@before_compile` hook updates the manifest
-3. The watcher detects the change and regenerates CSS
-4. Phoenix live_reload refreshes your browser
-
-### 6. Update Build Aliases
-
-In `mix.exs`, update your aliases:
+### 6. Update Aliases
 
 ```elixir
+# mix.exs
 defp aliases do
   [
-    setup: ["deps.get", "assets.setup", "assets.build"],
+    setup: ["deps.get", "ecto.setup", "assets.setup", "assets.build"],
     "assets.setup": ["esbuild.install --if-missing"],
-    "assets.build": ["compile", "esbuild my_app", "esbuild css", "live_style default"],
-    "assets.deploy": [
-      "live_style default",
-      "esbuild my_app --minify",
-      "esbuild css --minify",
-      "phx.digest"
-    ]
+    "assets.build": ["compile", "live_style my_app", "esbuild my_app"],
+    "assets.deploy": ["live_style my_app", "esbuild my_app --minify", "phx.digest"]
   ]
 end
 ```
 
-### 7. Include CSS in Layout
-
-Add the stylesheets to your root layout (`lib/my_app_web/components/layouts/root.html.heex`):
+### 7. Single Stylesheet in Layout
 
 ```heex
+<%!-- lib/my_app_web/components/layouts/root.html.heex --%>
 <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
-<link phx-track-static rel="stylesheet" href={~p"/assets/css/live.css"} />
-<script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}></script>
 ```
 
-### 8. Add CSS Reset (Optional but Recommended)
+---
 
-Create a base CSS reset in `assets/css/app.css`:
-
-```css
-/*
- * CSS Reset and base styles.
- * Wrapped in @layer reset so LiveStyle rules take precedence.
- */
-
-@layer reset {
-  *,
-  *::before,
-  *::after {
-    box-sizing: border-box;
-  }
-
-  * {
-    margin: 0;
-    padding: 0;
-  }
-
-  body {
-    min-height: 100vh;
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
-  }
-
-  img, picture, video, canvas, svg {
-    display: block;
-    max-width: 100%;
-  }
-
-  input, button, textarea, select {
-    font: inherit;
-  }
-
-  /* Phoenix LiveView compatibility */
-  [data-phx-main],
-  [data-phx-session] {
-    display: contents;
-  }
-}
-```
-
-### 9. Test Setup (If Needed)
-
-If your tests define LiveStyle modules (e.g., test fixtures with `use LiveStyle`),
-add the test setup task to your aliases:
-
-```elixir
-defp aliases do
-  [
-    # ...
-    test: ["live_style.setup_tests", "test"]
-  ]
-end
-```
-
-## Quick Start
-
-Here's a complete example of a styled button component:
+## Quick Start: Your First Component
 
 ```elixir
 defmodule MyAppWeb.Components.Button do
@@ -192,12 +179,13 @@ defmodule MyAppWeb.Components.Button do
   use LiveStyle
 
   class :base,
-    display: "flex",
+    display: "inline-flex",
     align_items: "center",
     padding: "8px 16px",
     border_radius: "8px",
     border: "none",
-    cursor: "pointer"
+    cursor: "pointer",
+    font_weight: "500"
 
   class :primary,
     background_color: "#4f46e5",
@@ -219,93 +207,105 @@ defmodule MyAppWeb.Components.Button do
 end
 ```
 
-Use it in your templates:
+Use in templates:
 
 ```heex
-<.button>Primary Button</.button>
-<.button variant={:secondary}>Secondary Button</.button>
+<.button>Primary</.button>
+<.button variant={:secondary}>Secondary</.button>
 ```
 
-## Module Organization
+---
 
-LiveStyle uses a module-as-namespace pattern. Each module defines its own tokens or styles.
+## Project Structure
+
+Organize styles in a dedicated directory:
+
+```
+lib/my_app_web/
+├── style/
+│   ├── tokens.ex      # Spacing, typography, borders
+│   └── semantic.ex    # Themed colors (light/dark)
+├── components/
+│   └── core_components.ex
+└── ...
+```
 
 ### Design Tokens
 
-For centralized design tokens, create separate modules for each token type. Use `vars` for values that might be themed (colors) and `consts` for static values:
-
 ```elixir
-defmodule MyAppWeb.Colors do
+# lib/my_app_web/style/tokens.ex
+defmodule MyAppWeb.Style.Tokens do
   use LiveStyle
 
-  vars [
-    white: "#ffffff",
-    black: "#000000",
-    gray_900: "#111827",
-    indigo_600: "#4f46e5"
-  ]
-end
-
-defmodule MyAppWeb.Spacing do
-  use LiveStyle
-
-  consts [
-    sm: "8px",
-    md: "16px",
-    lg: "24px"
-  ]
-end
-
-defmodule MyAppWeb.Radius do
-  use LiveStyle
-
-  consts [
-    sm: "4px",
-    md: "8px",
-    lg: "12px"
-  ]
-end
-
-defmodule MyAppWeb.Animations do
-  use LiveStyle
-
-  keyframes :spin,
-    from: [transform: "rotate(0deg)"],
-    to: [transform: "rotate(360deg)"]
+  consts(
+    spacing_1: "0.25rem",
+    spacing_2: "0.5rem",
+    spacing_4: "1rem",
+    radius_md: "0.375rem"
+  )
 end
 ```
 
-### Component Styles
-
-For component-specific styles, use `var` for colors/themed values and `const` for static values:
+### Themed Colors
 
 ```elixir
-defmodule MyAppWeb.Button do
+# lib/my_app_web/style/semantic.ex
+defmodule MyAppWeb.Style.Semantic do
+  use LiveStyle
+
+  # Light theme (default)
+  vars(
+    surface: "oklch(97% 0.008 25)",
+    text: "oklch(25% 0.035 25)",
+    primary: "oklch(45% 0.2 25)"
+  )
+
+  # Dark theme
+  theme_class(:dark,
+    surface: "oklch(15% 0.015 25)",
+    text: "oklch(93% 0.008 25)",
+    primary: "oklch(65% 0.18 25)"
+  )
+end
+```
+
+### Using Tokens
+
+```elixir
+defmodule MyAppWeb.CoreComponents do
   use Phoenix.Component
   use LiveStyle
 
-  class :base,
-    display: "inline-flex",
-    padding: const({MyAppWeb.Spacing, :md}),
-    border_radius: const({MyAppWeb.Radius, :md})
+  alias MyAppWeb.Style.{Semantic, Tokens}
 
-  class :primary,
-    background_color: var({MyAppWeb.Colors, :indigo_600}),
-    color: var({MyAppWeb.Colors, :white})
-
-  def button(assigns) do
-    ~H"""
-    <button {css([:base, :primary])}>
-      <%= render_slot(@inner_block) %>
-    </button>
-    """
-  end
+  class :card,
+    padding: const({Tokens, :spacing_4}),
+    border_radius: const({Tokens, :radius_md}),
+    background_color: var({Semantic, :surface}),
+    color: var({Semantic, :text})
 end
 ```
 
+### Live Reload
+
+Watch style modules in `config/dev.exs`:
+
+```elixir
+config :my_app, MyAppWeb.Endpoint,
+  live_reload: [
+    patterns: [
+      ~r"priv/static/(?!uploads/).*\.(js|css|png|jpeg|jpg|gif|svg)$",
+      ~r"lib/my_app_web/(controllers|live|components)/.*\.(ex|heex)$",
+      ~r"lib/my_app_web/style/.*\.ex$"
+    ]
+  ]
+```
+
+---
+
 ## Next Steps
 
-- [Design Tokens](design-tokens.md) - Learn about CSS variables, constants, and keyframes
+- [Design Tokens](design-tokens.md) - CSS variables, constants, and keyframes
 - [Styling Components](styling-components.md) - Deep dive into `class` and composition
-- [Theming](theming.md) - Create and apply themes
-- [Configuration](configuration.md) - Configure shorthand behaviors and other options
+- [Theming](theming.md) - Light/dark themes and user preferences
+- [Configuration](configuration.md) - Shorthand behaviors, validation, and more
