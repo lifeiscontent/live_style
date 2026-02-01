@@ -112,6 +112,36 @@ defmodule LiveStyle.AtRulesTest do
     )
   end
 
+  # Module to test @starting-style with responsive variants inside
+  # The default should become an inverse media query to prevent "leaking"
+  defmodule StartingStyleResponsiveModule do
+    use LiveStyle
+
+    # When @starting-style has responsive variants, default must become
+    # an inverse media query. Otherwise, the unconditional default applies
+    # at all viewports alongside the responsive variant.
+    class(:toast_enter,
+      transform: [
+        default: "translateY(0)",
+        "@starting-style": [
+          default: "translateY(0.5rem)",
+          "@media (min-width: 640px)": "translateY(-0.5rem)"
+        ]
+      ]
+    )
+
+    # Test with max-width instead of min-width
+    class(:toast_enter_max,
+      transform: [
+        default: "translateY(0)",
+        "@starting-style": [
+          default: "translateY(0.5rem)",
+          "@media (max-width: 640px)": "translateY(-0.5rem)"
+        ]
+      ]
+    )
+  end
+
   describe "@media queries" do
     test "responsive breakpoints generate media queries" do
       css = LiveStyle.Compiler.generate_css()
@@ -191,6 +221,33 @@ defmodule LiveStyle.AtRulesTest do
       # Expected: @supports (opacity: 0.5){@media (min-width: 768px){@starting-style{...}}}
       assert css =~
                ~r/@supports \(opacity: 0\.5\)\{@media \(min-width: 768px\)\{@starting-style\{/
+    end
+
+    test "@starting-style with responsive variants generates exclusive media queries" do
+      css = LiveStyle.Compiler.generate_css()
+
+      # The default inside @starting-style should become @media (max-width: 639.99px)
+      # to prevent it from "leaking" to desktop viewports
+      assert css =~ ~r/@media \(max-width: 639\.99px\)\{@starting-style\{/
+
+      # The responsive variant should be @media (min-width: 640px){@starting-style{...}}
+      assert css =~ ~r/@media \(min-width: 640px\)\{@starting-style\{/
+
+      # For toast_enter (0.5rem variant), both mobile and desktop should be media-wrapped
+      # Mobile: @media (max-width: 639.99px){@starting-style{...translateY(.5rem)...}}
+      assert css =~
+               ~r/@media \(max-width: 639\.99px\)\{@starting-style\{[^}]*translateY\(\.5rem\)/
+
+      # Desktop: @media (min-width: 640px){@starting-style{...translateY(-.5rem)...}}
+      assert css =~ ~r/@media \(min-width: 640px\)\{@starting-style\{[^}]*translateY\(-\.5rem\)/
+    end
+
+    test "@starting-style with max-width responsive variant generates inverse min-width" do
+      css = LiveStyle.Compiler.generate_css()
+
+      # For max-width variants, default should become min-width + epsilon
+      # @media (max-width: 640px) → default becomes @media (min-width: 640.01px)
+      assert css =~ ~r/@media \(min-width: 640\.01px\)\{@starting-style\{/
     end
   end
 end

@@ -12,6 +12,12 @@ defmodule LiveStyle.Class.Conditional do
   #
   # Note: All conditional values should be sorted lists at this point.
   # Maps are converted to sorted lists at storage time.
+  #
+  # Special handling for @starting-style:
+  # When inside @starting-style with responsive variants, default must become
+  # an inverse media query. Unlike regular CSS where specificity resolves conflicts,
+  # @starting-style applies ALL matching rules at element insertion, so an
+  # unconditional default would "leak" to all viewports.
 
   @doc false
   @spec conditional?(term()) :: boolean()
@@ -51,7 +57,10 @@ defmodule LiveStyle.Class.Conditional do
   # Conditional values are sorted lists at this point
   def flatten(value_list, parent_selector) when is_list(value_list) do
     if conditional?(value_list) do
-      Enum.flat_map(value_list, &flatten_entry(&1, parent_selector))
+      # Transform default to inverse media query when inside @starting-style
+      # with responsive variants (see module doc for explanation)
+      transformed = maybe_transform_starting_style_default(value_list, parent_selector)
+      Enum.flat_map(transformed, &flatten_entry(&1, parent_selector))
     else
       [{parent_selector, value_list}]
     end
@@ -96,4 +105,106 @@ defmodule LiveStyle.Class.Conditional do
   def selector_key?(<<":", _rest::binary>>), do: true
   def selector_key?(<<"@", _rest::binary>>), do: true
   def selector_key?(_), do: false
+
+  # Transform default to inverse media query when inside @starting-style
+  # with responsive variants. This prevents the default from "leaking" to
+  # all viewports (see module doc for detailed explanation).
+  defp maybe_transform_starting_style_default(value_list, parent_selector) do
+    if inside_starting_style?(parent_selector) and has_responsive_variants?(value_list) do
+      transform_default_to_inverse_media(value_list)
+    else
+      value_list
+    end
+  end
+
+  defp inside_starting_style?(nil), do: false
+  defp inside_starting_style?(selector), do: String.contains?(selector, "@starting-style")
+
+  defp has_responsive_variants?(value_list) do
+    Enum.any?(value_list, fn
+      {key, _} when is_binary(key) -> String.starts_with?(key, "@media")
+      {key, _} when is_atom(key) -> String.starts_with?(Atom.to_string(key), "@media")
+      _ -> false
+    end)
+  end
+
+  defp transform_default_to_inverse_media(value_list) do
+    # Extract all min-width breakpoints from @media queries
+    breakpoints = extract_min_width_breakpoints(value_list)
+
+    if Enum.empty?(breakpoints) do
+      # No min-width queries, check for max-width
+      max_breakpoints = extract_max_width_breakpoints(value_list)
+
+      if Enum.empty?(max_breakpoints) do
+        # No recognizable breakpoints, leave unchanged
+        value_list
+      else
+        # Has max-width queries - default should be min-width of largest + epsilon
+        max_bp = Enum.max(max_breakpoints)
+        inverse = "@media (min-width: #{format_breakpoint(max_bp + 0.01)})"
+        replace_default_with_media(value_list, inverse)
+      end
+    else
+      # Has min-width queries - default should be max-width of smallest - epsilon
+      min_bp = Enum.min(breakpoints)
+      inverse = "@media (max-width: #{format_breakpoint(min_bp - 0.01)})"
+      replace_default_with_media(value_list, inverse)
+    end
+  end
+
+  defp extract_min_width_breakpoints(value_list) do
+    value_list
+    |> Enum.flat_map(fn
+      {key, _} ->
+        key_str = if is_atom(key), do: Atom.to_string(key), else: key
+
+        case Regex.run(~r/@media\s*\(\s*min-width:\s*([\d.]+)(px)?\s*\)/, key_str) do
+          [_, value | _] -> [parse_breakpoint(value)]
+          _ -> []
+        end
+
+      _ ->
+        []
+    end)
+  end
+
+  defp extract_max_width_breakpoints(value_list) do
+    value_list
+    |> Enum.flat_map(fn
+      {key, _} ->
+        key_str = if is_atom(key), do: Atom.to_string(key), else: key
+
+        case Regex.run(~r/@media\s*\(\s*max-width:\s*([\d.]+)(px)?\s*\)/, key_str) do
+          [_, value | _] -> [parse_breakpoint(value)]
+          _ -> []
+        end
+
+      _ ->
+        []
+    end)
+  end
+
+  defp parse_breakpoint(value) do
+    case Float.parse(value) do
+      {float, _} -> float
+      :error -> 0.0
+    end
+  end
+
+  defp format_breakpoint(value) when is_float(value) do
+    # Format with minimal decimal places
+    if value == trunc(value) do
+      "#{trunc(value)}px"
+    else
+      "#{:erlang.float_to_binary(value, decimals: 2)}px"
+    end
+  end
+
+  defp replace_default_with_media(value_list, media_query) do
+    Enum.map(value_list, fn
+      {key, value} when key in [:default, "default"] -> {media_query, value}
+      entry -> entry
+    end)
+  end
 end
