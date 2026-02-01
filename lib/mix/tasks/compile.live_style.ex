@@ -55,6 +55,8 @@ defmodule Mix.Tasks.Compile.LiveStyle do
 
   use Mix.Task.Compiler
 
+  alias LiveStyle.Compiler.ModuleData
+
   @impl true
   def run(_args) do
     # Merge all per-module files into the manifest
@@ -88,6 +90,7 @@ defmodule Mix.Tasks.Compile.LiveStyle do
   def clean do
     File.rm(LiveStyle.Storage.path())
     File.rm(LiveStyle.Storage.usage_path())
+    ModuleData.clear_usage()
 
     if path = LiveStyle.Config.output_path() do
       File.rm(path)

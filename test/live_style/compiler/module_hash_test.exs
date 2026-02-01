@@ -495,7 +495,7 @@ defmodule LiveStyle.Compiler.ModuleHashTest do
       # Write module data without a hash
       ModuleData.write(OtherModule, %{module: OtherModule, classes: %{}})
 
-      assert ModuleHash.get_stored_hash(TestModule) == nil
+      assert ModuleHash.get_stored_hash(OtherModule) == nil
     end
 
     test "returns stored hash when module data exists" do

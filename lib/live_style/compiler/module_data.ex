@@ -147,11 +147,18 @@ defmodule LiveStyle.Compiler.ModuleData do
     dir = Path.dirname(path)
     File.mkdir_p!(dir)
 
-    # Read existing usage, add new entry, write back
+    # Read existing usage, add new entry, write back atomically
     usage = read_usage_file(path)
     updated = MapSet.put(usage, {defining_module, class_name})
-    File.write!(path, :erlang.term_to_binary(updated))
+    write_atomic(path, :erlang.term_to_binary(updated))
     :ok
+  end
+
+  # Atomic write: write to temp file then rename
+  defp write_atomic(path, binary) do
+    tmp_path = path <> ".tmp"
+    File.write!(tmp_path, binary)
+    File.rename!(tmp_path, path)
   end
 
   defp usage_path(module) do
@@ -161,9 +168,17 @@ defmodule LiveStyle.Compiler.ModuleData do
 
   defp read_usage_file(path) do
     if File.exists?(path) do
-      path
-      |> File.read!()
-      |> :erlang.binary_to_term()
+      case File.read(path) do
+        {:ok, binary} ->
+          try do
+            :erlang.binary_to_term(binary)
+          rescue
+            ArgumentError -> MapSet.new()
+          end
+
+        {:error, _} ->
+          MapSet.new()
+      end
     else
       MapSet.new()
     end
@@ -196,7 +211,10 @@ defmodule LiveStyle.Compiler.ModuleData do
   @doc """
   Clears all usage files.
 
-  Called before a clean build.
+  Called during `mix compile.live_style --clean` to remove stale usage data.
+  Usage files for deleted modules persist until a clean build since tracking
+  consuming modules across incremental builds is complex. The impact is minimal
+  (slightly larger CSS until clean) and a clean build fixes it.
   """
   @spec clear_usage() :: :ok
   def clear_usage do
