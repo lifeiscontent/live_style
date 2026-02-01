@@ -139,6 +139,76 @@ jobs:
           HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
         run: mix hex.publish --yes
 
+  # Automatically run git_ops.release on push to main (not tags, not PRs)
+  # This updates CHANGELOG.md, bumps version, and creates a tag
+  # The tag push then triggers the publish and release jobs
+  git-ops-release:
+    name: Run git_ops.release
+    runs-on: ubuntu-latest
+    needs: [test, dialyzer]
+    # Only run on push to main, not on tags or PRs, and not for commits by github-actions
+    # (to prevent infinite loops when git_ops pushes version bumps)
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      !contains(github.event.head_commit.message, 'chore: release version')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # Need full history for git_ops
+          # Use PAT to bypass branch protection rules
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Setup Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.17"
+          otp-version: "27"
+
+      - name: Cache deps
+        uses: actions/cache@v5
+        with:
+          path: deps
+          key: ${{ runner.os }}-mix-1.17-27-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-1.17-27-
+
+      - name: Install dependencies
+        env:
+          MIX_ENV: dev
+        run: mix deps.get
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Run git_ops.release
+        id: git_ops
+        env:
+          MIX_ENV: dev
+        run: |
+          # Run git_ops.release and capture output
+          # Exit code is non-zero if no release needed, which is fine
+          mix git_ops.release --yes 2>&1 | tee /tmp/git_ops_output.txt || true
+
+          # Check if a new version was created
+          if grep -q "Your new version is" /tmp/git_ops_output.txt; then
+            echo "released=true" >> $GITHUB_OUTPUT
+          else
+            echo "released=false" >> $GITHUB_OUTPUT
+            echo "No new release needed"
+          fi
+
+      - name: Push changes and tags
+        if: steps.git_ops.outputs.released == 'true'
+        run: |
+          git push origin main --follow-tags
+
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
