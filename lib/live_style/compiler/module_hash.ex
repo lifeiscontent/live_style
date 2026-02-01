@@ -18,7 +18,7 @@ defmodule LiveStyle.Compiler.ModuleHash do
   This follows the pattern used by Gettext for PO file change detection.
   """
 
-  alias LiveStyle.{Manifest, Storage}
+  alias LiveStyle.Compiler.ModuleData
 
   @doc """
   Computes a content hash for a module's LiveStyle definitions.
@@ -65,14 +65,20 @@ defmodule LiveStyle.Compiler.ModuleHash do
   end
 
   @doc """
-  Gets the stored hash for a module from the manifest.
+  Gets the stored hash for a module.
 
   Returns `nil` if no hash is stored (e.g., clean build or new module).
+
+  This reads from the module's per-module data file instead of the full
+  manifest, making `__mix_recompile__?` checks much faster. Each module
+  has its own file, so no locking is needed.
   """
   @spec get_stored_hash(module()) :: binary() | nil
   def get_stored_hash(module) when is_atom(module) do
-    manifest = Storage.read()
-    Manifest.get_module_hash(manifest, module)
+    case ModuleData.read(module) do
+      nil -> nil
+      data -> Map.get(data, :module_hash)
+    end
   end
 
   # Normalize a list by sorting it. For keyword lists and tuples,

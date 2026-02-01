@@ -92,6 +92,26 @@ defmodule LiveStyle.AtRulesTest do
     )
   end
 
+  defmodule NestedAtRulesModule do
+    use LiveStyle
+
+    # @starting-style combined with @media should result in @media being outermost
+    class(:responsive_enter,
+      transform: [
+        default: "none",
+        "@starting-style@media (min-width: 640px)": "translateY(-0.5rem)"
+      ]
+    )
+
+    # Multiple combinations to test priority ordering
+    class(:complex_nesting,
+      opacity: [
+        default: "1",
+        "@starting-style@supports (opacity: 0.5)@media (min-width: 768px)": "0"
+      ]
+    )
+  end
+
   describe "@media queries" do
     test "responsive breakpoints generate media queries" do
       css = LiveStyle.Compiler.generate_css()
@@ -156,6 +176,21 @@ defmodule LiveStyle.AtRulesTest do
       assert css =~ "@starting-style"
       assert css =~ "opacity:0"
       assert css =~ "translateY(-10px)"
+    end
+
+    test "@starting-style combined with @media has correct nesting order" do
+      css = LiveStyle.Compiler.generate_css()
+      # @media should be OUTSIDE (outermost), @starting-style should be INSIDE (innermost)
+      # Expected: @media (min-width: 640px){@starting-style{...}}
+      assert css =~ ~r/@media \(min-width: 640px\)\{@starting-style\{/
+    end
+
+    test "@starting-style with @supports and @media has correct nesting order" do
+      css = LiveStyle.Compiler.generate_css()
+      # Priority order (outermost to innermost): @supports > @media > @starting-style
+      # Expected: @supports (opacity: 0.5){@media (min-width: 768px){@starting-style{...}}}
+      assert css =~
+               ~r/@supports \(opacity: 0\.5\)\{@media \(min-width: 768px\)\{@starting-style\{/
     end
   end
 end

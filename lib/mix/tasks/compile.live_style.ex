@@ -88,7 +88,11 @@ defmodule Mix.Tasks.Compile.LiveStyle do
   def clean do
     File.rm(LiveStyle.Storage.path())
     File.rm(LiveStyle.Storage.usage_path())
-    File.rm(LiveStyle.Config.output_path())
+
+    if path = LiveStyle.Config.output_path() do
+      File.rm(path)
+    end
+
     :ok
   end
 end
