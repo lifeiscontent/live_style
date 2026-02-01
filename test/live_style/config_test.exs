@@ -10,12 +10,20 @@ defmodule LiveStyle.ConfigTest do
 
   alias LiveStyle.Config
 
-  # Define a test class in this module to ensure we have atomic classes
+  # Define test classes in this module to ensure we have atomic classes
   # This makes the test self-contained and doesn't depend on other test files
   defmodule TestStyles do
     use LiveStyle
 
     class(:test_color, color: "red")
+
+    # Class with pseudo-class to test :not(#\#) specificity hack
+    class(:test_hover,
+      color: [
+        default: "blue",
+        ":hover": "red"
+      ]
+    )
   end
 
   describe "class_name_prefix" do
