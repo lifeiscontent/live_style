@@ -5,6 +5,23 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.0](https://github.com/lifeiscontent/live_style/compare/v0.15.0...v0.16.0) (2026-02-01)
+
+
+
+
+### Features:
+
+* add css_class/1 macro and fix at-rule nesting, compilation perf by Aaron Reisman
+
+### Bug Fixes:
+
+* address PR review comments (atomic writes, test assertion, clean wiring) by Aaron Reisman
+
+* make config_test self-contained for :not(#\#) test by Aaron Reisman
+
+* @starting-style responsive variants use exclusive media queries by Aaron Reisman
+
 ## [v0.15.0](https://github.com/lifeiscontent/live_style/compare/v0.14.0...v0.15.0) (2026-01-31)
 
 
