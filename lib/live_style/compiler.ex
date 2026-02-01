@@ -38,15 +38,15 @@ defmodule LiveStyle.Compiler do
   """
   @spec get_css(module(), list()) :: LiveStyle.Attrs.t()
   def get_css(module, refs) when is_atom(module) and is_list(refs) do
-    # Record usage for tree shaking
-    record_usage_from_refs(module, refs)
+    # Usage is recorded at compile time via css/1 in templates.
+    # For testing, use mark_all_used in test setup (already done by LiveStyle.TestCase).
     LiveStyle.Runtime.resolve_attrs(module, refs, nil)
   end
 
   @spec get_css(module(), atom()) :: LiveStyle.Attrs.t()
   def get_css(module, ref) when is_atom(module) and is_atom(ref) do
-    # Record usage for tree shaking
-    record_usage(module, ref)
+    # Usage is recorded at compile time via css/1 in templates.
+    # For testing, use mark_all_used in test setup (already done by LiveStyle.TestCase).
     class_strings = module.__live_style__(:class_strings)
     %LiveStyle.Attrs{class: Keyword.get(class_strings, ref, ""), style: nil}
   end
@@ -68,15 +68,15 @@ defmodule LiveStyle.Compiler do
   """
   @spec get_css_class(module(), list()) :: String.t()
   def get_css_class(module, refs) when is_atom(module) and is_list(refs) do
-    # Record usage for tree shaking
-    record_usage_from_refs(module, refs)
+    # Usage is recorded at compile time via css/1 in templates.
+    # For testing, use mark_all_used in test setup (already done by LiveStyle.TestCase).
     LiveStyle.Runtime.resolve_class_string(module, refs)
   end
 
   @spec get_css_class(module(), atom()) :: String.t()
   def get_css_class(module, ref) when is_atom(module) and is_atom(ref) do
-    # Record usage for tree shaking
-    record_usage(module, ref)
+    # Usage is recorded at compile time via css/1 in templates.
+    # For testing, use mark_all_used in test setup (already done by LiveStyle.TestCase).
     class_strings = module.__live_style__(:class_strings)
     Keyword.get(class_strings, ref, "")
   end
@@ -96,39 +96,5 @@ defmodule LiveStyle.Compiler do
   def generate_css do
     manifest = LiveStyle.Storage.read()
     CSSCompiler.compile(manifest)
-  end
-
-  # Record usage for a single class reference
-  defp record_usage(module, class_name) when is_atom(module) and is_atom(class_name) do
-    LiveStyle.Storage.update_usage(fn usage ->
-      LiveStyle.UsageManifest.record_usage(usage, module, class_name)
-    end)
-  end
-
-  # Record usage from a list of refs (handles various ref formats)
-  defp record_usage_from_refs(module, refs) when is_atom(module) and is_list(refs) do
-    LiveStyle.Storage.update_usage(fn usage ->
-      Enum.reduce(refs, usage, &record_ref_usage(&1, &2, module))
-    end)
-  end
-
-  defp record_ref_usage(ref, acc, module) do
-    case ref do
-      # Simple atom ref
-      name when is_atom(name) and name not in [nil, true, false] ->
-        LiveStyle.UsageManifest.record_usage(acc, module, name)
-
-      # Cross-module ref {OtherModule, :class}
-      {other_module, name} when is_atom(other_module) and is_atom(name) ->
-        LiveStyle.UsageManifest.record_usage(acc, other_module, name)
-
-      # Dynamic tuple {:class, value}
-      {name, _value} when is_atom(name) ->
-        LiveStyle.UsageManifest.record_usage(acc, module, name)
-
-      # Skip false/nil values from conditionals
-      _ ->
-        acc
-    end
   end
 end

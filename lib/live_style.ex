@@ -66,6 +66,8 @@ defmodule LiveStyle do
   See the README for comprehensive documentation and examples.
   """
 
+  alias LiveStyle.Compiler.ModuleData
+
   defmacro __using__(_opts \\ []) do
     # Register attributes IMMEDIATELY during macro expansion (not in quote)
     # This ensures accumulate: true is set before any vars/class calls
@@ -99,6 +101,7 @@ defmodule LiveStyle do
           # Runtime resolution macros (validates at compile time, resolves at runtime)
           css: 1,
           css: 2,
+          css_class: 1,
           # Composition
           include: 1,
           # Utilities
@@ -999,10 +1002,11 @@ defmodule LiveStyle do
   # Single atom reference: css(:button)
   # Returns Attrs struct for spreading in templates
   defmacro css(name) when is_atom(name) do
-    module = __CALLER__.module
+    caller_module = __CALLER__.module
 
     # Record usage at compile time for tree shaking
-    record_class_usage(module, name)
+    # For single atom ref, the defining module is the caller itself
+    record_class_usage(caller_module, caller_module, name)
 
     quote do
       %LiveStyle.Attrs{
@@ -1015,11 +1019,13 @@ defmodule LiveStyle do
   # List of refs: css([:base, :primary, @active && :active])
   # Resolves and merges multiple refs at runtime, returns Attrs struct
   defmacro css(refs) when is_list(refs) do
-    module = __CALLER__.module
+    caller_module = __CALLER__.module
 
     # Extract and record all static class refs at compile time
-    extract_class_refs(refs, module)
-    |> Enum.each(fn {mod, class_name} -> record_class_usage(mod, class_name) end)
+    extract_class_refs(refs, caller_module)
+    |> Enum.each(fn {defining_mod, class_name} ->
+      record_class_usage(caller_module, defining_mod, class_name)
+    end)
 
     quote do
       LiveStyle.resolve_attrs(__MODULE__, unquote(refs), nil)
@@ -1049,26 +1055,75 @@ defmodule LiveStyle do
       <div {css([:base], style: [opacity: "0.5", transform: "scale(1.1)"])}>
   """
   defmacro css(refs, opts) when is_list(opts) do
-    module = __CALLER__.module
+    caller_module = __CALLER__.module
 
     # Extract and record all static class refs at compile time
     # Handle both single ref and list of refs
     refs_list = if is_list(refs), do: refs, else: [refs]
 
-    extract_class_refs(refs_list, module)
-    |> Enum.each(fn {mod, class_name} -> record_class_usage(mod, class_name) end)
+    extract_class_refs(refs_list, caller_module)
+    |> Enum.each(fn {defining_mod, class_name} ->
+      record_class_usage(caller_module, defining_mod, class_name)
+    end)
 
     quote do
       LiveStyle.resolve_attrs(__MODULE__, unquote(refs), unquote(opts))
     end
   end
 
-  # Records a class usage for tree shaking
+  @doc """
+  Returns just the CSS class string for a style reference.
+
+  Useful when you need the class string directly, such as with `Phoenix.LiveView.JS`:
+
+      JS.transition(css_class(:toast_hiding), to: "#\#{id}", time: 200)
+
+  This is more ergonomic than destructuring the `css/1` result:
+
+      # Before:
+      %{class: hiding_class} = css(:toast_hiding)
+      JS.transition(hiding_class, to: "#\#{id}")
+
+      # After:
+      JS.transition(css_class(:toast_hiding), to: "#\#{id}")
+
+  ## Cross-module references
+
+  Use a tuple to reference styles from another module:
+
+      JS.add_class(css_class({SharedStyles, :highlight}), to: "#target")
+  """
+  defmacro css_class(name) when is_atom(name) do
+    caller_module = __CALLER__.module
+    record_class_usage(caller_module, caller_module, name)
+
+    quote do
+      Keyword.get(__MODULE__.__live_style__(:class_strings), unquote(name), "")
+    end
+  end
+
+  defmacro css_class({module, name}) when is_atom(module) and is_atom(name) do
+    caller_module = __CALLER__.module
+    record_class_usage(caller_module, module, name)
+
+    quote do
+      Keyword.get(unquote(module).__live_style__(:class_strings), unquote(name), "")
+    end
+  end
+
+  # Records a class usage for tree shaking (per-module file, no locking)
+  # 2-arg version for backwards compatibility (assumes consuming == defining)
   @doc false
-  def record_class_usage(module, class_name) when is_atom(module) and is_atom(class_name) do
-    LiveStyle.Storage.update_usage(fn usage ->
-      LiveStyle.UsageManifest.record_usage(usage, module, class_name)
-    end)
+  def record_class_usage(defining_module, class_name)
+      when is_atom(defining_module) and is_atom(class_name) do
+    ModuleData.record_usage(defining_module, defining_module, class_name)
+  end
+
+  # 3-arg version with explicit consuming module
+  @doc false
+  def record_class_usage(consuming_module, defining_module, class_name)
+      when is_atom(consuming_module) and is_atom(defining_module) and is_atom(class_name) do
+    ModuleData.record_usage(consuming_module, defining_module, class_name)
   end
 
   # Extracts static class references from a list of refs (for usage tracking)

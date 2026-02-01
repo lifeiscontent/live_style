@@ -410,4 +410,46 @@ defmodule LiveStyle.AttrsTest do
       assert String.contains?(merged_attrs.class, "prop-class")
     end
   end
+
+  describe "css_class/1" do
+    defmodule CssClassTestModule do
+      use LiveStyle
+
+      class(:toast_hiding,
+        opacity: "0",
+        transform: "translateY(0.5rem)"
+      )
+
+      class(:highlight, background_color: "yellow")
+
+      # Test using css_class in a function (typical JS usage)
+      def get_hiding_class, do: css_class(:toast_hiding)
+      def get_highlight_class, do: css_class(:highlight)
+    end
+
+    test "returns class string for local ref" do
+      class = CssClassTestModule.get_hiding_class()
+      assert is_binary(class)
+      assert class != ""
+    end
+
+    test "returns different class for different styles" do
+      hiding = CssClassTestModule.get_hiding_class()
+      highlight = CssClassTestModule.get_highlight_class()
+
+      assert hiding != highlight
+    end
+
+    test "returns same class as css/1" do
+      # Get class via the Compiler helper
+      attrs = LiveStyle.Compiler.get_css(CssClassTestModule, [:toast_hiding])
+      direct_class = CssClassTestModule.get_hiding_class()
+
+      # Compare as sets since order may differ
+      css_classes = String.split(attrs.class) |> MapSet.new()
+      direct_classes = String.split(direct_class) |> MapSet.new()
+
+      assert css_classes == direct_classes
+    end
+  end
 end

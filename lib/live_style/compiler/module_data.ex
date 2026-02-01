@@ -118,4 +118,89 @@ defmodule LiveStyle.Compiler.ModuleData do
     hash = :crypto.hash(:md5, inspect(module)) |> Base.encode16(case: :lower)
     Path.join(modules_dir(), "#{hash}.etf")
   end
+
+  # ===========================================================================
+  # Per-Module Usage Tracking (for tree-shaking)
+  # ===========================================================================
+
+  @doc """
+  Returns the usage directory path.
+  """
+  @spec usage_dir() :: String.t()
+  def usage_dir do
+    build_path = Mix.Project.build_path()
+    app = Mix.Project.config()[:app] || :live_style
+
+    Path.join([build_path, "live_style", to_string(app), "usage"])
+  end
+
+  @doc """
+  Records class usage for a consuming module.
+
+  Called during macro expansion of `css/1`. Each module that uses classes
+  gets its own usage file - no locking needed.
+  """
+  @spec record_usage(module(), module(), atom()) :: :ok
+  def record_usage(consuming_module, defining_module, class_name)
+      when is_atom(consuming_module) and is_atom(defining_module) and is_atom(class_name) do
+    path = usage_path(consuming_module)
+    dir = Path.dirname(path)
+    File.mkdir_p!(dir)
+
+    # Read existing usage, add new entry, write back
+    usage = read_usage_file(path)
+    updated = MapSet.put(usage, {defining_module, class_name})
+    File.write!(path, :erlang.term_to_binary(updated))
+    :ok
+  end
+
+  defp usage_path(module) do
+    hash = :crypto.hash(:md5, inspect(module)) |> Base.encode16(case: :lower)
+    Path.join(usage_dir(), "#{hash}.etf")
+  end
+
+  defp read_usage_file(path) do
+    if File.exists?(path) do
+      path
+      |> File.read!()
+      |> :erlang.binary_to_term()
+    else
+      MapSet.new()
+    end
+  end
+
+  @doc """
+  Collects all usage from per-module usage files.
+
+  Called after compilation to merge all usage into a single manifest.
+  """
+  @spec collect_all_usage() :: MapSet.t()
+  def collect_all_usage do
+    usage_dir()
+    |> File.ls()
+    |> case do
+      {:ok, files} ->
+        files
+        |> Enum.filter(&String.ends_with?(&1, ".etf"))
+        |> Enum.reduce(MapSet.new(), fn file, acc ->
+          path = Path.join(usage_dir(), file)
+          usage = read_usage_file(path)
+          MapSet.union(acc, usage)
+        end)
+
+      {:error, _} ->
+        MapSet.new()
+    end
+  end
+
+  @doc """
+  Clears all usage files.
+
+  Called before a clean build.
+  """
+  @spec clear_usage() :: :ok
+  def clear_usage do
+    File.rm_rf(usage_dir())
+    :ok
+  end
 end

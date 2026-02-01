@@ -300,6 +300,9 @@ defmodule LiveStyle.Storage do
   It can also be called manually (e.g., in test_helper.exs) to ensure the manifest
   is populated before tests run.
 
+  Also merges per-module usage files into the usage manifest (no locking needed
+  since this runs after all modules have been compiled).
+
   Returns the number of modules merged.
   """
   @spec merge_module_data() :: non_neg_integer()
@@ -319,10 +322,32 @@ defmodule LiveStyle.Storage do
     # Write merged manifest
     write(manifest)
 
+    # Merge per-module usage files into usage manifest
+    usage = ModuleData.collect_all_usage()
+    write_usage_direct(usage)
+
     # Clean up outdated module files (modules that no longer use LiveStyle)
     ModuleData.cleanup_outdated(active_modules)
 
     length(module_data)
+  end
+
+  # Write usage directly without locking (called after compilation is complete)
+  defp write_usage_direct(usage) do
+    file_path = usage_path()
+    dir = Path.dirname(file_path)
+    File.mkdir_p!(dir)
+
+    temp_path = file_path <> ".tmp"
+
+    try do
+      File.write!(temp_path, :erlang.term_to_binary(usage))
+      File.rename!(temp_path, file_path)
+    rescue
+      error ->
+        File.rm(temp_path)
+        reraise error, __STACKTRACE__
+    end
   end
 
   defp merge_module_into_manifest(manifest, module, data) do

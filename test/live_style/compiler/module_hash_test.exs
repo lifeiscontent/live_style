@@ -9,7 +9,7 @@ defmodule LiveStyle.Compiler.ModuleHashTest do
   """
   use ExUnit.Case, async: false
 
-  alias LiveStyle.Compiler.ModuleHash
+  alias LiveStyle.Compiler.{ModuleData, ModuleHash}
   alias LiveStyle.{Manifest, Storage}
 
   @test_manifest_path "test/tmp/module_hash_manifest.etf"
@@ -18,6 +18,15 @@ defmodule LiveStyle.Compiler.ModuleHashTest do
     File.rm_rf!("test/tmp")
     File.mkdir_p!("test/tmp")
     Storage.set_path(@test_manifest_path)
+
+    # Clean up any cached module data for test modules
+    modules_dir = ModuleData.modules_dir()
+
+    for module <- [TestModule, OtherModule, AModule, MModule, ZModule] do
+      hash = :crypto.hash(:md5, inspect(module)) |> Base.encode16(case: :lower)
+      path = Path.join(modules_dir, "#{hash}.etf")
+      File.rm(path)
+    end
 
     on_exit(fn ->
       Storage.clear_path()
@@ -478,33 +487,22 @@ defmodule LiveStyle.Compiler.ModuleHashTest do
   end
 
   describe "get_stored_hash/1" do
-    test "returns nil when manifest is empty" do
-      Storage.write(Manifest.empty())
+    test "returns nil when no module data exists" do
+      assert ModuleHash.get_stored_hash(TestModule) == nil
+    end
+
+    test "returns nil when module data has no hash" do
+      # Write module data without a hash
+      ModuleData.write(OtherModule, %{module: OtherModule, classes: %{}})
 
       assert ModuleHash.get_stored_hash(TestModule) == nil
     end
 
-    test "returns nil when module not in manifest" do
-      manifest =
-        Manifest.empty()
-        |> Manifest.put_module_hash(
-          OtherModule,
-          <<1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>>
-        )
-
-      Storage.write(manifest)
-
-      assert ModuleHash.get_stored_hash(TestModule) == nil
-    end
-
-    test "returns stored hash when module exists in manifest" do
+    test "returns stored hash when module data exists" do
       expected_hash = <<1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>>
 
-      manifest =
-        Manifest.empty()
-        |> Manifest.put_module_hash(TestModule, expected_hash)
-
-      Storage.write(manifest)
+      # Write module data with a hash
+      ModuleData.write(TestModule, %{module: TestModule, module_hash: expected_hash})
 
       assert ModuleHash.get_stored_hash(TestModule) == expected_hash
     end
