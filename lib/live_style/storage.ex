@@ -527,15 +527,53 @@ defmodule LiveStyle.Storage do
   defp maybe_clean_stale_lock(lock) do
     case File.stat(lock) do
       {:ok, %{mtime: mtime}} ->
-        age_seconds = System.os_time(:second) - to_unix_time(mtime)
+        cond do
+          # First check if the locking process is dead (fast recovery)
+          stale_lock_by_pid?(lock) ->
+            File.rm_rf(lock)
 
-        if age_seconds > @stale_lock_threshold_seconds do
-          File.rm_rf(lock)
+          # Fallback to time-based check (handles edge cases)
+          stale_lock_by_time?(mtime) ->
+            File.rm_rf(lock)
+
+          true ->
+            :ok
         end
 
       {:error, _} ->
         :ok
     end
+  end
+
+  # Check if the locking process is no longer alive
+  defp stale_lock_by_pid?(lock) do
+    pid_file = Path.join(lock, "pid")
+
+    case File.read(pid_file) do
+      {:ok, content} ->
+        case Integer.parse(String.trim(content)) do
+          {pid, ""} -> not process_alive?(pid)
+          _ -> false
+        end
+
+      {:error, _} ->
+        # No PID file - fall back to time-based check
+        false
+    end
+  end
+
+  # Check if a system process is alive using OS-level check
+  defp process_alive?(pid) when is_integer(pid) do
+    # Use kill -0 to check if process exists (doesn't send actual signal)
+    case System.cmd("kill", ["-0", Integer.to_string(pid)], stderr_to_stdout: true) do
+      {_, 0} -> true
+      _ -> false
+    end
+  end
+
+  defp stale_lock_by_time?(mtime) do
+    age_seconds = System.os_time(:second) - to_unix_time(mtime)
+    age_seconds > @stale_lock_threshold_seconds
   end
 
   defp to_unix_time({{year, month, day}, {hour, min, sec}}) do
@@ -546,6 +584,8 @@ defmodule LiveStyle.Storage do
   defp acquire_lock(lock, timeout) when timeout > 0 do
     case File.mkdir(lock) do
       :ok ->
+        # Write our PID so other processes can detect if we crash
+        write_lock_pid(lock)
         :ok
 
       {:error, :eexist} ->
@@ -564,6 +604,12 @@ defmodule LiveStyle.Storage do
         "Timeout acquiring lock at #{lock}. " <>
           "Another process may be holding the lock. " <>
           "Try deleting #{lock} if no other process is running."
+  end
+
+  defp write_lock_pid(lock) do
+    pid_file = Path.join(lock, "pid")
+    # System.pid() returns a string like "12345"
+    File.write(pid_file, System.pid())
   end
 
   defp release_lock(lock), do: File.rm_rf(lock)
