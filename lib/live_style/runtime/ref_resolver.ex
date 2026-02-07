@@ -115,26 +115,19 @@ defmodule LiveStyle.Runtime.RefResolver do
   # to the generated __dynamic_* function as the positional list it expects.
   defp normalize_dynamic_args(module, name, args)
        when is_atom(module) and is_atom(name) and is_list(args) do
-    if Keyword.keyword?(args) do
-      case module.__live_style__(:class, name) do
-        entry when is_list(entry) ->
-          case Keyword.get(entry, :all_props) do
-            props when is_list(props) and props != [] ->
-              Enum.map(props, &Keyword.get(args, &1))
-
-            _ ->
-              args
-          end
-
-        _ ->
-          args
-      end
-    else
-      args
-    end
+    if Keyword.keyword?(args), do: normalize_keyword_dynamic_args(module, name, args), else: args
   rescue
     _ -> args
   end
 
   defp normalize_dynamic_args(_module, _name, args), do: args
+
+  defp normalize_keyword_dynamic_args(module, name, args) do
+    with entry when is_list(entry) <- module.__live_style__(:class, name),
+         props when is_list(props) and props != [] <- Keyword.get(entry, :all_props) do
+      Enum.map(props, &Keyword.get(args, &1))
+    else
+      _ -> args
+    end
+  end
 end

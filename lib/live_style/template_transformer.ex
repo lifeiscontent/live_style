@@ -15,17 +15,11 @@ defmodule LiveStyle.TemplateTransformer do
   alias LiveStyle.Compiler.BeforeCompile
   alias LiveStyle.Runtime.Dynamic
 
-  if Code.ensure_loaded?(Phoenix.LiveView.TemplateTransformer) do
-    @behaviour Phoenix.LiveView.TemplateTransformer
-  end
-
   @doc false
   def dynamic_class(module, name, args)
       when is_atom(module) and is_atom(name) do
-    case dynamic_attrs(module, name, args) do
-      %LiveStyle.Attrs{class: class} when is_binary(class) -> class
-      _ -> ""
-    end
+    %LiveStyle.Attrs{class: class} = dynamic_attrs(module, name, args)
+    class
   end
 
   def dynamic_class(_module, _name, _args), do: ""
@@ -242,7 +236,7 @@ defmodule LiveStyle.TemplateTransformer do
   end
 
   defp rewrite_class_ast({name, args_ast} = tuple, context) when is_atom(name) do
-    if class_name_atom?(name) and is_dynamic_ref_args?(args_ast) and
+    if class_name_atom?(name) and dynamic_ref_args?(args_ast) and
          is_atom(context.caller_module) do
       rewrite_dynamic_ref(context.caller_module, name, args_ast, tuple, context)
     else
@@ -348,31 +342,30 @@ defmodule LiveStyle.TemplateTransformer do
 
     {class_name, context} = dynamic_class_name(module, name, context)
 
-    cond do
-      Macro.quoted_literal?(args_ast) ->
-        case resolve_dynamic_literal(module, name, args_ast, context) do
-          {attrs, context} when is_map(attrs) ->
-            class_ast =
-              class_name || Map.get(attrs, :class) ||
-                runtime_dynamic_class_ast(module, name, args_ast)
+    if Macro.quoted_literal?(args_ast) do
+      case resolve_dynamic_literal(module, name, args_ast, context) do
+        {attrs, context} when is_map(attrs) ->
+          class_ast =
+            class_name || Map.get(attrs, :class) ||
+              runtime_dynamic_class_ast(module, name, args_ast)
 
-            style_parts = style_parts_from_attrs(attrs)
-            {class_ast, style_parts, context}
+          style_parts = style_parts_from_attrs(attrs)
+          {class_ast, style_parts, context}
 
-          {nil, context} ->
-            class_ast = class_name || runtime_dynamic_class_ast(module, name, args_ast)
-            style_ast = runtime_dynamic_style_ast(module, name, args_ast)
-            {class_ast, [{:dynamic, style_ast}], context}
-        end
-
-      class_name ->
+        {nil, context} ->
+          class_ast = class_name || runtime_dynamic_class_ast(module, name, args_ast)
+          style_ast = runtime_dynamic_style_ast(module, name, args_ast)
+          {class_ast, [{:dynamic, style_ast}], context}
+      end
+    else
+      if class_name do
         style_ast = runtime_dynamic_style_ast(module, name, args_ast)
         {class_name, [{:dynamic, style_ast}], context}
-
-      true ->
+      else
         class_ast = runtime_dynamic_class_ast(module, name, args_ast)
         style_ast = runtime_dynamic_style_ast(module, name, args_ast)
         {class_ast, [{:dynamic, style_ast}], context}
+      end
     end
   rescue
     _ ->
@@ -381,8 +374,8 @@ defmodule LiveStyle.TemplateTransformer do
       {class_ast, [{:dynamic, style_ast}], context}
   end
 
-  defp is_dynamic_ref_args?(args) when is_list(args), do: true
-  defp is_dynamic_ref_args?(_), do: false
+  defp dynamic_ref_args?(args) when is_list(args), do: true
+  defp dynamic_ref_args?(_), do: false
 
   defp runtime_dynamic_class_ast(module, name, args_ast) do
     quote do
@@ -425,13 +418,19 @@ defmodule LiveStyle.TemplateTransformer do
 
   defp resolve_dynamic_loaded(module, name, args)
        when is_atom(module) and is_atom(name) do
-    if dynamic_loaded?(module, name) do
-      %LiveStyle.Attrs{class: class, style: style} =
-        LiveStyle.resolve_attrs(module, [{name, args}], nil)
+    case dynamic_loaded?(module, name) do
+      true ->
+        case LiveStyle.resolve_attrs(module, [{name, args}], nil) do
+          %LiveStyle.Attrs{class: class, style: style}
+          when is_binary(class) and class != "" ->
+            %{class: class, style: style}
 
-      if is_binary(class) and class != "" do
-        %{class: class, style: style}
-      end
+          _ ->
+            nil
+        end
+
+      _ ->
+        nil
     end
   rescue
     _ -> nil
@@ -464,29 +463,38 @@ defmodule LiveStyle.TemplateTransformer do
   defp resolve_dynamic_open(_module, _name, _args, context), do: {nil, context}
 
   defp dynamic_class_name(module, name, context) when is_atom(module) and is_atom(name) do
-    cond do
-      dynamic_loaded?(module, name) ->
+    case dynamic_loaded?(module, name) do
+      true ->
         class_name = module.__live_style__(:class_strings) |> Keyword.get(name)
         {blank_to_nil(class_name), context}
 
-      module_open_with_live_style_attrs?(module) ->
-        {open_data, context} = open_module_data(module, context)
-
-        class_name =
-          if Map.has_key?(open_data.dynamic, name) do
-            Keyword.get(open_data.class_strings, name)
-          end
-
-        {blank_to_nil(class_name), context}
-
-      true ->
-        {nil, context}
+      _ ->
+        dynamic_class_name_from_open_module(module, name, context)
     end
   rescue
     _ -> {nil, context}
   end
 
   defp dynamic_class_name(_module, _name, context), do: {nil, context}
+
+  defp dynamic_class_name_from_open_module(module, name, context) do
+    case module_open_with_live_style_attrs?(module) do
+      true ->
+        {open_data, context} = open_module_data(module, context)
+        class_name = open_dynamic_class_name(open_data, name)
+        {blank_to_nil(class_name), context}
+
+      _ ->
+        {nil, context}
+    end
+  end
+
+  defp open_dynamic_class_name(open_data, name) do
+    case Map.has_key?(open_data.dynamic, name) do
+      true -> Keyword.get(open_data.class_strings, name)
+      _ -> nil
+    end
+  end
 
   defp dynamic_loaded?(module, name) do
     function_exported?(module, :__live_style__, 1) and
@@ -506,13 +514,14 @@ defmodule LiveStyle.TemplateTransformer do
 
   defp normalize_dynamic_args(args, _all_props), do: args
 
-  defp format_var_style(var_list) when is_list(var_list) do
-    var_list
-    |> Enum.map(fn {var_name, value} -> "#{var_name}: #{value}" end)
-    |> Enum.join("; ")
-  end
+  defp format_var_style(var_list) do
+    style =
+      var_list
+      |> List.wrap()
+      |> Enum.map_join("; ", fn {var_name, value} -> "#{var_name}: #{value}" end)
 
-  defp format_var_style(_), do: nil
+    if style == "", do: nil, else: style
+  end
 
   defp merge_dynamic_style_attr(attrs, style_parts, class_expr_meta, class_attr_meta, context) do
     style_parts = normalize_style_parts(style_parts)
@@ -520,32 +529,47 @@ defmodule LiveStyle.TemplateTransformer do
     if style_parts == [] do
       {attrs, context}
     else
-      case find_style_attr(attrs) do
-        {:ok, index, style_attr} ->
-          {existing_part, context} = style_attr_part(style_attr, context)
-          style_parts = if existing_part, do: [existing_part | style_parts], else: style_parts
-
-          case build_style_attr(
-                 style_parts,
-                 style_expr_meta(style_attr, class_expr_meta, class_attr_meta),
-                 style_attr_meta(style_attr, class_attr_meta)
-               ) do
-            nil -> {List.delete_at(attrs, index), context}
-            style_attr -> {List.replace_at(attrs, index, style_attr), context}
-          end
-
-        :error ->
-          case build_style_attr(
-                 style_parts,
-                 style_expr_meta(nil, class_expr_meta, class_attr_meta),
-                 style_attr_meta(nil, class_attr_meta)
-               ) do
-            nil -> {attrs, context}
-            style_attr -> {attrs ++ [style_attr], context}
-          end
-      end
+      merge_or_append_style_attr(attrs, style_parts, class_expr_meta, class_attr_meta, context)
     end
   end
+
+  defp merge_or_append_style_attr(attrs, style_parts, class_expr_meta, class_attr_meta, context) do
+    case find_style_attr(attrs) do
+      {:ok, index, style_attr} ->
+        {existing_part, context} = style_attr_part(style_attr, context)
+        style_parts = prepend_existing_style_part(style_parts, existing_part)
+
+        style_attr =
+          build_style_attr(
+            style_parts,
+            style_expr_meta(style_attr, class_expr_meta, class_attr_meta),
+            style_attr_meta(style_attr, class_attr_meta)
+          )
+
+        {put_or_delete_style_attr(attrs, index, style_attr), context}
+
+      :error ->
+        style_attr =
+          build_style_attr(
+            style_parts,
+            style_expr_meta(nil, class_expr_meta, class_attr_meta),
+            style_attr_meta(nil, class_attr_meta)
+          )
+
+        {append_style_attr(attrs, style_attr), context}
+    end
+  end
+
+  defp prepend_existing_style_part(style_parts, nil), do: style_parts
+  defp prepend_existing_style_part(style_parts, existing_part), do: [existing_part | style_parts]
+
+  defp put_or_delete_style_attr(attrs, index, nil), do: List.delete_at(attrs, index)
+
+  defp put_or_delete_style_attr(attrs, index, style_attr),
+    do: List.replace_at(attrs, index, style_attr)
+
+  defp append_style_attr(attrs, nil), do: attrs
+  defp append_style_attr(attrs, style_attr), do: attrs ++ [style_attr]
 
   defp normalize_style_parts(style_parts) do
     Enum.flat_map(style_parts, fn
@@ -785,8 +809,6 @@ defmodule LiveStyle.TemplateTransformer do
     _ -> %{class_strings: [], dynamic: %{}}
   end
 
-  defp build_open_module_data(_module), do: %{class_strings: [], dynamic: %{}}
-
   defp class_from_manifest(module, class_name) when is_atom(module) and is_atom(class_name) do
     key = Atom.to_string(module) <> "." <> Atom.to_string(class_name)
 
@@ -801,24 +823,21 @@ defmodule LiveStyle.TemplateTransformer do
     end
   end
 
-  defp class_from_manifest(_module, _class_name), do: nil
+  defp class_name_atom?(nil), do: false
+  defp class_name_atom?(false), do: false
+  defp class_name_atom?(true), do: false
 
   defp class_name_atom?(atom) when is_atom(atom) do
-    atom not in [nil, false, true] and
-      atom
-      |> Atom.to_string()
-      |> String.match?(~r/^[a-z_][a-zA-Z0-9_]*$/)
+    atom
+    |> Atom.to_string()
+    |> String.match?(~r/^[a-z_][a-zA-Z0-9_]*$/)
   end
-
-  defp class_name_atom?(_), do: false
 
   defp module_open_with_live_style_attrs?(module) when is_atom(module) do
     Module.open?(module) and Module.has_attribute?(module, :__live_style_classes__)
   rescue
     _ -> false
   end
-
-  defp module_open_with_live_style_attrs?(_), do: false
 
   defp expand_module({:__aliases__, _, _} = module_ast, %Macro.Env{} = caller),
     do: Macro.expand(module_ast, caller)
