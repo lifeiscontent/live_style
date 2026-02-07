@@ -43,11 +43,14 @@ defmodule LiveStyle.TemplateTransformer do
 
   @doc false
   def merge_style_segments(segments) when is_list(segments) do
-    segments
-    |> Enum.flat_map(&normalize_style_segment/1)
-    |> Enum.map(&String.trim/1)
-    |> Enum.reject(&(&1 == ""))
-    |> Enum.join("; ")
+    merged =
+      segments
+      |> Enum.flat_map(&normalize_style_segment/1)
+      |> Enum.map(&String.trim/1)
+      |> Enum.reject(&(&1 == ""))
+      |> Enum.join("; ")
+
+    if merged == "", do: nil, else: merged
   end
 
   def merge_style_segments(segment), do: merge_style_segments([segment])
@@ -522,24 +525,24 @@ defmodule LiveStyle.TemplateTransformer do
           {existing_part, context} = style_attr_part(style_attr, context)
           style_parts = if existing_part, do: [existing_part | style_parts], else: style_parts
 
-          style_attr =
-            build_style_attr(
-              style_parts,
-              style_expr_meta(style_attr, class_expr_meta, class_attr_meta),
-              style_attr_meta(style_attr, class_attr_meta)
-            )
-
-          {List.replace_at(attrs, index, style_attr), context}
+          case build_style_attr(
+                 style_parts,
+                 style_expr_meta(style_attr, class_expr_meta, class_attr_meta),
+                 style_attr_meta(style_attr, class_attr_meta)
+               ) do
+            nil -> {List.delete_at(attrs, index), context}
+            style_attr -> {List.replace_at(attrs, index, style_attr), context}
+          end
 
         :error ->
-          style_attr =
-            build_style_attr(
-              style_parts,
-              style_expr_meta(nil, class_expr_meta, class_attr_meta),
-              style_attr_meta(nil, class_attr_meta)
-            )
-
-          {attrs ++ [style_attr], context}
+          case build_style_attr(
+                 style_parts,
+                 style_expr_meta(nil, class_expr_meta, class_attr_meta),
+                 style_attr_meta(nil, class_attr_meta)
+               ) do
+            nil -> {attrs, context}
+            style_attr -> {attrs ++ [style_attr], context}
+          end
       end
     end
   end
@@ -593,7 +596,9 @@ defmodule LiveStyle.TemplateTransformer do
         |> Enum.map(fn {:static, value} -> value end)
         |> merge_style_segments()
 
-      {"style", {:string, style, %{delimiter: ?"}}, attr_meta}
+      if is_binary(style) and style != "" do
+        {"style", {:string, style, %{delimiter: ?"}}, attr_meta}
+      end
     else
       segments =
         Enum.map(style_parts, fn

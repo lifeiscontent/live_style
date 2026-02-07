@@ -107,7 +107,7 @@ defmodule LiveStyle.DynamicStylesTest do
     test "supports keyword args for multiple params in property order" do
       attrs =
         LiveStyle.Compiler.get_css(DynamicModule, [
-          {:dynamic_size, width: "100px", height: "200px"}
+          {:dynamic_size, height: "200px", width: "100px"}
         ])
 
       assert is_binary(attrs.class)
