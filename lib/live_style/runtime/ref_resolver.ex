@@ -59,6 +59,12 @@ defmodule LiveStyle.Runtime.RefResolver do
     end
   end
 
+  # Cross-module dynamic class (MFA-style): {OtherModule, :name, args}
+  def resolve(module, {other_module, name, args}, property_classes)
+      when is_atom(other_module) and is_atom(name) do
+    resolve(module, {{other_module, name}, args}, property_classes)
+  end
+
   # Cross-module dynamic class: {{OtherModule, :name}, args}
   def resolve(_module, {{other_module, name}, args}, _property_classes)
       when is_atom(other_module) and is_atom(name) do
@@ -70,6 +76,7 @@ defmodule LiveStyle.Runtime.RefResolver do
         dynamic_names = other_module.__live_style__(:dynamic_names)
 
         if name in dynamic_names do
+          args = normalize_dynamic_args(other_module, name, args)
           fn_name = :"__dynamic_#{name}__"
           var_list = apply(other_module, fn_name, [args])
           {:dynamic, prop_classes, var_list || []}
@@ -88,6 +95,7 @@ defmodule LiveStyle.Runtime.RefResolver do
     if name in dynamic_names do
       # Dynamic classes: get property_classes from compile-time map, compute var_list at runtime
       prop_classes = Keyword.get(property_classes, name, [])
+      args = normalize_dynamic_args(module, name, args)
       fn_name = :"__dynamic_#{name}__"
       var_list = apply(module, fn_name, [args])
       {:dynamic, prop_classes, var_list || []}
@@ -98,4 +106,35 @@ defmodule LiveStyle.Runtime.RefResolver do
   end
 
   def resolve(_module, _ref, _property_classes), do: :skip
+
+  # Supports keyword argument style for dynamic refs:
+  # {:dynamic_class, opacity: 0.5}
+  # {Module, :dynamic_class, opacity: 0.5}
+  #
+  # Values are mapped in dynamic class property order (:all_props), then passed
+  # to the generated __dynamic_* function as the positional list it expects.
+  defp normalize_dynamic_args(module, name, args)
+       when is_atom(module) and is_atom(name) and is_list(args) do
+    if Keyword.keyword?(args) do
+      case module.__live_style__(:class, name) do
+        entry when is_list(entry) ->
+          case Keyword.get(entry, :all_props) do
+            props when is_list(props) and props != [] ->
+              Enum.map(props, &Keyword.get(args, &1))
+
+            _ ->
+              args
+          end
+
+        _ ->
+          args
+      end
+    else
+      args
+    end
+  rescue
+    _ -> args
+  end
+
+  defp normalize_dynamic_args(_module, _name, args), do: args
 end

@@ -95,6 +95,26 @@ defmodule LiveStyle.DynamicStylesTest do
       assert is_binary(attrs.style)
       assert attrs.style =~ "translateX(50px)"
     end
+
+    test "supports keyword args for single param dynamic class" do
+      attrs = LiveStyle.Compiler.get_css(DynamicModule, [{:dynamic_opacity, opacity: "0.5"}])
+      assert is_binary(attrs.class)
+      assert attrs.class != ""
+      assert is_binary(attrs.style)
+      assert attrs.style =~ "0.5"
+    end
+
+    test "supports keyword args for multiple params in property order" do
+      attrs =
+        LiveStyle.Compiler.get_css(DynamicModule, [
+          {:dynamic_size, width: "100px", height: "200px"}
+        ])
+
+      assert is_binary(attrs.class)
+      assert is_binary(attrs.style)
+      assert attrs.style =~ "100px"
+      assert attrs.style =~ "200px"
+    end
   end
 
   describe "mixing static and dynamic" do
@@ -160,6 +180,18 @@ defmodule LiveStyle.DynamicStylesTest do
       assert is_binary(attrs.style)
       assert attrs.style =~ "50px"
       assert attrs.style =~ "100px"
+    end
+
+    test "supports cross-module MFA keyword args" do
+      attrs =
+        LiveStyle.Compiler.get_css(CrossModuleConsumer, [
+          {DynamicModule, :dynamic_opacity, opacity: "0.75"}
+        ])
+
+      assert is_binary(attrs.class)
+      assert attrs.class != ""
+      assert is_binary(attrs.style)
+      assert attrs.style =~ "0.75"
     end
 
     test "cross-module static class reference still works" do
