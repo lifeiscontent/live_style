@@ -1000,24 +1000,30 @@ defmodule LiveStyle do
       ])}>
   """
   # Single atom reference: css(:button)
-  # Returns Attrs struct for spreading in templates
+  # Computes class string at compile time for statics optimization (PR #4145)
   defmacro css(name) when is_atom(name) do
     caller_module = __CALLER__.module
 
     # Record usage at compile time for tree shaking
-    # For single atom ref, the defining module is the caller itself
     record_class_usage(caller_module, caller_module, name)
 
-    quote do
-      %LiveStyle.Attrs{
-        class: Keyword.get(__MODULE__.__live_style__(:class_strings), unquote(name), ""),
-        style: nil
-      }
+    case compute_static_class_string(caller_module, name) do
+      {:ok, ""} ->
+        quote do: []
+
+      {:ok, class_string} ->
+        quote do: [{:class, [unquote(class_string)]}]
+
+      :error ->
+        # Class not found yet (forward reference) — fall back to runtime
+        quote do
+          LiveStyle.resolve_attrs(__MODULE__, [unquote(name)], nil)
+        end
     end
   end
 
   # List of refs: css([:base, :primary, @active && :active])
-  # Resolves and merges multiple refs at runtime, returns Attrs struct
+  # Static atoms are resolved at compile time; dynamic expressions use runtime
   defmacro css(refs) when is_list(refs) do
     caller_module = __CALLER__.module
 
@@ -1027,8 +1033,21 @@ defmodule LiveStyle do
       record_class_usage(caller_module, defining_mod, class_name)
     end)
 
-    quote do
-      LiveStyle.resolve_attrs(__MODULE__, unquote(refs), nil)
+    if all_static_refs?(refs, __CALLER__) do
+      {class_string, style_string} =
+        compute_static_attrs!(caller_module, refs, __CALLER__)
+
+      Macro.escape(build_static_attr_list(class_string, style_string))
+    else
+      case try_branch_optimization(refs, __CALLER__) do
+        :error ->
+          quote do
+            LiveStyle.resolve_attrs(__MODULE__, unquote(refs), nil)
+          end
+
+        result ->
+          build_branch_optimized_ast(result, caller_module, __CALLER__)
+      end
     end
   end
 
@@ -1066,8 +1085,23 @@ defmodule LiveStyle do
       record_class_usage(caller_module, defining_mod, class_name)
     end)
 
-    quote do
-      LiveStyle.resolve_attrs(__MODULE__, unquote(refs), unquote(opts))
+    cond do
+      all_static_refs?(refs_list, __CALLER__) and static_style_opts?(opts, __CALLER__) ->
+        {class_string, dynamic_style_string} =
+          compute_static_attrs!(caller_module, refs_list, __CALLER__)
+
+        extra_style = compute_static_extra_styles(opts, __CALLER__)
+        style_string = merge_style_strings(dynamic_style_string, extra_style)
+
+        Macro.escape(build_static_attr_list(class_string, style_string))
+
+      static_style_opts?(opts, __CALLER__) ->
+        try_branch_with_style_opts(refs_list, refs, opts, caller_module, __CALLER__)
+
+      true ->
+        quote do
+          LiveStyle.resolve_attrs(__MODULE__, unquote(refs), unquote(opts))
+        end
     end
   end
 
@@ -1188,6 +1222,605 @@ defmodule LiveStyle do
     name = Atom.to_string(atom)
     # Class names are lowercase identifiers, not operators or special forms
     String.match?(name, ~r/^[a-z_][a-zA-Z0-9_]*$/)
+  end
+
+  # ============================================================================
+  # Compile-time class string computation (statics optimization)
+  # ============================================================================
+
+  # Check if all refs in a list can be resolved at compile time.
+  # Static refs are:
+  #   - Atoms (local refs): :button
+  #   - Cross-module tuples: {OtherModule, :button} (alias AST + atom)
+  #   - Dynamic class tuples with literal args: {:opacity, 0.5} or {:size, ["100px", "200px"]}
+  @doc false
+  def all_static_refs?(refs, caller) do
+    classes = Module.get_attribute(caller.module, :__live_style_classes__) || []
+
+    Enum.all?(refs, fn
+      ref when is_atom(ref) ->
+        # Check that the class is already defined (not a forward reference)
+        class_defined?(ref, classes)
+
+      {{:__aliases__, _, _} = module_ast, class_name} when is_atom(class_name) ->
+        case Macro.expand(module_ast, caller) do
+          module when is_atom(module) ->
+            # Verify the class exists in the target module
+            Code.ensure_loaded(module)
+
+            function_exported?(module, :__live_style__, 1) and
+              Keyword.has_key?(module.__live_style__(:property_classes), class_name)
+
+          _ ->
+            false
+        end
+
+      {class_name, args} when is_atom(class_name) ->
+        literal_value?(args) and class_defined?(class_name, classes) and
+          static_dynamic_class?(class_name, classes)
+
+      _ ->
+        false
+    end)
+  end
+
+  # Try to optimize a refs list that contains conditional patterns.
+  # Handles &&, if/else, case, and cond where all branch bodies are static atoms.
+  # Supports multiple conditionals (e.g., two && expressions) by enumerating
+  # all combinations. Limited to 16 total leaf branches to avoid exponential blowup.
+  # Returns {:ok, refs} or :error.
+  defp try_branch_optimization(refs, caller) do
+    branch_count = count_total_branches(refs)
+
+    if branch_count > 1 and branch_count <= 16 do
+      combinations = enumerate_combinations(refs)
+
+      if Enum.all?(combinations, &all_static_refs?(&1, caller)) do
+        {:ok, refs}
+      else
+        :error
+      end
+    else
+      :error
+    end
+  end
+
+  # Count total leaf branches from all conditional elements in refs.
+  # Product of individual branch counts (e.g., 2 &&'s = 2 × 2 = 4).
+  defp count_total_branches(refs) do
+    Enum.reduce(refs, 1, fn ref, acc -> acc * branch_count(ref) end)
+  end
+
+  defp branch_count({:&&, _, [_, r]}) when is_atom(r), do: 2
+  defp branch_count({:if, _, [_, [do: d, else: e]]}) when is_atom(d) and is_atom(e), do: 2
+
+  defp branch_count({:case, _, [_, [do: clauses]]}) when is_list(clauses) do
+    if all_clause_bodies_atoms?(clauses), do: length(clauses), else: 1
+  end
+
+  defp branch_count({:cond, _, [[do: clauses]]}) when is_list(clauses) do
+    if all_clause_bodies_atoms?(clauses), do: length(clauses), else: 1
+  end
+
+  defp branch_count(_), do: 1
+
+  defp all_clause_bodies_atoms?(clauses) do
+    Enum.all?(clauses, fn
+      {:->, _, [_, body]} when is_atom(body) -> true
+      _ -> false
+    end)
+  end
+
+  # Enumerate all possible leaf ref lists by expanding each conditional.
+  # For css([:a, c1 && :b, c2 && :c]) → [[:a, :b, :c], [:a, :b], [:a, :c], [:a]]
+  defp enumerate_combinations(refs) do
+    case find_first_conditional(refs) do
+      nil ->
+        [refs]
+
+      {_idx, branches} ->
+        branches
+        |> Enum.flat_map(&enumerate_combinations/1)
+        |> Enum.take(16)
+    end
+  end
+
+  # Find the first conditional element in refs and return its branch expansions.
+  # Returns {idx, [branch_refs_list, ...]} or nil.
+  defp find_first_conditional(refs) do
+    refs
+    |> Enum.with_index()
+    |> Enum.find_value(fn
+      {{:&&, _, [_, ref]}, idx} when is_atom(ref) ->
+        {idx, [List.replace_at(refs, idx, ref), List.delete_at(refs, idx)]}
+
+      {{:if, _, [_, [do: d, else: e]]}, idx} when is_atom(d) and is_atom(e) ->
+        {idx, [List.replace_at(refs, idx, d), List.replace_at(refs, idx, e)]}
+
+      {{:case, _, [_, [do: clauses]]}, idx} when is_list(clauses) ->
+        expand_clause_branches(clauses, refs, idx)
+
+      {{:cond, _, [[do: clauses]]}, idx} when is_list(clauses) ->
+        expand_clause_branches(clauses, refs, idx)
+
+      _ ->
+        nil
+    end)
+  end
+
+  defp expand_clause_branches(clauses, refs, idx) do
+    if all_clause_bodies_atoms?(clauses) do
+      branches = Enum.map(clauses, fn {:->, _, [_, body]} -> List.replace_at(refs, idx, body) end)
+      {idx, branches}
+    end
+  end
+
+  # Build quoted AST for branch-optimized conditionals.
+  # Recursively processes each conditional element, generating nested branching.
+  # Optional style_fn merges extra style opts into each leaf's dynamic style.
+  defp build_branch_optimized_ast({:ok, refs}, caller_module, caller, style_fn \\ nil) do
+    build_recursive_branches(refs, caller_module, caller, style_fn)
+  end
+
+  defp build_recursive_branches(refs, caller_module, caller, style_fn) do
+    case find_first_conditional_with_info(refs) do
+      nil ->
+        # Base case: all refs are static atoms — compute attrs
+        {c, s} = compute_static_attrs!(caller_module, refs, caller)
+        style = if style_fn, do: style_fn.(s), else: s
+        Macro.escape(build_static_attr_list(c, style))
+
+      {idx, {:and, condition, ref}} ->
+        truthy =
+          build_recursive_branches(
+            List.replace_at(refs, idx, ref),
+            caller_module,
+            caller,
+            style_fn
+          )
+
+        falsy =
+          build_recursive_branches(
+            List.delete_at(refs, idx),
+            caller_module,
+            caller,
+            style_fn
+          )
+
+        quote do
+          if unquote(condition), do: unquote(truthy), else: unquote(falsy)
+        end
+
+      {idx, {:if_else, condition, do_ref, else_ref}} ->
+        truthy =
+          build_recursive_branches(
+            List.replace_at(refs, idx, do_ref),
+            caller_module,
+            caller,
+            style_fn
+          )
+
+        falsy =
+          build_recursive_branches(
+            List.replace_at(refs, idx, else_ref),
+            caller_module,
+            caller,
+            style_fn
+          )
+
+        quote do
+          if unquote(condition), do: unquote(truthy), else: unquote(falsy)
+        end
+
+      {idx, {:case_expr, meta, subject, clauses}} ->
+        optimized_clauses =
+          Enum.map(clauses, fn {patterns, clause_meta, body} ->
+            branch =
+              build_recursive_branches(
+                List.replace_at(refs, idx, body),
+                caller_module,
+                caller,
+                style_fn
+              )
+
+            {:->, clause_meta, [patterns, branch]}
+          end)
+
+        {:case, meta, [subject, [do: optimized_clauses]]}
+
+      {idx, {:cond_expr, meta, clauses}} ->
+        optimized_clauses =
+          Enum.map(clauses, fn {conditions, clause_meta, body} ->
+            branch =
+              build_recursive_branches(
+                List.replace_at(refs, idx, body),
+                caller_module,
+                caller,
+                style_fn
+              )
+
+            {:->, clause_meta, [conditions, branch]}
+          end)
+
+        {:cond, meta, [[do: optimized_clauses]]}
+    end
+  end
+
+  # Find the first conditional and return structured info for AST generation.
+  defp find_first_conditional_with_info(refs) do
+    refs
+    |> Enum.with_index()
+    |> Enum.find_value(fn
+      {{:&&, _, [condition, ref]}, idx} when is_atom(ref) ->
+        {idx, {:and, condition, ref}}
+
+      {{:if, _, [condition, [do: d, else: e]]}, idx} when is_atom(d) and is_atom(e) ->
+        {idx, {:if_else, condition, d, e}}
+
+      {{:case, meta, [subject, [do: clauses]]}, idx} when is_list(clauses) ->
+        expand_case_clause_info(clauses, idx, meta, subject)
+
+      {{:cond, meta, [[do: clauses]]}, idx} when is_list(clauses) ->
+        expand_cond_clause_info(clauses, idx, meta)
+
+      _ ->
+        nil
+    end)
+  end
+
+  defp expand_case_clause_info(clauses, idx, meta, subject) do
+    if all_clause_bodies_atoms?(clauses) do
+      clause_info = Enum.map(clauses, fn {:->, cm, [p, body]} -> {p, cm, body} end)
+      {idx, {:case_expr, meta, subject, clause_info}}
+    end
+  end
+
+  defp expand_cond_clause_info(clauses, idx, meta) do
+    if all_clause_bodies_atoms?(clauses) do
+      clause_info = Enum.map(clauses, fn {:->, cm, [conds, body]} -> {conds, cm, body} end)
+      {idx, {:cond_expr, meta, clause_info}}
+    end
+  end
+
+  # Build a keyword list of static attributes from pre-computed class and style strings.
+  defp build_static_attr_list(class_string, style_string) do
+    attrs = []
+    attrs = if style_string, do: [{:style, [style_string]} | attrs], else: attrs
+    attrs = if class_string != "", do: [{:class, [class_string]} | attrs], else: attrs
+    attrs
+  end
+
+  # Check if a class name has been defined in the accumulated classes so far.
+  defp class_defined?(name, classes) do
+    Enum.any?(classes, fn
+      {^name, _} -> true
+      {^name, _, _} -> true
+      _ -> false
+    end)
+  end
+
+  # Check if a dynamic class with args can be resolved at compile time.
+  # Only allows simple property mapping (has_computed=false), not computed bodies.
+  defp static_dynamic_class?(class_name, classes) do
+    case Enum.find(classes, fn
+           {^class_name, {:__dynamic__, _, _}} -> true
+           _ -> false
+         end) do
+      {_, {:__dynamic__, _all_props, has_computed}} -> not has_computed
+      nil -> true
+    end
+  end
+
+  # Try branch optimization with style opts for css/2.
+  defp try_branch_with_style_opts(refs_list, refs, opts, caller_module, caller) do
+    case try_branch_optimization(refs_list, caller) do
+      :error ->
+        quote do
+          LiveStyle.resolve_attrs(__MODULE__, unquote(refs), unquote(opts))
+        end
+
+      result ->
+        extra_style = compute_static_extra_styles(opts, caller)
+
+        build_branch_optimized_ast(result, caller_module, caller, fn dynamic_style ->
+          merge_style_strings(dynamic_style, extra_style)
+        end)
+    end
+  end
+
+  # Check if a value is a compile-time literal (not an AST expression)
+  defp literal_value?(value) when is_binary(value), do: true
+  defp literal_value?(value) when is_number(value), do: true
+  defp literal_value?(value) when is_atom(value), do: true
+  defp literal_value?(values) when is_list(values), do: Enum.all?(values, &literal_value?/1)
+  defp literal_value?(_), do: false
+
+  # Check if style opts are all compile-time literals.
+  # Expands nested macros (e.g., view_transition_class(:card)) before checking.
+  # Accepts opts like [style: [opacity: "0.5", view_transition_class: view_transition_class(:card)]]
+  defp static_style_opts?(opts, caller) when is_list(opts) do
+    case Keyword.get(opts, :style) do
+      nil ->
+        true
+
+      styles when is_list(styles) ->
+        Enum.all?(styles, fn
+          {key, value} when is_atom(key) or is_binary(key) ->
+            expanded = Macro.expand(value, caller)
+            literal_value?(expanded)
+
+          _ ->
+            false
+        end)
+
+      style when is_binary(style) ->
+        true
+
+      _ ->
+        false
+    end
+  end
+
+  # Compute extra styles from static opts at compile time.
+  # Expands nested macros in style values before formatting.
+  # Mirrors the runtime format_extra_styles logic.
+  defp compute_static_extra_styles(opts, caller) do
+    case Keyword.get(opts, :style) do
+      nil ->
+        nil
+
+      styles when is_list(styles) ->
+        Enum.map_join(styles, "; ", fn {key, value} ->
+          format_style_declaration(key, Macro.expand(value, caller))
+        end)
+
+      style when is_binary(style) ->
+        style
+    end
+  end
+
+  defp format_style_declaration(key, value) when is_atom(key) do
+    "#{LiveStyle.CSSValue.to_css_property(key)}: #{value}"
+  end
+
+  defp format_style_declaration(key, value), do: "#{key}: #{value}"
+
+  # Merge dynamic class var styles with extra style opts.
+  defp merge_style_strings(nil, nil), do: nil
+  defp merge_style_strings(nil, extra) when is_binary(extra), do: extra
+  defp merge_style_strings(dynamic, nil) when is_binary(dynamic), do: dynamic
+
+  defp merge_style_strings(dynamic, extra)
+       when is_binary(dynamic) and is_binary(extra) do
+    "#{dynamic}; #{extra}"
+  end
+
+  # Compute class string for a single local atom ref at compile time.
+  # Returns {:ok, class_string} or :error if the class isn't found yet
+  # (forward reference — class defined later in the module).
+  @doc false
+  def compute_static_class_string(caller_module, name) do
+    manifest = get_or_build_manifest(caller_module)
+    key = LiveStyle.Manifest.key(caller_module, name)
+
+    case LiveStyle.Manifest.get_class(manifest, key) do
+      entry when is_list(entry) ->
+        {:ok, Keyword.fetch!(entry, :class_string)}
+
+      nil ->
+        :error
+    end
+  end
+
+  # Compute merged attrs (class string + optional style) for a list of static refs.
+  # Handles local atoms, cross-module refs, and dynamic refs with literal args.
+  # Returns {class_string, style_string | nil}.
+  @doc false
+  def compute_static_attrs!(caller_module, refs, caller) do
+    alias LiveStyle.Compiler.BeforeCompile
+    alias LiveStyle.Runtime.PropertyMerger
+
+    classes = Module.get_attribute(caller_module, :__live_style_classes__) || []
+    manifest = get_or_build_manifest(caller_module)
+
+    # Build property_classes map for local classes
+    classes_reversed = Enum.reverse(classes)
+
+    {_class_strings, local_property_classes} =
+      BeforeCompile.build_class_maps(classes_reversed, caller_module, manifest)
+
+    # Merge property classes and collect CSS variable lists in order
+    {merged_props, var_lists} =
+      Enum.reduce(refs, {[], []}, fn ref, {props_acc, vars_acc} ->
+        {prop_classes, var_list} =
+          fetch_static_ref_data!(ref, caller_module, local_property_classes, caller)
+
+        new_props = PropertyMerger.merge(prop_classes, props_acc)
+        new_vars = if var_list, do: [var_list | vars_acc], else: vars_acc
+        {new_props, new_vars}
+      end)
+
+    class_string =
+      merged_props
+      |> PropertyMerger.to_class_list()
+      |> Enum.uniq()
+      |> Enum.join(" ")
+
+    style_string = build_static_style_string(var_lists)
+
+    {class_string, style_string}
+  end
+
+  # Build a style string from collected CSS variable lists.
+  defp build_static_style_string([]), do: nil
+
+  defp build_static_style_string(var_lists) do
+    # Reverse to get original order, then merge (last wins per variable name)
+    merged_vars =
+      var_lists
+      |> Enum.reverse()
+      |> Enum.reduce([], fn var_list, acc ->
+        Enum.reduce(var_list, acc, fn {key, value}, inner_acc ->
+          List.keystore(inner_acc, key, 0, {key, value})
+        end)
+      end)
+
+    case merged_vars do
+      [] -> nil
+      vars -> Enum.map_join(vars, "; ", fn {name, value} -> "#{name}: #{value}" end)
+    end
+  end
+
+  # Fetch property classes (and optional var_list) for a static ref at compile time.
+  # Returns {prop_classes, var_list | nil}.
+  defp fetch_static_ref_data!(name, caller_module, local_property_classes, caller)
+       when is_atom(name) do
+    case Keyword.fetch(local_property_classes, name) do
+      {:ok, prop_classes} ->
+        {prop_classes, nil}
+
+      :error ->
+        raise CompileError,
+          description:
+            "Class :#{name} not found in #{inspect(caller_module)}. " <>
+              "Make sure `class :#{name}, ...` is defined before this reference.",
+          file: caller.file,
+          line: caller.line
+    end
+  end
+
+  # Cross-module ref: {OtherModule, :class_name}
+  defp fetch_static_ref_data!(
+         {{:__aliases__, _, _} = module_ast, class_name},
+         _caller_module,
+         _local_property_classes,
+         caller
+       )
+       when is_atom(class_name) do
+    module = Macro.expand(module_ast, caller)
+
+    case Keyword.fetch(module.__live_style__(:property_classes), class_name) do
+      {:ok, prop_classes} ->
+        {prop_classes, nil}
+
+      :error ->
+        raise CompileError,
+          description:
+            "Class :#{class_name} not found in #{inspect(module)}. " <>
+              "Make sure `class :#{class_name}, ...` is defined in that module.",
+          file: caller.file,
+          line: caller.line
+    end
+  end
+
+  # Dynamic ref with literal args: {:opacity, 0.5} or {:size, ["100px", "200px"]}
+  defp fetch_static_ref_data!(
+         {class_name, args},
+         caller_module,
+         local_property_classes,
+         caller
+       )
+       when is_atom(class_name) do
+    # Get property classes (same as bare atom ref)
+    prop_classes =
+      case Keyword.fetch(local_property_classes, class_name) do
+        {:ok, pc} ->
+          pc
+
+        :error ->
+          raise CompileError,
+            description:
+              "Class :#{class_name} not found in #{inspect(caller_module)}. " <>
+                "Make sure `class :#{class_name}, ...` is defined before this reference.",
+            file: caller.file,
+            line: caller.line
+      end
+
+    # Compute CSS variable list at compile time
+    classes = Module.get_attribute(caller_module, :__live_style_classes__) || []
+    classes_reversed = Enum.reverse(classes)
+
+    dynamic_names =
+      classes_reversed
+      |> Enum.filter(fn
+        {_name, {:__dynamic__, _, _}} -> true
+        _ -> false
+      end)
+      |> Enum.map(fn {name, _} -> name end)
+
+    if class_name in dynamic_names do
+      # Find the dynamic class entry to get all_props and has_computed
+      {^class_name, {:__dynamic__, all_props, has_computed}} =
+        Enum.find(classes_reversed, fn
+          {^class_name, {:__dynamic__, _, _}} -> true
+          _ -> false
+        end)
+
+      args_list = if is_list(args), do: args, else: [args]
+
+      alias LiveStyle.Runtime.Dynamic
+
+      var_list =
+        Dynamic.compute_var_list(
+          all_props,
+          args_list,
+          caller_module,
+          class_name,
+          has_computed
+        )
+
+      {prop_classes, var_list}
+    else
+      # Not a dynamic class — just use as static (like bare atom with ignored args)
+      {prop_classes, nil}
+    end
+  end
+
+  # Build a local manifest from accumulated class definitions.
+  # Reuses the same pipeline as __before_compile__.
+  defp build_local_manifest(classes, module) do
+    alias LiveStyle.Class
+    alias LiveStyle.Compiler.BeforeCompile
+
+    classes_reversed = Enum.reverse(classes)
+
+    {static_classes, dynamic_classes} =
+      Enum.split_with(classes_reversed, fn
+        {_name, {:__dynamic__, _, _}} -> false
+        {_name, _declarations, _opts} -> true
+        {_name, decl} -> not match?({:__dynamic__, _, _}, decl)
+      end)
+
+    manifest = LiveStyle.Manifest.empty()
+
+    manifest =
+      Enum.reduce(static_classes, manifest, fn class_entry, acc ->
+        {name, declarations, opts} = BeforeCompile.normalize_class_entry(class_entry)
+        Class.batch_define(acc, module, name, declarations, opts)
+      end)
+
+    Enum.reduce(dynamic_classes, manifest, fn
+      {name, {:__dynamic__, all_props, _has_computed}}, acc ->
+        Class.batch_define_dynamic(acc, module, name, all_props)
+    end)
+  end
+
+  # Get or build a cached manifest for the module being compiled.
+  # Caches the result in a module attribute to avoid recomputation
+  # across multiple css() calls in the same module.
+  defp get_or_build_manifest(module) do
+    classes = Module.get_attribute(module, :__live_style_classes__) || []
+    class_count = length(classes)
+
+    case Module.get_attribute(module, :__live_style_manifest_cache__) do
+      {^class_count, manifest} ->
+        manifest
+
+      _ ->
+        manifest = build_local_manifest(classes, module)
+        Module.put_attribute(module, :__live_style_manifest_cache__, {class_count, manifest})
+        manifest
+    end
   end
 
   @doc """
