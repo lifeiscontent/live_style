@@ -975,22 +975,25 @@ defmodule LiveStyle do
   @doc """
   Returns CSS attributes for spreading in HEEx templates.
 
-  Returns `%LiveStyle.Attrs{}` for use with the spread syntax `{css(...)}`
-  in templates. This handles both static and dynamic styles that set CSS
-  variables via inline style.
+  When all references can be resolved at compile time, returns a literal
+  keyword list like `[class: ["x1234"]]` that Phoenix LiveView's tag engine
+  embeds in `Rendered.static` (sent once, never re-transmitted on updates).
+
+  Falls back to `%LiveStyle.Attrs{}` at runtime for forward references,
+  dynamic args, or non-literal style values.
 
   ## Examples
 
-      # Single ref
+      # Single ref (static — class in Rendered.static)
       <div {css(:button)}>
 
-      # List of refs with conditionals
+      # List of refs with conditionals (branch-optimized)
       <div {css([:base, @active && :active])}>
 
-      # Dynamic styles
+      # Dynamic styles (runtime fallback)
       <div {css([{:dynamic_color, @color}])}>
 
-      # With additional inline styles
+      # With additional inline styles (static class, dynamic style value)
       <div {css([:card], style: [view_transition_name: "card-1"])}>
 
       # With view transitions
@@ -1028,7 +1031,7 @@ defmodule LiveStyle do
     caller_module = __CALLER__.module
 
     # Extract and record all static class refs at compile time
-    extract_class_refs(refs, caller_module)
+    extract_class_refs(refs, caller_module, __CALLER__)
     |> Enum.each(fn {defining_mod, class_name} ->
       record_class_usage(caller_module, defining_mod, class_name)
     end)
@@ -1080,7 +1083,7 @@ defmodule LiveStyle do
     # Handle both single ref and list of refs
     refs_list = if is_list(refs), do: refs, else: [refs]
 
-    extract_class_refs(refs_list, caller_module)
+    extract_class_refs(refs_list, caller_module, __CALLER__)
     |> Enum.each(fn {defining_mod, class_name} ->
       record_class_usage(caller_module, defining_mod, class_name)
     end)
@@ -1112,13 +1115,9 @@ defmodule LiveStyle do
 
       JS.transition(css_class(:toast_hiding), to: "#\#{id}", time: 200)
 
-  This is more ergonomic than destructuring the `css/1` result:
+  Unlike `css/1` which returns attributes for template spreading,
+  `css_class/1` returns a plain class string for use in JS commands:
 
-      # Before:
-      %{class: hiding_class} = css(:toast_hiding)
-      JS.transition(hiding_class, to: "#\#{id}")
-
-      # After:
       JS.transition(css_class(:toast_hiding), to: "#\#{id}")
 
   ## Cross-module references
@@ -1163,29 +1162,30 @@ defmodule LiveStyle do
   # Extracts static class references from a list of refs (for usage tracking)
   # Returns list of {module, class_name} tuples
   @doc false
-  def extract_class_refs(refs, caller_module) when is_list(refs) do
+  def extract_class_refs(refs, caller_module, caller) when is_list(refs) do
     refs
-    |> Enum.flat_map(fn ref -> extract_single_ref(ref, caller_module) end)
+    |> Enum.flat_map(fn ref -> extract_single_ref(ref, caller_module, caller) end)
     |> Enum.uniq()
   end
 
-  defp extract_single_ref(ref, caller_module) when is_atom(ref) do
+  defp extract_single_ref(ref, caller_module, _caller) when is_atom(ref) do
     # Simple atom ref like :button
     [{caller_module, ref}]
   end
 
-  defp extract_single_ref({module, class_name}, _caller_module)
+  defp extract_single_ref({module, class_name}, _caller_module, _caller)
        when is_atom(module) and is_atom(class_name) do
     # Cross-module ref like {OtherModule, :btn}
     [{module, class_name}]
   end
 
-  defp extract_single_ref({class_name, _value}, caller_module) when is_atom(class_name) do
+  defp extract_single_ref({class_name, _value}, caller_module, _caller)
+       when is_atom(class_name) do
     # Dynamic tuple like {:dynamic_color, @color} - track the class name
     [{caller_module, class_name}]
   end
 
-  defp extract_single_ref(ast, caller_module) do
+  defp extract_single_ref(ast, caller_module, caller) do
     # Complex expression like @active && :primary
     # Use Macro.prewalk to find all atom literals (potential class refs)
     {_, refs} =
@@ -1202,7 +1202,7 @@ defmodule LiveStyle do
         # Cross-module tuple refs inside expressions
         {{:__aliases__, _, _} = module_ast, class_name} = node, acc
         when is_atom(class_name) ->
-          case Macro.expand(module_ast, __ENV__) do
+          case Macro.expand(module_ast, caller) do
             module when is_atom(module) ->
               {node, [{module, class_name} | acc]}
 
