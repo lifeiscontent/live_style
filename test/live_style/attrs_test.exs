@@ -202,6 +202,78 @@ defmodule LiveStyle.AttrsTest do
       assert String.contains?(button_attrs.class, "external-class")
     end
 
+    test "raw class string before local refs preserves later override order" do
+      parent_class =
+        ParentStyles.__live_style__(:class_strings) |> Keyword.fetch!(:override_color)
+
+      parent_color_class =
+        ParentStyles.__live_style__(:property_classes)
+        |> Keyword.fetch!(:override_color)
+        |> Enum.find_value(fn
+          {"color", class} -> class
+          _ -> nil
+        end)
+
+      button_color_class =
+        ButtonStyles.__live_style__(:property_classes)
+        |> Keyword.fetch!(:btn_primary)
+        |> Enum.find_value(fn
+          {"color", class} -> class
+          _ -> nil
+        end)
+
+      merged =
+        LiveStyle.Runtime.resolve_attrs(
+          ButtonStyles,
+          [parent_class, :btn_primary],
+          nil
+        )
+
+      classes = String.split(merged.class)
+      parent_index = Enum.find_index(classes, &(&1 == parent_color_class))
+      button_index = Enum.find_index(classes, &(&1 == button_color_class))
+
+      assert is_integer(parent_index)
+      assert is_integer(button_index)
+      assert parent_index < button_index
+    end
+
+    test "raw class string after local refs overrides local classes" do
+      parent_class =
+        ParentStyles.__live_style__(:class_strings) |> Keyword.fetch!(:override_color)
+
+      parent_color_class =
+        ParentStyles.__live_style__(:property_classes)
+        |> Keyword.fetch!(:override_color)
+        |> Enum.find_value(fn
+          {"color", class} -> class
+          _ -> nil
+        end)
+
+      button_color_class =
+        ButtonStyles.__live_style__(:property_classes)
+        |> Keyword.fetch!(:btn_primary)
+        |> Enum.find_value(fn
+          {"color", class} -> class
+          _ -> nil
+        end)
+
+      merged =
+        LiveStyle.Runtime.resolve_attrs(
+          ButtonStyles,
+          [:btn_primary, parent_class],
+          nil
+        )
+
+      classes = String.split(merged.class)
+      parent_index = Enum.find_index(classes, &(&1 == parent_color_class))
+      button_index = Enum.find_index(classes, &(&1 == button_color_class))
+
+      assert is_integer(parent_index)
+      assert is_integer(button_index)
+      assert button_index < parent_index
+    end
+
     test "full component simulation - active button (StyleX behavior)" do
       # Simulate: <.button {css([:full_override])}>
       parent_attrs = LiveStyle.Runtime.resolve_attrs(ParentStyles, [:full_override], nil)
