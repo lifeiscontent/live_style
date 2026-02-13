@@ -9,16 +9,14 @@ defmodule LiveStyle.Runtime.Attrs do
   def resolve_attrs(module, refs, opts) when is_atom(module) and is_list(refs) do
     property_classes_map = module.__live_style__(:property_classes)
 
-    {merged_props, var_styles, extra_classes} =
+    {merged_props, var_styles, ordered_classes, _prop_classes_by_key} =
       refs
       |> List.flatten()
       |> Enum.reject(&falsy?/1)
-      |> Enum.reduce({[], [], []}, &process_ref(&1, &2, module, property_classes_map))
-
-    class_list = PropertyMerger.to_class_list(merged_props)
+      |> Enum.reduce({[], [], [], %{}}, &process_ref(&1, &2, module, property_classes_map))
 
     class_string =
-      (class_list ++ Enum.reverse(extra_classes))
+      ordered_classes
       |> Enum.uniq()
       |> Enum.join(" ")
 
@@ -34,52 +32,63 @@ defmodule LiveStyle.Runtime.Attrs do
   defp falsy?(""), do: true
   defp falsy?(_), do: false
 
-  defp process_ref(%Marker{class: class}, {props_acc, vars_acc, extra_acc}, _module, _map) do
-    {props_acc, vars_acc, [class | extra_acc]}
+  defp process_ref(%Marker{class: class}, state, _module, _map) do
+    append_class_string(state, class)
   end
 
-  defp process_ref(%LiveStyle.Attrs{} = attrs, {props_acc, vars_acc, extra_acc}, _module, _map) do
-    process_attrs_ref(attrs, props_acc, vars_acc, extra_acc)
+  defp process_ref(%LiveStyle.Attrs{} = attrs, state, _module, _map) do
+    process_attrs_ref(attrs, state)
   end
 
-  defp process_ref(binary, {props_acc, vars_acc, extra_acc}, _module, _map)
-       when is_binary(binary) do
-    {props_acc, vars_acc, [binary | extra_acc]}
+  defp process_ref(binary, state, _module, _map) when is_binary(binary) do
+    append_class_string(state, binary)
   end
 
-  defp process_ref(ref, {props_acc, vars_acc, extra_acc}, module, property_classes_map) do
-    {new_props, new_vars} =
+  defp process_ref(
+         ref,
+         {props_acc, vars_acc, class_order, prop_classes_by_key},
+         module,
+         property_classes_map
+       ) do
+    {new_props, new_vars, new_class_order, new_prop_classes_by_key} =
       RefResolver.resolve(module, ref, property_classes_map)
-      |> merge_resolved_ref(props_acc, vars_acc)
+      |> merge_resolved_ref(props_acc, vars_acc, class_order, prop_classes_by_key)
 
-    {new_props, new_vars, extra_acc}
+    {new_props, new_vars, new_class_order, new_prop_classes_by_key}
   end
 
   defp process_attrs_ref(
          %LiveStyle.Attrs{prop_classes: prop_classes, class: class},
-         props_acc,
-         vars_acc,
-         extra_acc
+         {props_acc, vars_acc, class_order, prop_classes_by_key}
        )
        when is_list(prop_classes) and prop_classes != [] do
     # Merge the property classes from the Attrs struct
     new_props = PropertyMerger.merge(prop_classes, props_acc)
 
+    {new_class_order, new_prop_classes_by_key} =
+      apply_prop_classes(prop_classes, class_order, prop_classes_by_key)
+
     # Also preserve any extra classes (like markers) that aren't in prop_classes
     extra_from_attrs = extract_extra_classes(class, prop_classes)
-    new_extra = extra_from_attrs ++ extra_acc
+    ordered_with_extra = new_class_order ++ extra_from_attrs
 
-    {new_props, vars_acc, new_extra}
+    {new_props, vars_acc, ordered_with_extra, new_prop_classes_by_key}
   end
 
-  defp process_attrs_ref(%LiveStyle.Attrs{class: class}, props_acc, vars_acc, extra_acc)
+  defp process_attrs_ref(
+         %LiveStyle.Attrs{class: class},
+         {props_acc, vars_acc, class_order, prop_classes_by_key}
+       )
        when is_binary(class) and class != "" do
     # No property classes - treat as extra class string
-    {props_acc, vars_acc, [class | extra_acc]}
+    {props_acc, vars_acc, class_order ++ split_class_string(class), prop_classes_by_key}
   end
 
-  defp process_attrs_ref(%LiveStyle.Attrs{}, props_acc, vars_acc, extra_acc) do
-    {props_acc, vars_acc, extra_acc}
+  defp process_attrs_ref(
+         %LiveStyle.Attrs{},
+         {props_acc, vars_acc, class_order, prop_classes_by_key}
+       ) do
+    {props_acc, vars_acc, class_order, prop_classes_by_key}
   end
 
   defp extract_extra_classes(class, prop_classes) when is_binary(class) and class != "" do
@@ -143,16 +152,90 @@ defmodule LiveStyle.Runtime.Attrs do
     end)
   end
 
-  defp merge_resolved_ref({:static, prop_classes}, props_acc, vars_acc) do
+  defp merge_resolved_ref(
+         {:static, prop_classes},
+         props_acc,
+         vars_acc,
+         class_order,
+         prop_classes_by_key
+       ) do
     merged = PropertyMerger.merge(prop_classes, props_acc)
-    {merged, vars_acc}
+
+    {new_class_order, new_prop_classes_by_key} =
+      apply_prop_classes(prop_classes, class_order, prop_classes_by_key)
+
+    {merged, vars_acc, new_class_order, new_prop_classes_by_key}
   end
 
-  defp merge_resolved_ref({:dynamic, prop_classes, var_list}, props_acc, vars_acc) do
+  defp merge_resolved_ref(
+         {:dynamic, prop_classes, var_list},
+         props_acc,
+         vars_acc,
+         class_order,
+         prop_classes_by_key
+       ) do
     # Dynamic classes now merge by property just like static classes (StyleX behavior)
     merged = PropertyMerger.merge(prop_classes, props_acc)
-    {merged, [var_list | vars_acc]}
+
+    {new_class_order, new_prop_classes_by_key} =
+      apply_prop_classes(prop_classes, class_order, prop_classes_by_key)
+
+    {merged, [var_list | vars_acc], new_class_order, new_prop_classes_by_key}
   end
 
-  defp merge_resolved_ref(:skip, props_acc, vars_acc), do: {props_acc, vars_acc}
+  defp merge_resolved_ref(:skip, props_acc, vars_acc, class_order, prop_classes_by_key) do
+    {props_acc, vars_acc, class_order, prop_classes_by_key}
+  end
+
+  defp append_class_string({props_acc, vars_acc, class_order, prop_classes_by_key}, class_string) do
+    {props_acc, vars_acc, class_order ++ split_class_string(class_string), prop_classes_by_key}
+  end
+
+  defp split_class_string(class_string) when is_binary(class_string) do
+    String.split(class_string, " ", trim: true)
+  end
+
+  defp apply_prop_classes(prop_classes, class_order, prop_classes_by_key)
+       when is_list(prop_classes) do
+    Enum.reduce(prop_classes, {class_order, prop_classes_by_key}, fn
+      {prop_key, :__unset__}, {order_acc, prop_map_acc} ->
+        case Map.pop(prop_map_acc, prop_key) do
+          {nil, updated_map} ->
+            {order_acc, updated_map}
+
+          {old_class, updated_map} ->
+            {remove_last(order_acc, old_class), updated_map}
+        end
+
+      {prop_key, class_name}, {order_acc, prop_map_acc}
+      when is_binary(class_name) and class_name != "" ->
+        {trimmed_order, updated_map} =
+          case Map.pop(prop_map_acc, prop_key) do
+            {nil, map_without_prop} ->
+              {order_acc, map_without_prop}
+
+            {old_class, map_without_prop} ->
+              {remove_last(order_acc, old_class), map_without_prop}
+          end
+
+        {trimmed_order ++ [class_name], Map.put(updated_map, prop_key, class_name)}
+
+      _entry, acc ->
+        acc
+    end)
+  end
+
+  defp remove_last(list, target) do
+    list
+    |> Enum.reverse()
+    |> remove_first_reversed(target)
+    |> Enum.reverse()
+  end
+
+  defp remove_first_reversed([target | rest], target), do: rest
+
+  defp remove_first_reversed([head | rest], target),
+    do: [head | remove_first_reversed(rest, target)]
+
+  defp remove_first_reversed([], _target), do: []
 end
