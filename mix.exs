@@ -50,7 +50,7 @@ defmodule LiveStyle.MixProject do
 
   defp deps do
     [
-      {:phoenix_live_view, "~> 1.0", optional: true},
+      {:phoenix_live_view, "~> 1.1", optional: true},
       {:file_system, "~> 1.0", optional: true},
       {:ex_doc, "~> 0.31", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
