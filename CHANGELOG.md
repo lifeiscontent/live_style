@@ -5,6 +5,19 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.1](https://github.com/lifeiscontent/live_style/compare/v0.16.0...v0.16.1) (2026-02-13)
+
+
+
+
+### Bug Fixes:
+
+* preserve class override order for string refs by Aaron Reisman
+
+* use exact OTP/Elixir versions in PLT cache key by Aaron Reisman
+
+* address review feedback for css statics optimization by Aaron Reisman
+
 ## [v0.16.0](https://github.com/lifeiscontent/live_style/compare/v0.15.0...v0.16.0) (2026-02-01)
 
 
