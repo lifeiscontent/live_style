@@ -41,16 +41,24 @@ defmodule LiveStyle.Compiler.Watch do
 
     apply(FileSystem, :subscribe, [pid])
 
+    # Monitor FileSystem process to detect crashes
+    fs_ref = Process.monitor(pid)
+
     Logger.info("LiveStyle watching #{modules_dir} for changes...")
 
     # Track content hash to only regenerate when data actually changes
     # No debouncing needed - the hash check naturally handles duplicate events
     initial_hash = compute_modules_hash(modules_dir)
-    watch_loop(output, input, modules_dir, run_once_fun, initial_hash)
+    watch_loop(output, input, modules_dir, run_once_fun, initial_hash, fs_ref)
   end
 
+  # Heartbeat interval for the watch loop (2 minutes)
+  @heartbeat_interval_ms :timer.minutes(2)
+
   # Main watch loop - process events immediately, rely on content hash to skip duplicates
-  defp watch_loop(output, input, modules_dir, run_once_fun, last_hash) do
+  defp watch_loop(output, input, modules_dir, run_once_fun, last_hash, fs_ref) do
+    require Logger
+
     receive do
       {:file_event, _pid, {path, events}} ->
         new_hash =
@@ -67,10 +75,18 @@ defmodule LiveStyle.Compiler.Watch do
               last_hash
           end
 
-        watch_loop(output, input, modules_dir, run_once_fun, new_hash)
+        watch_loop(output, input, modules_dir, run_once_fun, new_hash, fs_ref)
 
       {:file_event, _pid, :stop} ->
         0
+
+      {:DOWN, ^fs_ref, :process, _pid, reason} ->
+        Logger.error("[LiveStyle] FileSystem watcher crashed: #{inspect(reason)}")
+        1
+    after
+      @heartbeat_interval_ms ->
+        Logger.debug("[LiveStyle] Watch loop heartbeat - waiting for file events")
+        watch_loop(output, input, modules_dir, run_once_fun, last_hash, fs_ref)
     end
   end
 
