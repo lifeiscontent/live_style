@@ -30,8 +30,9 @@ defmodule LiveStyle.MediaQuery.Transform do
   """
 
   # Compile regex patterns at module level
-  @min_width_regex ~r/@media\s*\(min-width:\s*(\d+(?:\.\d+)?)(px|em|rem)\)/
-  @max_width_regex ~r/@media\s*\(max-width:\s*(\d+(?:\.\d+)?)(px|em|rem)\)/
+  # Anchored to only match simple min/max-width queries, avoiding mangling complex queries
+  @min_width_regex ~r/\A@media\s*\(min-width:\s*(\d+(?:\.\d+)?)(px|em|rem)\)\s*\z/
+  @max_width_regex ~r/\A@media\s*\(max-width:\s*(\d+(?:\.\d+)?)(px|em|rem)\)\s*\z/
 
   @doc """
   Transform a conditional value to implement "last media query wins" semantics.
@@ -192,22 +193,22 @@ defmodule LiveStyle.MediaQuery.Transform do
     # Sort by value ascending
     sorted = Enum.sort_by(queries, fn {_key, parsed} -> parsed.value end)
 
-    sorted
-    |> Enum.with_index()
-    |> Enum.map(fn {{old_key, parsed}, index} ->
-      if index < length(sorted) - 1 do
+    # Pair each query with the next one using zip for O(n) iteration
+    pairs = Enum.zip(sorted, tl(sorted) ++ [nil])
+
+    Enum.map(pairs, fn
+      {{old_key, parsed}, {_next_key, next_parsed}} ->
         # Not the last query - add upper bound
-        {_next_key, next_parsed} = Enum.at(sorted, index + 1)
         upper_bound = next_parsed.value - 0.01
 
         new_key =
           "@media (min-width: #{format_value(parsed.value)}#{parsed.unit}) and (max-width: #{format_value(upper_bound)}#{parsed.unit})"
 
         {old_key, new_key}
-      else
+
+      {{old_key, _parsed}, nil} ->
         # Last query - no transformation
         {old_key, old_key}
-      end
     end)
   end
 
@@ -221,22 +222,22 @@ defmodule LiveStyle.MediaQuery.Transform do
     # Sort by value descending (largest first)
     sorted = Enum.sort_by(queries, fn {_key, parsed} -> -parsed.value end)
 
-    sorted
-    |> Enum.with_index()
-    |> Enum.map(fn {{old_key, parsed}, index} ->
-      if index < length(sorted) - 1 do
+    # Pair each query with the next one using zip for O(n) iteration
+    pairs = Enum.zip(sorted, tl(sorted) ++ [nil])
+
+    Enum.map(pairs, fn
+      {{old_key, parsed}, {_next_key, next_parsed}} ->
         # Not the last query - add lower bound
-        {_next_key, next_parsed} = Enum.at(sorted, index + 1)
         lower_bound = next_parsed.value + 0.01
 
         new_key =
           "@media (min-width: #{format_value(lower_bound)}#{parsed.unit}) and (max-width: #{format_value(parsed.value)}#{parsed.unit})"
 
         {old_key, new_key}
-      else
+
+      {{old_key, _parsed}, nil} ->
         # Last query - no transformation
         {old_key, old_key}
-      end
     end)
   end
 

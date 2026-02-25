@@ -31,7 +31,32 @@ defmodule LiveStyle.Runtime.PropertyMerger do
   """
   @spec merge(prop_classes(), accumulator()) :: accumulator()
   def merge(prop_classes, acc) when is_list(prop_classes) do
-    Enum.reduce(prop_classes, acc, &merge_prop/2)
+    # Build a map from the accumulator for O(1) lookups
+    acc_map = Map.new(acc, fn {k, v} -> {normalize_key(k), {k, v}} end)
+    # Track insertion order as a list of normalized keys
+    acc_keys = Enum.map(acc, fn {k, _v} -> normalize_key(k) end)
+
+    # Merge each property class using map for O(1) ops, list for order
+    {merged_map, merged_keys} =
+      Enum.reduce(prop_classes, {acc_map, acc_keys}, fn
+        {prop, :__unset__}, {map, keys} ->
+          nk = normalize_key(prop)
+          {Map.delete(map, nk), List.delete(keys, nk)}
+
+        {prop, class}, {map, keys} ->
+          nk = normalize_key(prop)
+          existing? = Map.has_key?(map, nk)
+          new_map = Map.put(map, nk, {prop, class})
+
+          new_keys =
+            if existing?,
+              do: keys,
+              else: keys ++ [nk]
+
+          {new_map, new_keys}
+      end)
+
+    Enum.map(merged_keys, fn nk -> merged_map[nk] end)
   end
 
   @doc """

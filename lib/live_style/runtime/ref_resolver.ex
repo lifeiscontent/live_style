@@ -48,54 +48,56 @@ defmodule LiveStyle.Runtime.RefResolver do
 
   def resolve(_module, {other_module, name}, _property_classes)
       when is_atom(other_module) and is_atom(name) do
-    case Atom.to_string(other_module) do
-      <<"Elixir.", _::binary>> ->
-        other_prop_classes = other_module.__live_style__(:property_classes)
-        prop_classes = Keyword.get(other_prop_classes, name, [])
-        {:static, prop_classes}
-
-      _ ->
-        :skip
+    if live_style_module?(other_module) do
+      other_prop_classes = other_module.__live_style__(:property_classes)
+      prop_classes = Keyword.get(other_prop_classes, name, [])
+      {:static, prop_classes}
+    else
+      :skip
     end
   end
 
   # Cross-module dynamic class: {{OtherModule, :name}, args}
   def resolve(_module, {{other_module, name}, args}, _property_classes)
       when is_atom(other_module) and is_atom(name) do
-    case Atom.to_string(other_module) do
-      <<"Elixir.", _::binary>> ->
-        other_prop_classes = other_module.__live_style__(:property_classes)
-        prop_classes = Keyword.get(other_prop_classes, name, [])
-
-        dynamic_names = other_module.__live_style__(:dynamic_names)
-
-        if name in dynamic_names do
-          fn_name = :"__dynamic_#{name}__"
-          var_list = apply(other_module, fn_name, [args])
-          {:dynamic, prop_classes, var_list || []}
-        else
-          {:static, prop_classes}
-        end
-
-      _ ->
-        :skip
+    if live_style_module?(other_module) do
+      other_prop_classes = other_module.__live_style__(:property_classes)
+      prop_classes = Keyword.get(other_prop_classes, name, [])
+      dynamic_names = other_module.__live_style__(:dynamic_names)
+      resolve_dynamic(other_module, name, args, prop_classes, dynamic_names)
+    else
+      :skip
     end
   end
 
   def resolve(module, {name, args}, property_classes) when is_atom(name) do
-    dynamic_names = module.__live_style__(:dynamic_names)
-
-    if name in dynamic_names do
-      # Dynamic classes: get property_classes from compile-time map, compute var_list at runtime
+    if function_exported?(module, :__live_style__, 1) do
+      dynamic_names = module.__live_style__(:dynamic_names)
       prop_classes = Keyword.get(property_classes, name, [])
-      fn_name = :"__dynamic_#{name}__"
-      var_list = apply(module, fn_name, [args])
-      {:dynamic, prop_classes, var_list || []}
+      resolve_dynamic(module, name, args, prop_classes, dynamic_names)
     else
-      prop_classes = Keyword.get(property_classes, name, [])
-      {:static, prop_classes}
+      :skip
     end
   end
 
   def resolve(_module, _ref, _property_classes), do: :skip
+
+  defp resolve_dynamic(module, name, args, prop_classes, dynamic_names) do
+    if name in dynamic_names do
+      fn_name = :"__dynamic_#{name}__"
+
+      if function_exported?(module, fn_name, 1) do
+        var_list = apply(module, fn_name, [args])
+        {:dynamic, prop_classes, var_list || []}
+      else
+        {:static, prop_classes}
+      end
+    else
+      {:static, prop_classes}
+    end
+  end
+
+  defp live_style_module?(module) do
+    Code.ensure_loaded?(module) and function_exported?(module, :__live_style__, 1)
+  end
 end

@@ -42,7 +42,9 @@ defmodule LiveStyle.Attrs do
   def to_list(%__MODULE__{class: class, style: style} = attrs) do
     result = []
     result = if style && style != "", do: [{:style, style} | result], else: result
-    result = if class && class != "", do: [{:class, attrs} | result], else: result
+    has_class = is_binary(class) and class != ""
+    has_prop_classes = is_list(attrs.prop_classes) and attrs.prop_classes != []
+    result = if has_class or has_prop_classes, do: [{:class, attrs} | result], else: result
     result
   end
 

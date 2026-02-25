@@ -24,10 +24,22 @@ defmodule LiveStyle.Compiler.CSS.Writer.File do
 
   defp write_file(path, content) do
     dir = Path.dirname(path)
+    temp_path = Path.join(dir, ".#{Path.basename(path)}.tmp")
 
     with :ok <- File.mkdir_p(dir),
-         :ok <- File.write(path, content) do
-      {:ok, :written}
+         :ok <- File.write(temp_path, content) do
+      case File.rename(temp_path, path) do
+        :ok ->
+          {:ok, :written}
+
+        {:error, reason} ->
+          File.rm(temp_path)
+          {:error, reason}
+      end
+    else
+      {:error, reason} ->
+        File.rm(temp_path)
+        {:error, reason}
     end
   end
 end

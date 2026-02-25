@@ -123,8 +123,14 @@ defmodule LiveStyle.Compiler.CSS.Vars do
     [{at_rules, ident, to_string(value)}]
   end
 
-  # Check if a list is a conditional value list (keyword-like with :default or @-rule keys)
-  defp conditional_list?([{key, _} | _]) when is_atom(key) or is_binary(key), do: true
+  # Check if a list is a conditional value list (all elements must be {key, value} tuples)
+  defp conditional_list?([_ | _] = list) do
+    Enum.all?(list, fn
+      {k, _} when is_atom(k) or is_binary(k) -> true
+      _ -> false
+    end)
+  end
+
   defp conditional_list?(_), do: false
 
   # Handle default key with simple value
@@ -154,9 +160,17 @@ defmodule LiveStyle.Compiler.CSS.Vars do
     default = Keyword.get(list, :default) || get_string_key(list, "default")
 
     case default do
-      nil -> list |> List.first() |> elem(1) |> extract_initial_value()
-      val when is_binary(val) -> val
-      val -> extract_initial_value(val)
+      nil ->
+        case list do
+          [{_k, v} | _] -> extract_initial_value(v)
+          [] -> ""
+        end
+
+      val when is_binary(val) ->
+        val
+
+      val ->
+        extract_initial_value(val)
     end
   end
 

@@ -80,9 +80,14 @@ defmodule LiveStyle.Compiler.Watch do
     new_hash = compute_modules_hash(modules_dir)
 
     if new_hash != last_hash do
-      # Content changed - merge and regenerate
-      LiveStyle.Storage.merge_module_data()
-      _ = run_once_fun.(output, input)
+      try do
+        LiveStyle.Storage.merge_module_data()
+        _ = run_once_fun.(output, input)
+      rescue
+        e ->
+          require Logger
+          Logger.error("LiveStyle watch: regeneration failed: #{Exception.message(e)}")
+      end
     end
 
     new_hash
@@ -96,7 +101,7 @@ defmodule LiveStyle.Compiler.Watch do
         |> Enum.filter(&String.ends_with?(&1, ".etf"))
         |> Enum.sort()
         |> Enum.map(&file_content_hash(modules_dir, &1))
-        |> :erlang.md5()
+        |> then(&:crypto.hash(:md5, &1))
 
       {:error, _} ->
         <<>>
@@ -105,7 +110,7 @@ defmodule LiveStyle.Compiler.Watch do
 
   defp file_content_hash(dir, file) do
     case File.read(Path.join(dir, file)) do
-      {:ok, content} -> :erlang.md5(content)
+      {:ok, content} -> :crypto.hash(:md5, content)
       {:error, _} -> <<>>
     end
   end

@@ -34,15 +34,39 @@ defmodule LiveStyle.Selector.Condition do
 
   # Find @-rule that follows a pseudo-selector
   # e.g., ":hover@media ..." -> {":hover", "@media ..."}
+  # Skips @ signs inside brackets [] or parentheses () to avoid
+  # misinterpreting attribute selectors like :not([data-theme="@media"])
   defp find_at_rule_after_pseudo(selector) do
-    case :binary.match(selector, "@") do
-      :nomatch ->
-        nil
+    find_top_level_at(selector, 0, 0, 0)
+  end
 
-      {pos, _len} ->
-        pseudo = binary_part(selector, 0, pos)
-        at_rule = binary_part(selector, pos, byte_size(selector) - pos)
-        {pseudo, at_rule}
+  defp find_top_level_at(selector, pos, bracket_depth, paren_depth) do
+    if pos >= byte_size(selector) do
+      nil
+    else
+      <<_::binary-size(pos), char, _::binary>> = selector
+
+      case char do
+        ?[ ->
+          find_top_level_at(selector, pos + 1, bracket_depth + 1, paren_depth)
+
+        ?] ->
+          find_top_level_at(selector, pos + 1, max(bracket_depth - 1, 0), paren_depth)
+
+        ?( ->
+          find_top_level_at(selector, pos + 1, bracket_depth, paren_depth + 1)
+
+        ?) ->
+          find_top_level_at(selector, pos + 1, bracket_depth, max(paren_depth - 1, 0))
+
+        ?@ when bracket_depth == 0 and paren_depth == 0 ->
+          pseudo = binary_part(selector, 0, pos)
+          at_rule = binary_part(selector, pos, byte_size(selector) - pos)
+          {pseudo, at_rule}
+
+        _ ->
+          find_top_level_at(selector, pos + 1, bracket_depth, paren_depth)
+      end
     end
   end
 

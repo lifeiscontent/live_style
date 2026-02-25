@@ -137,7 +137,12 @@ defmodule LiveStyle.ShorthandBehavior.FlattenShorthands do
 
   defp extract_important(value) do
     if String.ends_with?(value, "!important") do
-      {String.trim(String.replace(value, "!important", "")), " !important"}
+      base =
+        value
+        |> String.replace_suffix("!important", "")
+        |> String.trim_trailing()
+
+      {base, " !important"}
     else
       {value, ""}
     end

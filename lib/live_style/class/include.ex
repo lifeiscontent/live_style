@@ -73,7 +73,13 @@ defmodule LiveStyle.Class.Include do
   - `manifest` - Optional manifest to look up local includes (for batch processing)
   """
   @spec resolve(keyword(), atom(), LiveStyle.Manifest.t() | nil) :: keyword()
-  def resolve(declarations, caller_module, manifest \\ nil) when is_list(declarations) do
+  def resolve(declarations, caller_module, manifest \\ nil)
+
+  def resolve(declarations, caller_module, manifest) when is_list(declarations) do
+    do_resolve(declarations, caller_module, manifest, MapSet.new())
+  end
+
+  defp do_resolve(declarations, caller_module, manifest, seen) when is_list(declarations) do
     {includes_list, regular} = Keyword.pop(declarations, :__include__, [])
 
     # Normalize includes_list to always be a list
@@ -82,14 +88,29 @@ defmodule LiveStyle.Class.Include do
     base =
       includes_list
       |> Enum.reduce([], fn include_ref, acc ->
+        ref_key = include_ref_key(include_ref, caller_module)
+
+        if MapSet.member?(seen, ref_key) do
+          raise CompileError,
+            description:
+              "LiveStyle: Include cycle detected: #{inspect(ref_key)}. " <>
+                "Classes cannot include each other in a cycle."
+        end
+
         included = fetch_included_style(include_ref, caller_module, manifest)
-        # Recursively resolve includes in the included style
-        resolved = resolve(included, caller_module, manifest)
+        resolved = do_resolve(included, caller_module, manifest, MapSet.put(seen, ref_key))
         Utils.merge_declarations(acc, resolved)
       end)
 
     Utils.merge_declarations(base, regular)
   end
+
+  defp include_ref_key({module, rule_name}, _caller_module)
+       when is_atom(module) and is_atom(rule_name),
+       do: {module, rule_name}
+
+  defp include_ref_key(class_name, caller_module) when is_atom(class_name),
+    do: {caller_module, class_name}
 
   defp fetch_included_style({module, rule_name}, caller_module, _manifest)
        when is_atom(module) and is_atom(rule_name) do
