@@ -5,6 +5,15 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.2](https://github.com/lifeiscontent/live_style/compare/v0.16.1...v0.16.2) (2026-02-25)
+
+
+
+
+### Bug Fixes:
+
+* improve robustness and fix bugs across codebase by Aaron Reisman
+
 ## [v0.16.1](https://github.com/lifeiscontent/live_style/compare/v0.16.0...v0.16.1) (2026-02-13)
 
 
