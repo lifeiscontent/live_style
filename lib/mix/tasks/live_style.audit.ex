@@ -96,16 +96,17 @@ defmodule Mix.Tasks.LiveStyle.Audit do
 
   defp extract_definitions(file) do
     content = File.read!(file)
+    module = extract_module_name(content)
 
     # Match class(:name, ...) definitions
     # The pattern must be at the start of a line (after whitespace) to avoid matching
     # inside other expressions
+    # Use return: :index to get byte offsets for accurate line number computation
     ~r/^\s*class\(\s*:([a-z_][a-z0-9_]*)\s*,/m
-    |> Regex.scan(content)
-    |> Enum.map(fn [full_match, class_name] ->
-      # Find line number by locating the match in content
-      line = count_lines_for_match(content, full_match)
-      module = extract_module_name(content)
+    |> Regex.scan(content, return: :index)
+    |> Enum.map(fn [{match_start, _match_len}, {cap_start, cap_len}] ->
+      class_name = binary_part(content, cap_start, cap_len)
+      line = count_lines_before(content, match_start)
 
       %{
         module: module,
@@ -123,18 +124,11 @@ defmodule Mix.Tasks.LiveStyle.Audit do
     end
   end
 
-  defp count_lines_for_match(content, match) do
-    # Find the position of the match and count lines up to that point
-    case :binary.match(content, match) do
-      {pos, _len} ->
-        content
-        |> :binary.part(0, pos)
-        |> String.split("\n")
-        |> length()
-
-      :nomatch ->
-        0
-    end
+  defp count_lines_before(content, byte_offset) do
+    content
+    |> binary_part(0, byte_offset)
+    |> String.split("\n")
+    |> length()
   end
 
   defp find_class_references(path) do

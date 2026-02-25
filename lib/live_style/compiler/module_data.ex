@@ -25,9 +25,19 @@ defmodule LiveStyle.Compiler.ModuleData do
   def write(module, data) when is_atom(module) and is_map(data) do
     path = module_path(module)
     dir = Path.dirname(path)
-
     File.mkdir_p!(dir)
-    File.write!(path, :erlang.term_to_binary(data))
+
+    temp_path = path <> ".tmp"
+
+    try do
+      File.write!(temp_path, :erlang.term_to_binary(data))
+      File.rename!(temp_path, path)
+    rescue
+      error ->
+        File.rm(temp_path)
+        reraise error, __STACKTRACE__
+    end
+
     :ok
   end
 
@@ -41,12 +51,18 @@ defmodule LiveStyle.Compiler.ModuleData do
     path = module_path(module)
 
     if File.exists?(path) do
-      path
-      |> File.read!()
-      |> :erlang.binary_to_term()
+      case File.read(path) do
+        {:ok, binary} ->
+          :erlang.binary_to_term(binary)
+
+        {:error, _} ->
+          nil
+      end
     else
       nil
     end
+  catch
+    :error, :badarg -> nil
   end
 
   @doc """
@@ -62,11 +78,9 @@ defmodule LiveStyle.Compiler.ModuleData do
       {:ok, files} ->
         files
         |> Enum.filter(&String.ends_with?(&1, ".etf"))
-        |> Enum.map(fn file ->
+        |> Enum.flat_map(fn file ->
           path = Path.join(modules_dir(), file)
-          data = path |> File.read!() |> :erlang.binary_to_term()
-          module = data[:module]
-          {module, data}
+          read_module_file(path)
         end)
 
       {:error, _} ->
@@ -86,12 +100,16 @@ defmodule LiveStyle.Compiler.ModuleData do
         for file <- files, String.ends_with?(file, ".etf") do
           path = Path.join(modules_dir(), file)
 
-          with {:ok, binary} <- File.read(path),
-               data <- :erlang.binary_to_term(binary),
-               module when is_atom(module) <- data[:module] do
-            unless MapSet.member?(active_modules, module) do
-              File.rm(path)
+          try do
+            with {:ok, binary} <- File.read(path),
+                 data <- :erlang.binary_to_term(binary),
+                 module when is_atom(module) <- data[:module] do
+              unless MapSet.member?(active_modules, module) do
+                File.rm(path)
+              end
             end
+          catch
+            :error, :badarg -> File.rm(path)
           end
         end
 
@@ -111,6 +129,22 @@ defmodule LiveStyle.Compiler.ModuleData do
     app = Mix.Project.config()[:app] || :live_style
 
     Path.join([build_path, "live_style", to_string(app), "modules"])
+  end
+
+  defp read_module_file(path) do
+    case File.read(path) do
+      {:ok, binary} ->
+        try do
+          data = :erlang.binary_to_term(binary)
+          module = data[:module]
+          if is_atom(module), do: [{module, data}], else: []
+        catch
+          :error, :badarg -> []
+        end
+
+      {:error, _} ->
+        []
+    end
   end
 
   defp module_path(module) do

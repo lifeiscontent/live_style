@@ -183,33 +183,21 @@ defmodule LiveStyle.Manifest do
     sorted_list_get(list, key)
   end
 
-  # Insert or update in a sorted list, maintaining sort order
-  defp sorted_list_put(list, key, entry) do
-    case sorted_list_find_index(list, key) do
-      {:found, index} ->
-        List.replace_at(list, index, {key, entry})
+  # Single-pass insert or update in a sorted list, maintaining sort order
+  defp sorted_list_put([], key, entry), do: [{key, entry}]
 
-      {:insert_at, index} ->
-        List.insert_at(list, index, {key, entry})
-    end
-  end
+  defp sorted_list_put([{k, _v} = head | rest], key, entry) when key < k,
+    do: [{key, entry}, head | rest]
 
-  # Get value from sorted list by key (linear search, but could use binary search)
-  defp sorted_list_get(list, key) do
-    case List.keyfind(list, key, 0) do
-      {^key, entry} -> entry
-      nil -> nil
-    end
-  end
+  defp sorted_list_put([{k, _} | rest], key, entry) when key == k,
+    do: [{key, entry} | rest]
 
-  # Find index where key exists or should be inserted
-  defp sorted_list_find_index(list, key) do
-    find_index(list, key, 0)
-  end
+  defp sorted_list_put([head | rest], key, entry),
+    do: [head | sorted_list_put(rest, key, entry)]
 
-  defp find_index([], _key, index), do: {:insert_at, index}
-
-  defp find_index([{k, _} | _rest], key, index) when key < k, do: {:insert_at, index}
-  defp find_index([{k, _} | _rest], key, index) when key == k, do: {:found, index}
-  defp find_index([_ | rest], key, index), do: find_index(rest, key, index + 1)
+  # Single-pass get from sorted list with early stop
+  defp sorted_list_get([], _key), do: nil
+  defp sorted_list_get([{k, _} | _rest], key) when key < k, do: nil
+  defp sorted_list_get([{k, entry} | _rest], key) when key == k, do: entry
+  defp sorted_list_get([_ | rest], key), do: sorted_list_get(rest, key)
 end

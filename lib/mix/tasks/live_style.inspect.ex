@@ -80,17 +80,26 @@ defmodule Mix.Tasks.LiveStyle.Inspect do
         print_list(module)
 
       opts[:css] && class_names != [] ->
-        class_atoms = Enum.map(class_names, &String.to_existing_atom/1)
+        class_atoms = Enum.map(class_names, &to_existing_atom_or_halt!(&1, module))
         print_css(module, class_atoms)
 
       class_names != [] ->
-        class_atoms = Enum.map(class_names, &String.to_existing_atom/1)
+        class_atoms = Enum.map(class_names, &to_existing_atom_or_halt!(&1, module))
         print_inspection(module, class_atoms)
 
       true ->
         Mix.shell().error("Please specify class names or use --list")
         Mix.shell().error("Example: mix live_style.inspect MyAppWeb.Button primary")
     end
+  end
+
+  defp to_existing_atom_or_halt!(name, module) do
+    String.to_existing_atom(name)
+  rescue
+    ArgumentError ->
+      Mix.shell().error("Unknown class #{inspect(name)} for #{inspect(module)}")
+      Mix.shell().error("Use --list to see available classes.")
+      exit({:shutdown, 1})
   end
 
   defp print_list(module) do

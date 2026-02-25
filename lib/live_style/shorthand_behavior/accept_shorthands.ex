@@ -134,14 +134,16 @@ defmodule LiveStyle.ShorthandBehavior.AcceptShorthands do
   defp apply_expansion({:complex, :overscroll_behavior}, value) do
     parts = split_css_value(value)
 
-    [x, y] =
-      case parts do
-        [single] -> [single, single]
-        [a, b] -> [a, b]
-        _ -> [nil, nil]
-      end
+    case parts do
+      [single] ->
+        [{"overscroll-behavior-x", single}, {"overscroll-behavior-y", single}]
 
-    [{"overscroll-behavior-x", x}, {"overscroll-behavior-y", y}]
+      [a, b] ->
+        [{"overscroll-behavior-x", a}, {"overscroll-behavior-y", b}]
+
+      _ ->
+        [{"overscroll-behavior", value}]
+    end
   end
 
   defp apply_expansion({:complex, :contain_intrinsic_size}, nil) do

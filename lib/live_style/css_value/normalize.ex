@@ -43,10 +43,16 @@ defmodule LiveStyle.CSSValue.Normalize do
   # Convert milliseconds to seconds when >= 10ms
   defp normalize_timings(value) do
     Regex.replace(@ms_timing_regex, value, fn _, num_str ->
-      num = String.to_float(num_str <> ".0") |> Float.round(4)
+      num =
+        if String.contains?(num_str, ".") do
+          String.to_float(num_str)
+        else
+          String.to_float(num_str <> ".0")
+        end
+        |> Float.round(4)
 
       if num >= 10 do
-        seconds = num / 1000
+        seconds = Float.round(num / 1000, 4)
         "#{seconds}s"
       else
         "#{num_str}ms"

@@ -50,20 +50,34 @@ defmodule LiveStyle.Compiler.CSS.AtomicClass do
     # Build declarations for all fallback values
     # Order preserved: first value is the preferred one, subsequent values are fallbacks
     # CSS applies in order, so last declaration wins if supported
-    decls =
-      Enum.map_join(values, ";", fn val ->
-        {ltr_prop, ltr_val} = RTL.generate_ltr(property, val)
-        "#{ltr_prop}:#{ltr_val}"
+    selector = Selector.build_atomic_class_selector(class_name, selector_suffix, at_rule)
+
+    # Generate LTR and RTL pairs for each fallback value
+    pairs =
+      Enum.map(values, fn val ->
+        ltr = RTL.generate_ltr(property, val)
+        rtl = RTL.generate_rtl(property, val)
+        {ltr, rtl}
       end)
 
-    selector = Selector.build_atomic_class_selector(class_name, selector_suffix, at_rule)
-    ltr_css = "#{selector}{#{decls}}"
+    ltr_decls = Enum.map_join(pairs, ";", fn {{p, v}, _} -> "#{p}:#{v}" end)
+    ltr_css = wrap_in_at_rules(at_rule, "#{selector}{#{ltr_decls}}")
 
-    # Wrap in at-rule if present (handles nested at-rules)
-    ltr_css = wrap_in_at_rules(at_rule, ltr_css)
+    # Generate RTL CSS if any value differs in RTL
+    rtl_decls =
+      Enum.map_join(pairs, ";", fn {{lp, lv}, rtl} ->
+        {rp, rv} = rtl || {lp, lv}
+        "#{rp}:#{rv}"
+      end)
 
-    # RTL handling for arrays is more complex, skip for now
-    {ltr_css, nil}
+    rtl_css =
+      if rtl_decls == ltr_decls do
+        nil
+      else
+        wrap_in_at_rules(at_rule, "html[dir=\"rtl\"] #{selector}{#{rtl_decls}}")
+      end
+
+    {ltr_css, rtl_css}
   end
 
   @doc false

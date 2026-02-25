@@ -115,7 +115,13 @@ defmodule LiveStyle.Compiler.CSS.ThemeClasses do
     end
   end
 
-  # Check if a list is a conditional value list
-  defp conditional_list?([{key, _} | _]) when is_atom(key) or is_binary(key), do: true
+  # Check if a list is a conditional value list (all elements must be {key, value} tuples)
+  defp conditional_list?([_ | _] = list) do
+    Enum.all?(list, fn
+      {k, _} when is_atom(k) or is_binary(k) -> true
+      _ -> false
+    end)
+  end
+
   defp conditional_list?(_), do: false
 end

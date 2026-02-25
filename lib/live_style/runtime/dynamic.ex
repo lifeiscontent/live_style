@@ -30,6 +30,16 @@ defmodule LiveStyle.Runtime.Dynamic do
         {to_css_var_name(prop, prefix), format_css_value(value)}
       end)
     else
+      prop_count = length(all_props)
+      value_count = length(values_list)
+
+      if prop_count != value_count do
+        raise ArgumentError,
+              "Dynamic class :#{name} in #{inspect(module)} expects #{prop_count} " <>
+                "value(s) but got #{value_count}. " <>
+                "Expected values for: #{inspect(all_props)}"
+      end
+
       all_props
       |> Enum.zip(values_list)
       |> Enum.map(fn {prop, value} ->

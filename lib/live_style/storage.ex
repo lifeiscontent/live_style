@@ -513,8 +513,6 @@ defmodule LiveStyle.Storage do
     lock = lock_path()
     # Ensure directory exists
     lock |> Path.dirname() |> File.mkdir_p!()
-    # Clean stale locks before attempting to acquire
-    maybe_clean_stale_lock(lock)
     acquire_lock(lock, @lock_timeout)
 
     try do
@@ -525,9 +523,9 @@ defmodule LiveStyle.Storage do
   end
 
   defp maybe_clean_stale_lock(lock) do
-    case File.stat(lock) do
+    case File.stat(lock, time: :posix) do
       {:ok, %{mtime: mtime}} ->
-        age_seconds = System.os_time(:second) - to_unix_time(mtime)
+        age_seconds = System.os_time(:second) - mtime
 
         if age_seconds > @stale_lock_threshold_seconds do
           File.rm_rf(lock)
@@ -538,17 +536,13 @@ defmodule LiveStyle.Storage do
     end
   end
 
-  defp to_unix_time({{year, month, day}, {hour, min, sec}}) do
-    :calendar.datetime_to_gregorian_seconds({{year, month, day}, {hour, min, sec}}) -
-      :calendar.datetime_to_gregorian_seconds({{1970, 1, 1}, {0, 0, 0}})
-  end
-
   defp acquire_lock(lock, timeout) when timeout > 0 do
     case File.mkdir(lock) do
       :ok ->
         :ok
 
       {:error, :eexist} ->
+        maybe_clean_stale_lock(lock)
         Process.sleep(@lock_retry_interval)
         acquire_lock(lock, timeout - @lock_retry_interval)
 
@@ -629,7 +623,6 @@ defmodule LiveStyle.Storage do
   defp with_usage_lock(fun) when is_function(fun, 0) do
     lock = usage_lock_path()
     lock |> Path.dirname() |> File.mkdir_p!()
-    maybe_clean_stale_lock(lock)
     acquire_lock(lock, @lock_timeout)
 
     try do
