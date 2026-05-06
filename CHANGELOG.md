@@ -5,6 +5,21 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.16.3](https://github.com/lifeiscontent/live_style/compare/v0.16.2...v0.16.3) (2026-05-06)
+
+
+
+
+### Bug Fixes:
+
+* use checkout credentials for release push by Aaron Reisman
+
+* make release checkout independent of PAT by Aaron Reisman
+
+* correct manifest serialization type by Aaron Reisman
+
+* address PR review feedback by Aaron Reisman
+
 ## [v0.16.2](https://github.com/lifeiscontent/live_style/compare/v0.16.1...v0.16.2) (2026-02-25)
 
 

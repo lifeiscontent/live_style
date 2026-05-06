@@ -9,7 +9,7 @@ The setup follows the same shape as Tailwind:
 | Find | Replace |
 |------|---------|
 | `@import "tailwindcss"` | `@import "live_style"` |
-| `{:tailwind, ...}` | `{:live_style, "~> 0.16.2"}` |
+| `{:tailwind, ...}` | `{:live_style, "~> 0.16.3"}` |
 | `config :tailwind, my_app: [...]` | `config :live_style, my_app: [...]` |
 | `tailwind my_app` | `live_style my_app` |
 | `Tailwind` | `LiveStyle` |
@@ -38,7 +38,7 @@ end
 
 def deps do
   [
-    {:live_style, "~> 0.16.2"},
+    {:live_style, "~> 0.16.3"},
     ...
   ]
 end
@@ -94,7 +94,7 @@ For new Phoenix projects without Tailwind:
 # mix.exs
 def deps do
   [
-    {:live_style, "~> 0.16.2"}
+    {:live_style, "~> 0.16.3"}
   ]
 end
 ```

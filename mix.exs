@@ -1,7 +1,7 @@
 defmodule LiveStyle.MixProject do
   use Mix.Project
 
-  @version "0.16.2"
+  @version "0.16.3"
   @source_url "https://github.com/lifeiscontent/live_style"
   @docs_modules [
     LiveStyle,
