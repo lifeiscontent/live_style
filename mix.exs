@@ -86,7 +86,7 @@ defmodule LiveStyle.MixProject do
       {:phoenix_live_view, "~> 1.1", optional: true, runtime: false},
       {:phoenix_html, "~> 3.3 or ~> 4.0", optional: true, runtime: false},
       {:file_system, "~> 1.0", optional: true, runtime: false},
-      {:jason, "~> 1.4", runtime: false},
+      {:jason, "~> 1.4", optional: true, runtime: false},
       {:ex_doc, "~> 0.40", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},

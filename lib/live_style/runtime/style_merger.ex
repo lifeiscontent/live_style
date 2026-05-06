@@ -5,13 +5,13 @@ defmodule LiveStyle.Runtime.StyleMerger do
 
   defstruct merged_props: [],
             var_styles: [],
-            ordered_classes: [],
+            class_stack: [],
             prop_classes_by_key: %{}
 
   @type state :: %__MODULE__{
           merged_props: LiveStyle.Attrs.prop_classes(),
           var_styles: [keyword()],
-          ordered_classes: [String.t()],
+          class_stack: [String.t()],
           prop_classes_by_key: %{optional(atom() | String.t()) => String.t()}
         }
 
@@ -62,8 +62,10 @@ defmodule LiveStyle.Runtime.StyleMerger do
   def merge_attrs(%LiveStyle.Attrs{}, state), do: state
 
   @spec append_class_string(state(), String.t()) :: state()
-  def append_class_string(%__MODULE__{ordered_classes: ordered_classes} = state, class_string) do
-    %{state | ordered_classes: ordered_classes ++ split_class_string(class_string)}
+  def append_class_string(%__MODULE__{} = state, class_string) do
+    class_string
+    |> split_class_string()
+    |> Enum.reduce(state, &append_class/2)
   end
 
   @spec to_attrs(state(), String.t() | nil) :: LiveStyle.Attrs.t()
@@ -71,12 +73,13 @@ defmodule LiveStyle.Runtime.StyleMerger do
         %__MODULE__{
           merged_props: merged_props,
           var_styles: var_styles,
-          ordered_classes: ordered_classes
+          class_stack: class_stack
         },
         extra_styles
       ) do
     class_string =
-      ordered_classes
+      class_stack
+      |> Enum.reverse()
       |> Enum.uniq()
       |> Enum.join(" ")
 
@@ -100,13 +103,13 @@ defmodule LiveStyle.Runtime.StyleMerger do
   defp merge_prop_classes(prop_classes, %__MODULE__{} = state) do
     merged = PropertyMerger.merge(prop_classes, state.merged_props)
 
-    {new_class_order, new_prop_classes_by_key} =
-      apply_prop_classes(prop_classes, state.ordered_classes, state.prop_classes_by_key)
+    {new_class_stack, new_prop_classes_by_key} =
+      apply_prop_classes(prop_classes, state.class_stack, state.prop_classes_by_key)
 
     %{
       state
       | merged_props: merged,
-        ordered_classes: new_class_order,
+        class_stack: new_class_stack,
         prop_classes_by_key: new_prop_classes_by_key
     }
   end
@@ -168,47 +171,44 @@ defmodule LiveStyle.Runtime.StyleMerger do
     String.split(class_string, " ", trim: true)
   end
 
-  defp apply_prop_classes(prop_classes, class_order, prop_classes_by_key)
+  defp append_class(class_name, %__MODULE__{class_stack: class_stack} = state) do
+    %{state | class_stack: [class_name | class_stack]}
+  end
+
+  defp apply_prop_classes(prop_classes, class_stack, prop_classes_by_key)
        when is_list(prop_classes) do
-    Enum.reduce(prop_classes, {class_order, prop_classes_by_key}, fn
-      {prop_key, :__unset__}, {order_acc, prop_map_acc} ->
+    Enum.reduce(prop_classes, {class_stack, prop_classes_by_key}, fn
+      {prop_key, :__unset__}, {stack_acc, prop_map_acc} ->
         case Map.pop(prop_map_acc, prop_key) do
           {nil, updated_map} ->
-            {order_acc, updated_map}
+            {stack_acc, updated_map}
 
           {old_class, updated_map} ->
-            {remove_last(order_acc, old_class), updated_map}
+            {remove_first(stack_acc, old_class), updated_map}
         end
 
-      {prop_key, class_name}, {order_acc, prop_map_acc}
+      {prop_key, class_name}, {stack_acc, prop_map_acc}
       when is_binary(class_name) and class_name != "" ->
-        {trimmed_order, updated_map} =
+        {trimmed_stack, updated_map} =
           case Map.pop(prop_map_acc, prop_key) do
             {nil, map_without_prop} ->
-              {order_acc, map_without_prop}
+              {stack_acc, map_without_prop}
 
             {old_class, map_without_prop} ->
-              {remove_last(order_acc, old_class), map_without_prop}
+              {remove_first(stack_acc, old_class), map_without_prop}
           end
 
-        {trimmed_order ++ [class_name], Map.put(updated_map, prop_key, class_name)}
+        {[class_name | trimmed_stack], Map.put(updated_map, prop_key, class_name)}
 
       _entry, acc ->
         acc
     end)
   end
 
-  defp remove_last(list, target) do
-    list
-    |> Enum.reverse()
-    |> remove_first_reversed(target)
-    |> Enum.reverse()
-  end
+  defp remove_first([target | rest], target), do: rest
 
-  defp remove_first_reversed([target | rest], target), do: rest
+  defp remove_first([head | rest], target),
+    do: [head | remove_first(rest, target)]
 
-  defp remove_first_reversed([head | rest], target),
-    do: [head | remove_first_reversed(rest, target)]
-
-  defp remove_first_reversed([], _target), do: []
+  defp remove_first([], _target), do: []
 end
