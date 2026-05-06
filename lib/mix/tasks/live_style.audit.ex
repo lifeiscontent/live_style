@@ -14,6 +14,7 @@ defmodule Mix.Tasks.LiveStyle.Audit do
 
     * `--path` - Directory to scan (default: "lib")
     * `--format` - Output format: "text" or "json" (default: "text")
+      JSON output requires the optional `:jason` dependency.
 
   ## How It Works
 
@@ -228,6 +229,8 @@ defmodule Mix.Tasks.LiveStyle.Audit do
   end
 
   defp output_json(unused) do
+    ensure_jason!()
+
     items =
       unused
       |> Enum.flat_map(fn {module, classes} ->
@@ -237,5 +240,13 @@ defmodule Mix.Tasks.LiveStyle.Audit do
       end)
 
     Mix.shell().info(Jason.encode!(items))
+  end
+
+  defp ensure_jason! do
+    unless Code.ensure_loaded?(Jason) do
+      Mix.raise(
+        "JSON output requires Jason. Add {:jason, \"~> 1.4\"} to your deps or use --format text."
+      )
+    end
   end
 end
