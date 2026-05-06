@@ -155,11 +155,21 @@ jobs:
       contents: write
 
     steps:
+      - name: Validate release token
+        env:
+          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          if [ -z "$RELEASE_TOKEN" ]; then
+            echo "::error::RELEASE_TOKEN is required for git_ops.release so release commits and tags trigger follow-up workflows."
+            echo "::error::Configure RELEASE_TOKEN as a least-privilege service account PAT, or replace it with a GitHub App installation token."
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v6
         with:
           fetch-depth: 0  # Need full history for git_ops
-          persist-credentials: false
+          token: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Setup Elixir
         uses: erlef/setup-beam@v1
@@ -204,17 +214,8 @@ jobs:
 
       - name: Push changes and tags
         if: steps.git_ops.outputs.released == 'true'
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
-          token="${RELEASE_TOKEN:-$GITHUB_TOKEN}"
-
-          if [ -z "$RELEASE_TOKEN" ]; then
-            echo "::warning::RELEASE_TOKEN is not set; using GITHUB_TOKEN for release push"
-          fi
-
-          git push "https://x-access-token:${token}@github.com/${GITHUB_REPOSITORY}.git" main --follow-tags
+          git push origin main --follow-tags
 
   release:
     name: Create GitHub Release
