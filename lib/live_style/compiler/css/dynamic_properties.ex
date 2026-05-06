@@ -28,7 +28,7 @@ defmodule LiveStyle.Compiler.CSS.DynamicProperties do
   - Dynamic style vars: `inherits: false` (unless pseudo element)
   """
 
-  alias LiveStyle.{Config, Manifest.ClassEntry}
+  alias LiveStyle.{Config, Manifest, Manifest.ClassEntry}
 
   @doc """
   Generates @property rules for all dynamic CSS variables in the manifest.
@@ -39,7 +39,7 @@ defmodule LiveStyle.Compiler.CSS.DynamicProperties do
   def generate(manifest) do
     prefix = Config.class_name_prefix()
 
-    manifest.classes
+    Manifest.entries(manifest, :classes)
     |> Enum.filter(fn {_key, entry} -> ClassEntry.dynamic?(entry) end)
     |> Enum.flat_map(fn {_key, entry} ->
       Keyword.fetch!(entry, :atomic_classes)

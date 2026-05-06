@@ -47,18 +47,30 @@ defmodule LiveStyle.Manifest do
   @type class_entry :: ClassEntry.t()
   @type theme_class_entry :: ThemeClassEntry.t()
 
-  # All collections use sorted lists of {key, entry} tuples for deterministic ordering
+  # Collections are map-backed internally for fast put/get operations. Use
+  # `entries/2` when deterministic sorted traversal is needed.
   @type t :: %{
           version: pos_integer(),
-          vars: [{String.t(), var_entry()}],
-          consts: [{String.t(), const_entry()}],
-          keyframes: [{String.t(), keyframes_entry()}],
-          position_try: [{String.t(), position_try_entry()}],
-          view_transition_classes: [{String.t(), view_transition_class_entry()}],
-          classes: [{String.t(), class_entry()}],
-          theme_classes: [{String.t(), theme_class_entry()}],
-          module_hashes: [{module(), binary()}]
+          vars: %{optional(String.t()) => var_entry()},
+          consts: %{optional(String.t()) => const_entry()},
+          keyframes: %{optional(String.t()) => keyframes_entry()},
+          position_try: %{optional(String.t()) => position_try_entry()},
+          view_transition_classes: %{optional(String.t()) => view_transition_class_entry()},
+          classes: %{optional(String.t()) => class_entry()},
+          theme_classes: %{optional(String.t()) => theme_class_entry()},
+          module_hashes: %{optional(module()) => binary()}
         }
+
+  @collections [
+    :vars,
+    :consts,
+    :keyframes,
+    :position_try,
+    :view_transition_classes,
+    :classes,
+    :theme_classes,
+    :module_hashes
+  ]
 
   @doc """
   Returns the current manifest version.
@@ -70,14 +82,14 @@ defmodule LiveStyle.Manifest do
   def empty do
     %{
       version: @current_version,
-      vars: [],
-      consts: [],
-      keyframes: [],
-      position_try: [],
-      view_transition_classes: [],
-      classes: [],
-      theme_classes: [],
-      module_hashes: []
+      vars: %{},
+      consts: %{},
+      keyframes: %{},
+      position_try: %{},
+      view_transition_classes: %{},
+      classes: %{},
+      theme_classes: %{},
+      module_hashes: %{}
     }
   end
 
@@ -93,7 +105,9 @@ defmodule LiveStyle.Manifest do
     # If manifest version doesn't match current, discard old data and return fresh
     # This handles format changes that would otherwise cause runtime errors
     if current?(manifest) do
-      struct_merge(empty(), manifest)
+      manifest
+      |> struct_merge(empty())
+      |> normalize_collections()
     else
       old_version = Map.get(manifest, :version, "unknown")
 
@@ -113,9 +127,35 @@ defmodule LiveStyle.Manifest do
   @spec key(module(), atom()) :: String.t()
   def key(module, name), do: "#{to_string(module)}.#{name}"
 
-  defp struct_merge(base, updates) when is_map(base) and is_map(updates) do
-    Enum.reduce(updates, base, fn {k, v}, acc ->
-      if is_map_key(acc, k), do: %{acc | k => v}, else: acc
+  @doc """
+  Returns a deterministic sorted entry list for a collection.
+  """
+  @spec entries(t(), atom()) :: list()
+  def entries(manifest, collection) when collection in @collections do
+    manifest
+    |> Map.get(collection, %{})
+    |> sorted_entries()
+  end
+
+  @doc """
+  Returns the number of entries in a collection.
+  """
+  @spec count(t(), atom()) :: non_neg_integer()
+  def count(manifest, collection) when collection in @collections do
+    case Map.get(manifest, collection, %{}) do
+      entries when is_map(entries) -> map_size(entries)
+      entries when is_list(entries) -> length(entries)
+      _ -> 0
+    end
+  end
+
+  @doc """
+  Converts the manifest to a deterministic list-backed representation for disk.
+  """
+  @spec to_serializable(t()) :: t()
+  def to_serializable(manifest) do
+    Enum.reduce(@collections, manifest, fn collection, acc ->
+      Map.put(acc, collection, entries(acc, collection))
     end)
   end
 
@@ -152,9 +192,7 @@ defmodule LiveStyle.Manifest do
   """
   @spec put_module_hash(t(), module(), binary()) :: t()
   def put_module_hash(manifest, module, hash) when is_atom(module) and is_binary(hash) do
-    list = Map.get(manifest, :module_hashes, [])
-    updated = sorted_list_put(list, module, hash)
-    Map.put(manifest, :module_hashes, updated)
+    put_entry(manifest, :module_hashes, module, hash)
   end
 
   @doc """
@@ -164,40 +202,49 @@ defmodule LiveStyle.Manifest do
   """
   @spec get_module_hash(t(), module()) :: binary() | nil
   def get_module_hash(manifest, module) when is_atom(module) do
-    list = Map.get(manifest, :module_hashes, [])
-    sorted_list_get(list, module)
+    get_entry(manifest, :module_hashes, module)
   end
 
-  # Private helpers for sorted list operations
-
-  # Insert or update entry in sorted list, maintaining sort order by key
   defp put_entry(manifest, collection, key, entry) do
-    list = Map.get(manifest, collection, [])
-    updated = sorted_list_put(list, key, entry)
+    updated =
+      manifest
+      |> Map.get(collection, %{})
+      |> entries_to_map()
+      |> Map.put(key, entry)
+
     Map.put(manifest, collection, updated)
   end
 
-  # Get entry from sorted list by key
   defp get_entry(manifest, collection, key) do
-    list = Map.get(manifest, collection, [])
-    sorted_list_get(list, key)
+    manifest
+    |> Map.get(collection, %{})
+    |> entries_to_map()
+    |> Map.get(key)
   end
 
-  # Single-pass insert or update in a sorted list, maintaining sort order
-  defp sorted_list_put([], key, entry), do: [{key, entry}]
+  defp struct_merge(updates, base) when is_map(base) and is_map(updates) do
+    Enum.reduce(updates, base, fn {k, v}, acc ->
+      if is_map_key(acc, k), do: %{acc | k => v}, else: acc
+    end)
+  end
 
-  defp sorted_list_put([{k, _v} = head | rest], key, entry) when key < k,
-    do: [{key, entry}, head | rest]
+  defp normalize_collections(manifest) do
+    Enum.reduce(@collections, manifest, fn collection, acc ->
+      Map.update!(acc, collection, &entries_to_map/1)
+    end)
+  end
 
-  defp sorted_list_put([{k, _} | rest], key, entry) when key == k,
-    do: [{key, entry} | rest]
+  defp entries_to_map(entries) when is_map(entries), do: entries
+  defp entries_to_map(entries) when is_list(entries), do: Map.new(entries)
+  defp entries_to_map(_entries), do: %{}
 
-  defp sorted_list_put([head | rest], key, entry),
-    do: [head | sorted_list_put(rest, key, entry)]
+  defp sorted_entries(entries) when is_map(entries) do
+    Enum.sort_by(entries, fn {key, _entry} -> key end)
+  end
 
-  # Single-pass get from sorted list with early stop
-  defp sorted_list_get([], _key), do: nil
-  defp sorted_list_get([{k, _} | _rest], key) when key < k, do: nil
-  defp sorted_list_get([{k, entry} | _rest], key) when key == k, do: entry
-  defp sorted_list_get([_ | rest], key), do: sorted_list_get(rest, key)
+  defp sorted_entries(entries) when is_list(entries) do
+    Enum.sort_by(entries, fn {key, _entry} -> key end)
+  end
+
+  defp sorted_entries(_entries), do: []
 end

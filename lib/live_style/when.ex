@@ -3,8 +3,8 @@ defmodule LiveStyle.When do
   Contextual selectors for styling elements based on ancestor, descendant, or sibling state.
 
   These functions generate CSS selectors that allow you to style an element based on
-  the state of related elements in the DOM tree. They work by using marker classes
-  that you apply to the elements you want to observe.
+  the state of related elements in the DOM tree. They work by using markers that
+  you apply as classes to the elements you want to observe.
 
   ## Browser Support
 
@@ -13,7 +13,7 @@ defmodule LiveStyle.When do
 
   ## Using Markers
 
-  To use these selectors, you must mark the element being observed with a marker class.
+  To use these selectors, you must mark the element being observed with a marker.
   Use `LiveStyle.default_marker/0` for the default marker, or `LiveStyle.marker/1`
   for custom markers.
 
@@ -33,7 +33,7 @@ defmodule LiveStyle.When do
 
         def render(assigns) do
           ~H\"\"\"
-          <div class={LiveStyle.default_marker()}>
+          <div {css([LiveStyle.default_marker()])}>
             <div {css(:card)}>Hover parent to move me</div>
           </div>
           \"\"\"
@@ -65,7 +65,7 @@ defmodule LiveStyle.When do
   ## Parameters
 
     * `pseudo` - The pseudo selector (e.g., `":hover"`, `":focus"`)
-    * `marker` - Optional custom marker class name. Defaults to the configured default marker.
+    * `marker` - Optional custom marker. Defaults to the configured default marker.
 
   ## Example
 
@@ -79,6 +79,9 @@ defmodule LiveStyle.When do
   """
   def ancestor(pseudo), do: ancestor(pseudo, Marker.default())
 
+  @doc """
+  Creates an ancestor selector using a custom marker.
+  """
   def ancestor(pseudo, marker) do
     validate_pseudo!(pseudo)
     class = Marker.to_class(marker)
@@ -94,7 +97,7 @@ defmodule LiveStyle.When do
   ## Parameters
 
     * `pseudo` - The pseudo selector (e.g., `":hover"`, `":focus"`)
-    * `marker` - Optional custom marker class name. Defaults to the configured default marker.
+    * `marker` - Optional custom marker. Defaults to the configured default marker.
 
   ## Example
 
@@ -108,6 +111,9 @@ defmodule LiveStyle.When do
   """
   def descendant(pseudo), do: descendant(pseudo, Marker.default())
 
+  @doc """
+  Creates a descendant selector using a custom marker.
+  """
   def descendant(pseudo, marker) do
     validate_pseudo!(pseudo)
     class = Marker.to_class(marker)
@@ -123,7 +129,7 @@ defmodule LiveStyle.When do
   ## Parameters
 
     * `pseudo` - The pseudo selector (e.g., `":hover"`, `":focus"`)
-    * `marker` - Optional custom marker class name. Defaults to the configured default marker.
+    * `marker` - Optional custom marker. Defaults to the configured default marker.
 
   ## Example
 
@@ -137,6 +143,9 @@ defmodule LiveStyle.When do
   """
   def sibling_before(pseudo), do: sibling_before(pseudo, Marker.default())
 
+  @doc """
+  Creates a preceding-sibling selector using a custom marker.
+  """
   def sibling_before(pseudo, marker) do
     validate_pseudo!(pseudo)
     class = Marker.to_class(marker)
@@ -152,7 +161,7 @@ defmodule LiveStyle.When do
   ## Parameters
 
     * `pseudo` - The pseudo selector (e.g., `":hover"`, `":focus"`)
-    * `marker` - Optional custom marker class name. Defaults to the configured default marker.
+    * `marker` - Optional custom marker. Defaults to the configured default marker.
 
   ## Example
 
@@ -166,6 +175,9 @@ defmodule LiveStyle.When do
   """
   def sibling_after(pseudo), do: sibling_after(pseudo, Marker.default())
 
+  @doc """
+  Creates a following-sibling selector using a custom marker.
+  """
   def sibling_after(pseudo, marker) do
     validate_pseudo!(pseudo)
     class = Marker.to_class(marker)
@@ -181,7 +193,7 @@ defmodule LiveStyle.When do
   ## Parameters
 
     * `pseudo` - The pseudo selector (e.g., `":hover"`, `":focus"`)
-    * `marker` - Optional custom marker class name. Defaults to the configured default marker.
+    * `marker` - Optional custom marker. Defaults to the configured default marker.
 
   ## Example
 
@@ -195,6 +207,9 @@ defmodule LiveStyle.When do
   """
   def any_sibling(pseudo), do: any_sibling(pseudo, Marker.default())
 
+  @doc """
+  Creates an any-sibling selector using a custom marker.
+  """
   def any_sibling(pseudo, marker) do
     validate_pseudo!(pseudo)
     class = Marker.to_class(marker)

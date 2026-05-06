@@ -4,7 +4,7 @@ defmodule LiveStyle.ShorthandBehavior do
 
   LiveStyle supports three built-in behaviors for handling CSS shorthand properties:
 
-  - `LiveStyle.ShorthandBehavior.AcceptShorthands` (default) - Keeps shorthand properties with nil resets
+  - `LiveStyle.ShorthandBehavior.AcceptShorthands` (default) - Keeps shorthand declarations intact while tracking related longhands
   - `LiveStyle.ShorthandBehavior.FlattenShorthands` - Expands shorthands to their longhand equivalents
   - `LiveStyle.ShorthandBehavior.ForbidShorthands` - Forbids disallowed shorthand properties at compile time
 

@@ -11,10 +11,10 @@ defmodule LiveStyle.ShorthandBehavior.ForbidShorthands do
 
   ## Example
 
-      iex> ForbidShorthands.expand("margin", "10px")
+      iex> ForbidShorthands.expand_declaration("margin", "10px")
       [{"margin", "10px"}]
 
-      iex> ForbidShorthands.expand("border", "1px solid black")
+      iex> ForbidShorthands.expand_declaration("border", "1px solid black")
       ** (ArgumentError) 'border' is not supported...
 
   """

@@ -25,7 +25,7 @@ defmodule LiveStyle.Marker do
 
         def render(assigns) do
           ~H\"\"\"
-          <div {css(default_marker())}>
+          <div {css([default_marker()])}>
             <div {css(:card)}>Hover parent to move me</div>
           </div>
           \"\"\"
@@ -43,7 +43,7 @@ defmodule LiveStyle.Marker do
         ]
 
       # In template:
-      <tr {css(marker(:row))}>
+      <tr {css([marker(:row)])}>
         <td {css(:cell)}>...</td>
       </tr>
 
@@ -52,7 +52,7 @@ defmodule LiveStyle.Marker do
   Use `{Module, :name}` syntax to reference markers from other modules:
 
       # In template:
-      <tr {css(marker({OtherModule, :row}))}>
+      <tr {css([marker({OtherModule, :row})])}>
 
   Different modules using the same marker name get independent markers:
 
@@ -82,7 +82,7 @@ defmodule LiveStyle.Marker do
 
   ## Example
 
-      <div {css(default_marker())}>
+      <div {css([default_marker()])}>
         <div {css(:card)}>Hover parent to move me</div>
       </div>
   """

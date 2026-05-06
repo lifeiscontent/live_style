@@ -6,6 +6,7 @@ defmodule LiveStyle.StorageTest do
   """
   use ExUnit.Case, async: false
 
+  alias LiveStyle.Compiler.ModuleData
   alias LiveStyle.{Manifest, Storage}
 
   @test_manifest_path "test/tmp/test_manifest.etf"
@@ -32,8 +33,8 @@ defmodule LiveStyle.StorageTest do
       manifest = Storage.read()
 
       assert manifest.version == Manifest.current_version()
-      assert manifest.vars == []
-      assert manifest.classes == []
+      assert manifest.vars == %{}
+      assert manifest.classes == %{}
     end
 
     test "write and read roundtrip preserves data" do
@@ -70,7 +71,7 @@ defmodule LiveStyle.StorageTest do
       Storage.clear()
       # File is recreated with empty manifest
       manifest = Storage.read()
-      assert manifest.vars == []
+      assert manifest.vars == %{}
     end
   end
 
@@ -93,7 +94,7 @@ defmodule LiveStyle.StorageTest do
                "var#{i} should exist in manifest"
       end
 
-      assert length(manifest.vars) == 10
+      assert Manifest.count(manifest, :vars) == 10
     end
 
     test "parallel updates don't lose data" do
@@ -209,7 +210,68 @@ defmodule LiveStyle.StorageTest do
 
       # Should return fresh manifest, not old data
       assert manifest.version == Manifest.current_version()
-      assert manifest.vars == []
+      assert manifest.vars == %{}
     end
+  end
+
+  describe "stale module data cleanup" do
+    test "merge_module_data removes entries for deleted source files" do
+      module = LiveStyle.StorageTest.DeletedSourceModule
+      source = "test/tmp/deleted_source_module.ex"
+      key = Manifest.key(module, :stale_class)
+
+      ModuleData.write(module, %{
+        module: module,
+        source: source,
+        classes: [{key, [class_string: "x-stale", atomic_classes: []]}]
+      })
+
+      assert File.exists?(module_data_path(module))
+
+      Storage.merge_module_data()
+
+      refute File.exists?(module_data_path(module))
+      refute Manifest.get_class(Storage.read(), key)
+    end
+
+    test "merge_module_data removes entries when source no longer uses LiveStyle" do
+      module = LiveStyle.StorageTest.NoLongerLiveStyle
+      source = "test/tmp/no_longer_live_style.ex"
+      key = Manifest.key(module, :stale_class)
+
+      File.write!(source, """
+      defmodule LiveStyle.StorageTest.NoLongerLiveStyle do
+        def plain, do: :ok
+      end
+      """)
+
+      ModuleData.write(module, %{
+        module: module,
+        source: source,
+        classes: [{key, [class_string: "x-stale", atomic_classes: []]}]
+      })
+
+      Storage.merge_module_data()
+
+      refute File.exists?(module_data_path(module))
+      refute Manifest.get_class(Storage.read(), key)
+    end
+
+    test "cleanup_stale_usage removes usage for inactive consumers" do
+      consumer = LiveStyle.StorageTest.DeletedConsumer
+      defining = LiveStyle.StorageTest.DefiningStyles
+
+      ModuleData.record_usage(consumer, defining, :button)
+      assert MapSet.member?(ModuleData.collect_all_usage(), {defining, :button})
+
+      Storage.merge_module_data()
+
+      refute MapSet.member?(ModuleData.collect_all_usage(), {defining, :button})
+    end
+  end
+
+  defp module_data_path(module) do
+    hash = :crypto.hash(:md5, inspect(module)) |> Base.encode16(case: :lower)
+    Path.join(ModuleData.modules_dir(), "#{hash}.etf")
   end
 end

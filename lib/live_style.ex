@@ -2,8 +2,10 @@ defmodule LiveStyle do
   @moduledoc """
   LiveStyle - Compile-time CSS-in-Elixir for Phoenix LiveView.
 
-  All style definitions compile away to string constants. At runtime,
-  only class name strings exist - no function calls or manifest lookups.
+  Static style references resolve to deterministic class payloads at compile time.
+  Dynamic classes and forward references use a small runtime attribute payload so
+  component spreads can preserve last-wins merging semantics without manifest
+  lookups during render.
 
   ## Basic Usage
 
@@ -60,13 +62,14 @@ defmodule LiveStyle do
 
   ## Public API Functions
 
-  - `LiveStyle.default_marker/0` - Get the default marker class for contextual selectors
-  - `LiveStyle.marker/1` - Get a custom marker class
+  - `LiveStyle.default_marker/0` - Get the default marker for contextual selectors
+  - `LiveStyle.marker/1` - Get a custom marker
 
   See the README for comprehensive documentation and examples.
   """
 
   alias LiveStyle.Compiler.ModuleData
+  alias LiveStyle.Runtime.StyleMerger
 
   defmacro __using__(_opts \\ []) do
     # Register attributes IMMEDIATELY during macro expansion (not in quote)
@@ -79,6 +82,7 @@ defmodule LiveStyle do
     Module.register_attribute(module, :__live_style_theme_classes__, accumulate: true)
     Module.register_attribute(module, :__live_style_view_transition_classes__, accumulate: true)
     Module.register_attribute(module, :__live_style_position_try__, accumulate: true)
+    Module.register_attribute(module, :__live_style_usage__, accumulate: true)
 
     quote do
       import LiveStyle,
@@ -181,8 +185,15 @@ defmodule LiveStyle do
     # Write module data to per-module file (no lock needed - each module has its own file)
     alias LiveStyle.Compiler.ModuleData
 
+    usage =
+      env.module
+      |> Module.get_attribute(:__live_style_usage__, [])
+      |> MapSet.new()
+
     ModuleData.write(module, %{
       module: module,
+      source: env.file,
+      source_fingerprint: ModuleData.source_fingerprint(env.file),
       module_hash: module_hash,
       vars: vars,
       consts: consts,
@@ -192,6 +203,8 @@ defmodule LiveStyle do
       position_try: position_try,
       classes: local_manifest.classes
     })
+
+    ModuleData.write_usage(module, usage)
 
     # Use local manifest to build class maps (no file read needed)
     manifest = local_manifest
@@ -380,9 +393,9 @@ defmodule LiveStyle do
   end
 
   @doc """
-  References a CSS variable, returning `var(--vhash)`.
+  References a CSS variable, returning a `var(--<prefix><hash>)` reference.
 
-  When used as a value, returns `var(--vhash)` for CSS variable references.
+  When used as a value, returns a `var(...)` reference for CSS variables.
   When used as a map key in keyframes, the `var()` wrapper is automatically
   stripped to produce valid CSS (matching StyleX behavior).
 
@@ -448,8 +461,8 @@ defmodule LiveStyle do
 
   ## Examples
 
-      consts breakpoint_sm: "@media (max-width: 640px)",
-             breakpoint_lg: "@media (min-width: 1025px)",
+      consts breakpoint_sm: "(max-width: 640px)",
+             breakpoint_lg: "(min-width: 1025px)",
              z_modal: "50",
              z_tooltip: "100"
   """
@@ -976,8 +989,8 @@ defmodule LiveStyle do
   Returns CSS attributes for spreading in HEEx templates.
 
   When all references can be resolved at compile time, returns a literal
-  keyword list like `[class: ["x1234"]]` that Phoenix LiveView's tag engine
-  embeds in `Rendered.static` (sent once, never re-transmitted on updates).
+  keyword list with a precomputed class payload, avoiding runtime class merging
+  for static references.
 
   Falls back to `%LiveStyle.Attrs{}` at runtime for forward references,
   dynamic args, or non-literal style values.
@@ -1010,18 +1023,22 @@ defmodule LiveStyle do
     # Record usage at compile time for tree shaking
     record_class_usage(caller_module, caller_module, name)
 
-    case compute_static_class_string(caller_module, name) do
-      {:ok, ""} ->
-        quote do: []
+    if all_static_refs?([name], __CALLER__) do
+      case compute_static_class_string(caller_module, name) do
+        {:ok, class_string} ->
+          prop_classes = static_prop_classes_source(caller_module, [name], __CALLER__)
+          Macro.escape(build_static_attr_list(class_string, nil, prop_classes))
 
-      {:ok, class_string} ->
-        quote do: [{:class, [unquote(class_string)]}]
-
-      :error ->
-        # Class not found yet (forward reference) — fall back to runtime
-        quote do
-          LiveStyle.resolve_attrs(__MODULE__, [unquote(name)], nil)
-        end
+        :error ->
+          quote do
+            LiveStyle.resolve_attrs(__MODULE__, [unquote(name)], nil)
+          end
+      end
+    else
+      # Class not found yet (forward reference) — fall back to runtime
+      quote do
+        LiveStyle.resolve_attrs(__MODULE__, [unquote(name)], nil)
+      end
     end
   end
 
@@ -1037,10 +1054,11 @@ defmodule LiveStyle do
     end)
 
     if all_static_refs?(refs, __CALLER__) do
-      {class_string, style_string} =
+      {class_string, style_string, _prop_classes} =
         compute_static_attrs!(caller_module, refs, __CALLER__)
 
-      Macro.escape(build_static_attr_list(class_string, style_string))
+      prop_classes = static_prop_classes_source(caller_module, refs, __CALLER__)
+      Macro.escape(build_static_attr_list(class_string, style_string, prop_classes))
     else
       case try_branch_optimization(refs, __CALLER__) do
         :error ->
@@ -1090,13 +1108,14 @@ defmodule LiveStyle do
 
     cond do
       all_static_refs?(refs_list, __CALLER__) and static_style_opts?(opts, __CALLER__) ->
-        {class_string, dynamic_style_string} =
+        {class_string, dynamic_style_string, _prop_classes} =
           compute_static_attrs!(caller_module, refs_list, __CALLER__)
 
         extra_style = compute_static_extra_styles(opts, __CALLER__)
         style_string = merge_style_strings(dynamic_style_string, extra_style)
 
-        Macro.escape(build_static_attr_list(class_string, style_string))
+        prop_classes = static_prop_classes_source(caller_module, refs_list, __CALLER__)
+        Macro.escape(build_static_attr_list(class_string, style_string, prop_classes))
 
       static_style_opts?(opts, __CALLER__) ->
         try_branch_with_style_opts(refs_list, refs, opts, caller_module, __CALLER__)
@@ -1149,43 +1168,67 @@ defmodule LiveStyle do
   @doc false
   def record_class_usage(defining_module, class_name)
       when is_atom(defining_module) and is_atom(class_name) do
-    ModuleData.record_usage(defining_module, defining_module, class_name)
+    record_class_usage(defining_module, defining_module, class_name)
   end
 
   # 3-arg version with explicit consuming module
   @doc false
   def record_class_usage(consuming_module, defining_module, class_name)
       when is_atom(consuming_module) and is_atom(defining_module) and is_atom(class_name) do
-    ModuleData.record_usage(consuming_module, defining_module, class_name)
+    usage = {defining_module, class_name}
+
+    if accumulate_class_usage(consuming_module, usage) do
+      :ok
+    else
+      ModuleData.record_usage(consuming_module, defining_module, class_name)
+    end
+  end
+
+  defp accumulate_class_usage(module, usage) do
+    if Module.open?(module) and Module.has_attribute?(module, :__live_style_usage__) do
+      Module.put_attribute(module, :__live_style_usage__, usage)
+      true
+    else
+      false
+    end
+  rescue
+    ArgumentError -> false
   end
 
   # Extracts static class references from a list of refs (for usage tracking)
   # Returns list of {module, class_name} tuples
   @doc false
   def extract_class_refs(refs, caller_module, caller) when is_list(refs) do
+    context = %{caller_module: caller_module, caller: caller}
+
     refs
-    |> Enum.flat_map(fn ref -> extract_single_ref(ref, caller_module, caller) end)
+    |> Enum.flat_map(fn ref -> extract_single_ref(ref, context) end)
     |> Enum.uniq()
   end
 
-  defp extract_single_ref(ref, caller_module, _caller) when is_atom(ref) do
-    # Simple atom ref like :button
-    [{caller_module, ref}]
+  defp extract_single_ref(ref, context) do
+    case ref do
+      class_name when is_atom(class_name) ->
+        local_ref(class_name, context.caller_module)
+
+      {module, class_name} when is_atom(module) and is_atom(class_name) ->
+        cross_module_ref(module, class_name)
+
+      {class_name, _value} when is_atom(class_name) ->
+        local_ref(class_name, context.caller_module)
+
+      ast ->
+        extract_refs_from_ast(ast, context.caller_module, context.caller)
+    end
   end
 
-  defp extract_single_ref({module, class_name}, _caller_module, _caller)
-       when is_atom(module) and is_atom(class_name) do
-    # Cross-module ref like {OtherModule, :btn}
+  defp local_ref(class_name, caller_module), do: [{caller_module, class_name}]
+
+  defp cross_module_ref(module, class_name) do
     [{module, class_name}]
   end
 
-  defp extract_single_ref({class_name, _value}, caller_module, _caller)
-       when is_atom(class_name) do
-    # Dynamic tuple like {:dynamic_color, @color} - track the class name
-    [{caller_module, class_name}]
-  end
-
-  defp extract_single_ref(ast, caller_module, caller) do
+  defp extract_refs_from_ast(ast, caller_module, caller) do
     # Complex expression like @active && :primary
     # Use Macro.prewalk to find all atom literals (potential class refs)
     {_, refs} =
@@ -1366,9 +1409,10 @@ defmodule LiveStyle do
     case find_first_conditional_with_info(refs) do
       nil ->
         # Base case: all refs are static atoms — compute attrs
-        {c, s} = compute_static_attrs!(caller_module, refs, caller)
+        {c, s, _prop_classes} = compute_static_attrs!(caller_module, refs, caller)
         style = if style_fn, do: style_fn.(s), else: s
-        Macro.escape(build_static_attr_list(c, style))
+        prop_classes = static_prop_classes_source(caller_module, refs, caller)
+        Macro.escape(build_static_attr_list(c, style, prop_classes))
 
       {idx, {:and, condition, ref}} ->
         truthy =
@@ -1483,12 +1527,21 @@ defmodule LiveStyle do
   end
 
   # Build a keyword list of static attributes from pre-computed class and style strings.
-  defp build_static_attr_list(class_string, style_string) do
-    attrs = []
-    attrs = if style_string, do: [{:style, [style_string]} | attrs], else: attrs
-    attrs = if class_string != "", do: [{:class, [class_string]} | attrs], else: attrs
-    attrs
+  defp build_static_attr_list(class_string, style_string, prop_classes) do
+    %LiveStyle.Attrs{class: class_string, style: style_string, prop_classes: prop_classes}
+    |> LiveStyle.Attrs.to_list()
   end
+
+  defp static_prop_classes_source(caller_module, refs, caller) do
+    {:live_style_static_refs, caller_module, Enum.map(refs, &normalize_static_ref(&1, caller))}
+  end
+
+  defp normalize_static_ref({{:__aliases__, _meta, _parts} = module_ast, class_name}, caller)
+       when is_atom(class_name) do
+    {Macro.expand(module_ast, caller), class_name}
+  end
+
+  defp normalize_static_ref(ref, _caller), do: ref
 
   # Check if a class name has been defined in the accumulated classes so far.
   defp class_defined?(name, classes) do
@@ -1586,13 +1639,8 @@ defmodule LiveStyle do
   defp format_style_declaration(key, value), do: "#{key}: #{value}"
 
   # Merge dynamic class var styles with extra style opts.
-  defp merge_style_strings(nil, nil), do: nil
-  defp merge_style_strings(nil, extra) when is_binary(extra), do: extra
-  defp merge_style_strings(dynamic, nil) when is_binary(dynamic), do: dynamic
-
-  defp merge_style_strings(dynamic, extra)
-       when is_binary(dynamic) and is_binary(extra) do
-    "#{dynamic}; #{extra}"
+  defp merge_style_strings(dynamic, extra) do
+    StyleMerger.merge_style_strings(dynamic, extra)
   end
 
   # Compute class string for a single local atom ref at compile time.
@@ -1600,103 +1648,87 @@ defmodule LiveStyle do
   # (forward reference — class defined later in the module).
   @doc false
   def compute_static_class_string(caller_module, name) do
-    manifest = get_or_build_manifest(caller_module)
-    key = LiveStyle.Manifest.key(caller_module, name)
+    cache = get_or_build_static_cache(caller_module)
 
-    case LiveStyle.Manifest.get_class(manifest, key) do
-      entry when is_list(entry) ->
-        {:ok, Keyword.fetch!(entry, :class_string)}
+    case Keyword.fetch(cache.class_strings, name) do
+      {:ok, class_string} ->
+        {:ok, class_string}
 
-      nil ->
+      :error ->
         :error
     end
   end
 
   # Compute merged attrs (class string + optional style) for a list of static refs.
   # Handles local atoms, cross-module refs, and dynamic refs with literal args.
-  # Returns {class_string, style_string | nil}.
+  # Returns {class_string, style_string | nil, prop_classes}.
   @doc false
   def compute_static_attrs!(caller_module, refs, caller) do
-    alias LiveStyle.Compiler.BeforeCompile
-    alias LiveStyle.Runtime.PropertyMerger
+    alias LiveStyle.Runtime.StyleMerger
 
-    classes = Module.get_attribute(caller_module, :__live_style_classes__) || []
-    manifest = get_or_build_manifest(caller_module)
+    cache = get_or_build_static_cache(caller_module)
 
-    # Build property_classes map for local classes
-    classes_reversed = Enum.reverse(classes)
+    context = %{caller_module: caller_module, cache: cache, caller: caller}
 
-    {_class_strings, local_property_classes} =
-      BeforeCompile.build_class_maps(classes_reversed, caller_module, manifest)
+    attrs =
+      refs
+      |> Enum.map(&resolve_static_ref!(&1, context))
+      |> StyleMerger.merge_resolved_refs()
 
-    # Merge property classes and collect CSS variable lists in order
-    {merged_props, var_lists} =
-      Enum.reduce(refs, {[], []}, fn ref, {props_acc, vars_acc} ->
-        {prop_classes, var_list} =
-          fetch_static_ref_data!(ref, caller_module, local_property_classes, caller)
-
-        new_props = PropertyMerger.merge(prop_classes, props_acc)
-        new_vars = if var_list, do: [var_list | vars_acc], else: vars_acc
-        {new_props, new_vars}
-      end)
-
-    class_string =
-      merged_props
-      |> PropertyMerger.to_class_list()
-      |> Enum.uniq()
-      |> Enum.join(" ")
-
-    style_string = build_static_style_string(var_lists)
-
-    {class_string, style_string}
+    {attrs.class, attrs.style, attrs.prop_classes}
   end
 
-  # Build a style string from collected CSS variable lists.
-  defp build_static_style_string([]), do: nil
-
-  defp build_static_style_string(var_lists) do
-    # Reverse to get original order, then merge (last wins per variable name)
-    merged_vars =
-      var_lists
-      |> Enum.reverse()
-      |> Enum.reduce([], fn var_list, acc ->
-        Enum.reduce(var_list, acc, fn {key, value}, inner_acc ->
-          List.keystore(inner_acc, key, 0, {key, value})
-        end)
-      end)
-
-    case merged_vars do
-      [] -> nil
-      vars -> Enum.map_join(vars, "; ", fn {name, value} -> "#{name}: #{value}" end)
-    end
-  end
-
-  # Fetch property classes (and optional var_list) for a static ref at compile time.
-  # Returns {prop_classes, var_list | nil}.
-  defp fetch_static_ref_data!(name, caller_module, local_property_classes, caller)
+  defp resolve_static_ref!(name, %{
+         caller_module: caller_module,
+         cache: cache,
+         caller: caller
+       })
        when is_atom(name) do
-    case Keyword.fetch(local_property_classes, name) do
-      {:ok, prop_classes} ->
-        {prop_classes, nil}
-
-      :error ->
-        raise CompileError,
-          description:
-            "Class :#{name} not found in #{inspect(caller_module)}. " <>
-              "Make sure `class :#{name}, ...` is defined before this reference.",
-          file: caller.file,
-          line: caller.line
-    end
+    name
+    |> fetch_local_static_ref!(caller_module, cache, caller)
+    |> to_resolved_static_ref()
   end
 
-  # Cross-module ref: {OtherModule, :class_name}
-  defp fetch_static_ref_data!(
+  defp resolve_static_ref!(
          {{:__aliases__, _, _} = module_ast, class_name},
-         _caller_module,
-         _local_property_classes,
-         caller
+         %{caller: caller}
        )
        when is_atom(class_name) do
+    module_ast
+    |> fetch_cross_module_static_ref!(class_name, caller)
+    |> to_resolved_static_ref()
+  end
+
+  defp resolve_static_ref!(
+         {class_name, args},
+         %{caller_module: caller_module, cache: cache, caller: caller}
+       )
+       when is_atom(class_name) do
+    class_name
+    |> fetch_dynamic_static_ref!(args, caller_module, cache, caller)
+    |> to_resolved_static_ref()
+  end
+
+  defp to_resolved_static_ref(ref_data) do
+    case ref_data do
+      {prop_classes, nil} -> {:static, prop_classes}
+      {prop_classes, var_list} -> {:dynamic, prop_classes, var_list}
+    end
+  end
+
+  defp fetch_local_static_ref!(class_name, caller_module, cache, caller) do
+    prop_classes =
+      fetch_local_prop_classes!(
+        class_name,
+        caller_module,
+        cache.property_classes,
+        caller
+      )
+
+    {prop_classes, nil}
+  end
+
+  defp fetch_cross_module_static_ref!(module_ast, class_name, caller) do
     module = Macro.expand(module_ast, caller)
 
     case Keyword.fetch(module.__live_style__(:property_classes), class_name) do
@@ -1713,45 +1745,18 @@ defmodule LiveStyle do
     end
   end
 
-  # Dynamic ref with literal args: {:opacity, 0.5} or {:size, ["100px", "200px"]}
-  defp fetch_static_ref_data!(
-         {class_name, args},
-         caller_module,
-         local_property_classes,
-         caller
-       )
-       when is_atom(class_name) do
-    # Get property classes (same as bare atom ref)
+  defp fetch_dynamic_static_ref!(class_name, args, caller_module, cache, caller) do
     prop_classes =
-      case Keyword.fetch(local_property_classes, class_name) do
-        {:ok, pc} ->
-          pc
+      fetch_local_prop_classes!(
+        class_name,
+        caller_module,
+        cache.property_classes,
+        caller
+      )
 
-        :error ->
-          raise CompileError,
-            description:
-              "Class :#{class_name} not found in #{inspect(caller_module)}. " <>
-                "Make sure `class :#{class_name}, ...` is defined before this reference.",
-            file: caller.file,
-            line: caller.line
-      end
-
-    # Compute CSS variable list at compile time
-    classes = Module.get_attribute(caller_module, :__live_style_classes__) || []
-    classes_reversed = Enum.reverse(classes)
-
-    dynamic_names =
-      classes_reversed
-      |> Enum.filter(fn
-        {_name, {:__dynamic__, _, _}} -> true
-        _ -> false
-      end)
-      |> Enum.map(fn {name, _} -> name end)
-
-    if class_name in dynamic_names do
-      # Find the dynamic class entry to get all_props and has_computed
+    if class_name in cache.dynamic_names do
       {^class_name, {:__dynamic__, all_props, has_computed}} =
-        Enum.find(classes_reversed, fn
+        Enum.find(cache.dynamic_classes, fn
           {^class_name, {:__dynamic__, _, _}} -> true
           _ -> false
         end)
@@ -1776,6 +1781,21 @@ defmodule LiveStyle do
     end
   end
 
+  defp fetch_local_prop_classes!(class_name, caller_module, property_classes, caller) do
+    case Keyword.fetch(property_classes, class_name) do
+      {:ok, prop_classes} ->
+        prop_classes
+
+      :error ->
+        raise CompileError,
+          description:
+            "Class :#{class_name} not found in #{inspect(caller_module)}. " <>
+              "Make sure `class :#{class_name}, ...` is defined before this reference.",
+          file: caller.file,
+          line: caller.line
+    end
+  end
+
   # Build a local manifest from accumulated class definitions.
   # Reuses the same pipeline as __before_compile__.
   defp build_local_manifest(classes, module) do
@@ -1784,12 +1804,7 @@ defmodule LiveStyle do
 
     classes_reversed = Enum.reverse(classes)
 
-    {static_classes, dynamic_classes} =
-      Enum.split_with(classes_reversed, fn
-        {_name, {:__dynamic__, _, _}} -> false
-        {_name, _declarations, _opts} -> true
-        {_name, decl} -> not match?({:__dynamic__, _, _}, decl)
-      end)
+    {static_classes, dynamic_classes} = split_class_entries(classes_reversed)
 
     manifest = LiveStyle.Manifest.empty()
 
@@ -1805,22 +1820,47 @@ defmodule LiveStyle do
     end)
   end
 
-  # Get or build a cached manifest for the module being compiled.
-  # Caches the result in a module attribute to avoid recomputation
-  # across multiple css() calls in the same module.
-  defp get_or_build_manifest(module) do
+  defp get_or_build_static_cache(module) do
     classes = Module.get_attribute(module, :__live_style_classes__) || []
     class_count = length(classes)
 
-    case Module.get_attribute(module, :__live_style_manifest_cache__) do
-      {^class_count, manifest} ->
-        manifest
+    case Module.get_attribute(module, :__live_style_static_cache__) do
+      {^class_count, cache} ->
+        cache
 
       _ ->
-        manifest = build_local_manifest(classes, module)
-        Module.put_attribute(module, :__live_style_manifest_cache__, {class_count, manifest})
-        manifest
+        cache = build_static_cache(classes, module)
+        Module.put_attribute(module, :__live_style_static_cache__, {class_count, cache})
+        cache
     end
+  end
+
+  defp build_static_cache(classes, module) do
+    alias LiveStyle.Compiler.BeforeCompile
+
+    classes_reversed = Enum.reverse(classes)
+    {static_classes, dynamic_classes} = split_class_entries(classes_reversed)
+    manifest = build_local_manifest(classes, module)
+    all_classes = static_classes ++ dynamic_classes
+
+    {class_strings, property_classes} =
+      BeforeCompile.build_class_maps(all_classes, module, manifest)
+
+    %{
+      manifest: manifest,
+      class_strings: class_strings,
+      property_classes: property_classes,
+      dynamic_classes: dynamic_classes,
+      dynamic_names: Enum.map(dynamic_classes, fn {name, _} -> name end)
+    }
+  end
+
+  defp split_class_entries(classes) do
+    Enum.split_with(classes, fn
+      {_name, {:__dynamic__, _, _}} -> false
+      {_name, _declarations, _opts} -> true
+      {_name, decl} -> not match?({:__dynamic__, _, _}, decl)
+    end)
   end
 
   @doc """
@@ -1995,18 +2035,18 @@ defmodule LiveStyle do
     to: LiveStyle.Runtime
 
   @doc """
-  Returns the default marker class name for use with `LiveStyle.When` selectors.
+  Returns the default marker for use with `LiveStyle.When` selectors.
 
   ## Example
 
-      <div class={default_marker()}>
+      <div {css([default_marker()])}>
         <div {css(:card)}>Hover parent to move me</div>
       </div>
   """
   defdelegate default_marker(), to: LiveStyle.Marker, as: :default
 
   @doc """
-  Returns a marker class name for use with `LiveStyle.When` selectors.
+  Returns a marker for use with `LiveStyle.When` selectors.
 
   Custom markers allow you to have multiple independent sets of contextual selectors
   in the same component tree.
@@ -2021,7 +2061,7 @@ defmodule LiveStyle do
 
   ## Usage
 
-      <tr class={marker(:row)}>
+      <tr {css([marker(:row)])}>
         <td {css(:cell)}>...</td>
       </tr>
   """

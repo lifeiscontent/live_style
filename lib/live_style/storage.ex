@@ -310,8 +310,8 @@ defmodule LiveStyle.Storage do
     alias LiveStyle.Compiler.ModuleData
     alias LiveStyle.Manifest
 
+    ModuleData.cleanup_stale()
     module_data = ModuleData.list_all()
-    active_modules = MapSet.new(module_data, fn {module, _data} -> module end)
 
     # Build manifest from per-module data
     manifest =
@@ -323,11 +323,10 @@ defmodule LiveStyle.Storage do
     write(manifest)
 
     # Merge per-module usage files into usage manifest
+    active_modules = MapSet.new(module_data, fn {module, _data} -> module end)
+    ModuleData.cleanup_stale_usage(active_modules)
     usage = ModuleData.collect_all_usage()
     write_usage_direct(usage)
-
-    # Clean up outdated module files (modules that no longer use LiveStyle)
-    ModuleData.cleanup_outdated(active_modules)
 
     length(module_data)
   end
@@ -480,6 +479,7 @@ defmodule LiveStyle.Storage do
     temp_path = file_path <> ".tmp"
 
     try do
+      manifest = LiveStyle.Manifest.to_serializable(manifest)
       File.write!(temp_path, :erlang.term_to_binary(manifest))
       File.rename!(temp_path, file_path)
     rescue

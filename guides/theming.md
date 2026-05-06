@@ -143,14 +143,13 @@ Apply the theme at the root level:
 
 ### JavaScript Integration
 
-Since theme class names are generated at compile time, you need to bridge them to JavaScript for runtime theme switching. Use data attributes to pass the class names:
+Since theme class names are generated at compile time, you need to bridge them to JavaScript for runtime theme switching. Use a data attribute to pass the dark theme class. The light theme is the default `vars` output, so clearing theme classes restores it:
 
 ```heex
 <!-- In root.html.heex -->
 <html
   lang="en"
   data-theme-dark={theme_class({MyAppWeb.Semantic, :dark})}
-  data-theme-light={theme_class({MyAppWeb.Semantic, :light})}
 >
 ```
 
@@ -161,8 +160,7 @@ Then in a blocking `<script>` tag in `<head>` (to prevent flash of unstyled cont
   (function() {
     const html = document.documentElement;
     const themes = {
-      dark: html.dataset.themeDark,
-      light: html.dataset.themeLight
+      dark: html.dataset.themeDark
     };
 
     const getStoredTheme = () => localStorage.getItem("theme");
@@ -176,9 +174,9 @@ Then in a blocking `<script>` tag in `<head>` (to prevent flash of unstyled cont
       // Apply the appropriate theme class
       if (theme === "system") {
         const systemTheme = getSystemTheme();
-        if (themes[systemTheme]) html.classList.add(themes[systemTheme]);
-      } else if (themes[theme]) {
-        html.classList.add(themes[theme]);
+        if (systemTheme === "dark" && themes.dark) html.classList.add(themes.dark);
+      } else if (theme === "dark" && themes.dark) {
+        html.classList.add(themes.dark);
       }
     };
 

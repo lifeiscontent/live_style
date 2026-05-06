@@ -13,12 +13,11 @@ defmodule LiveStyle.Compiler.CSS.Classes.Collector do
   def collect(manifest) do
     usage = LiveStyle.Storage.read_usage()
 
-    manifest.classes
+    LiveStyle.Manifest.entries(manifest, :classes)
     # Filter by usage (StyleX-style tree shaking)
     |> Enum.filter(fn {key, _entry} ->
       key_used?(key, usage)
     end)
-    # Already sorted by key in manifest (sorted list storage)
     |> Enum.flat_map(fn {_key, entry} ->
       # Sort atomic_classes by property name for deterministic order
       Keyword.fetch!(entry, :atomic_classes)

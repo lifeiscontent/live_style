@@ -204,21 +204,27 @@ defmodule Mix.Tasks.LiveStyle.Audit do
       )
 
       for {module, classes} <- Enum.sort(unused) do
-        Mix.shell().info("  #{IO.ANSI.bright()}#{module}#{IO.ANSI.reset()}")
-
-        for %{class: class, file: file, line: line} <- Enum.sort_by(classes, & &1.line) do
-          Mix.shell().info(
-            "    #{IO.ANSI.yellow()}#{class}#{IO.ANSI.reset()} #{IO.ANSI.faint()}(#{file}:#{line})#{IO.ANSI.reset()}"
-          )
-        end
-
-        Mix.shell().info("")
+        output_module_unused_classes(module, classes)
       end
 
       Mix.shell().info(
         "#{IO.ANSI.faint()}Note: Dynamic references may not be detected. Review before removing.#{IO.ANSI.reset()}"
       )
     end
+  end
+
+  defp output_module_unused_classes(module, classes) do
+    Mix.shell().info("  #{IO.ANSI.bright()}#{module}#{IO.ANSI.reset()}")
+
+    classes
+    |> Enum.sort_by(& &1.line)
+    |> Enum.each(fn %{class: class, file: file, line: line} ->
+      Mix.shell().info(
+        "    #{IO.ANSI.yellow()}#{class}#{IO.ANSI.reset()} #{IO.ANSI.faint()}(#{file}:#{line})#{IO.ANSI.reset()}"
+      )
+    end)
+
+    Mix.shell().info("")
   end
 
   defp output_json(unused) do

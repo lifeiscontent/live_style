@@ -526,7 +526,7 @@ defmodule LiveStyle.Compiler.ModuleHashTest do
         |> Manifest.put_module_hash(AModule, <<1::128>>)
         |> Manifest.put_module_hash(MModule, <<2::128>>)
 
-      modules = Enum.map(manifest.module_hashes, fn {mod, _} -> mod end)
+      modules = manifest |> Manifest.entries(:module_hashes) |> Enum.map(fn {mod, _} -> mod end)
       assert modules == Enum.sort(modules)
     end
 
@@ -539,7 +539,7 @@ defmodule LiveStyle.Compiler.ModuleHashTest do
         |> Manifest.put_module_hash(TestModule, old_hash)
         |> Manifest.put_module_hash(TestModule, new_hash)
 
-      assert length(manifest.module_hashes) == 1
+      assert Manifest.count(manifest, :module_hashes) == 1
       assert Manifest.get_module_hash(manifest, TestModule) == new_hash
     end
 
@@ -550,7 +550,7 @@ defmodule LiveStyle.Compiler.ModuleHashTest do
 
     test "module_hashes included in empty manifest" do
       manifest = Manifest.empty()
-      assert manifest.module_hashes == []
+      assert manifest.module_hashes == %{}
     end
   end
 end

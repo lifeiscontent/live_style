@@ -17,7 +17,9 @@ defmodule LiveStyle.Class.Processor.PseudoElement do
   """
 
   alias LiveStyle.Class.{Builder, Conditional}
+  alias LiveStyle.Config
   alias LiveStyle.CSSValue
+  alias LiveStyle.Property.Validation
 
   @doc """
   Processes a list of pseudo-element declarations into atomic class entries.
@@ -34,28 +36,35 @@ defmodule LiveStyle.Class.Processor.PseudoElement do
       ]
   """
   @spec transform(list(), keyword()) :: list()
-  def transform(declarations, _opts \\ []) do
+  def transform(declarations, opts \\ []) do
     Enum.flat_map(declarations, fn {pseudo_element, props} ->
-      process_props(to_string(pseudo_element), props)
+      process_props(to_string(pseudo_element), props, opts)
     end)
   end
 
   # Process all properties within a pseudo-element
   # Values are pre-sorted at entry point for deterministic iteration
-  defp process_props(pseudo_str, props) do
+  defp process_props(pseudo_str, props, opts) do
     Enum.flat_map(props, fn {prop, value} ->
-      process_prop(pseudo_str, prop, value)
+      process_prop(pseudo_str, prop, value, opts)
     end)
   end
 
   # Process a single property within a pseudo-element
-  defp process_prop(pseudo_str, prop, value) do
+  defp process_prop(pseudo_str, prop, value, opts) do
     css_prop = CSSValue.to_css_property(prop)
+    maybe_validate_property(css_prop, opts)
 
     if Conditional.conditional?(value) do
       process_conditional_prop(pseudo_str, css_prop, value)
     else
       process_simple_prop(pseudo_str, css_prop, value)
+    end
+  end
+
+  defp maybe_validate_property(css_prop, opts) do
+    if Config.validate_properties?() do
+      Validation.validate!(css_prop, opts)
     end
   end
 

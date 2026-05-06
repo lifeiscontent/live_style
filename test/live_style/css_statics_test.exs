@@ -3,8 +3,8 @@ defmodule LiveStyle.CssStaticsTest do
   Tests for compile-time css() macro optimization.
 
   Phoenix LiveView PR #4145 expands root attr macros in the tag engine.
-  When css() returns a literal list of {:class, [class_string]} tuples,
-  the class string ends up in Rendered.static instead of being dynamic.
+  When css() returns a literal attrs list with a precomputed class payload,
+  the class string can be prepared at compile time instead of runtime.
   """
   use LiveStyle.TestCase
 
@@ -179,23 +179,55 @@ defmodule LiveStyle.CssStaticsTest do
     end
   end
 
+  defmodule ComponentParentStyles do
+    use LiveStyle
+
+    class(:override_color, color: "red")
+
+    def static_single_spread, do: css(:override_color)
+    def static_list_spread, do: css([:override_color])
+  end
+
+  defmodule ComponentChildStyles do
+    use LiveStyle
+
+    class(:base_color, color: "white")
+  end
+
+  defp class_attrs(result) do
+    assert {:class, %LiveStyle.Attrs{} = attrs} = List.keyfind(result, :class, 0)
+    attrs
+  end
+
+  defp class_string(result), do: class_attrs(result).class
+
+  defp prop_class(module, class_name, prop_name) do
+    module.__live_style__(:property_classes)
+    |> Keyword.fetch!(class_name)
+    |> Enum.find_value(fn
+      {^prop_name, class} -> class
+      _ -> nil
+    end)
+  end
+
   describe "css/1 single atom returns literal list" do
-    test "returns list of {:class, [class_string]} tuples" do
+    test "returns class attrs with merge metadata" do
       result = StaticStyles.single_ref()
       assert is_list(result)
-      assert [{:class, [class_string]}] = result
-      assert is_binary(class_string)
-      assert class_string != ""
+      attrs = class_attrs(result)
+      assert is_binary(attrs.class)
+      assert attrs.class != ""
+      assert attrs.prop_classes != nil
     end
 
     test "class string matches module's class_strings" do
-      [{:class, [class_string]}] = StaticStyles.single_ref()
+      class_string = class_string(StaticStyles.single_ref())
       expected = StaticStyles.__live_style__(:class_strings) |> Keyword.get(:button)
       assert class_string == expected
     end
 
     test "hover class contains all condition classes" do
-      [{:class, [class_string]}] = StaticStyles.single_hover()
+      class_string = class_string(StaticStyles.single_hover())
       expected = StaticStyles.__live_style__(:class_strings) |> Keyword.get(:with_hover)
       assert class_string == expected
       # Two classes: default color + :hover color
@@ -203,7 +235,7 @@ defmodule LiveStyle.CssStaticsTest do
     end
 
     test "dynamic class bare atom returns class string" do
-      [{:class, [class_string]}] = StaticStyles.dynamic_bare()
+      class_string = class_string(StaticStyles.dynamic_bare())
       expected = StaticStyles.__live_style__(:class_strings) |> Keyword.get(:dynamic_opacity)
       assert class_string == expected
     end
@@ -212,12 +244,12 @@ defmodule LiveStyle.CssStaticsTest do
   describe "css/1 list of static atoms returns literal list" do
     test "returns merged class string" do
       result = StaticStyles.list_refs()
-      assert [{:class, [class_string]}] = result
+      class_string = class_string(result)
       assert is_binary(class_string)
     end
 
     test "merged class string includes classes from all refs (no overlap)" do
-      [{:class, [merged]}] = StaticStyles.list_refs()
+      merged = class_string(StaticStyles.list_refs())
 
       # :button has display + padding, :primary has background-color + color
       # No property overlap, so all 4 classes should be present
@@ -226,7 +258,7 @@ defmodule LiveStyle.CssStaticsTest do
     end
 
     test "last-wins merging removes overridden property classes" do
-      [{:class, [merged]}] = StaticStyles.merged_overlap()
+      merged = class_string(StaticStyles.merged_overlap())
 
       # :primary has background-color + color, :secondary has background-color + color
       # Both properties overlap, so only :secondary's classes should win
@@ -248,16 +280,52 @@ defmodule LiveStyle.CssStaticsTest do
     end
   end
 
+  describe "static css component spreads" do
+    test "single atom static css carries property metadata for component merging" do
+      parent_attrs = class_attrs(ComponentParentStyles.static_single_spread())
+
+      merged =
+        LiveStyle.Runtime.resolve_attrs(
+          ComponentChildStyles,
+          [:base_color, parent_attrs],
+          nil
+        )
+
+      child_color_class = prop_class(ComponentChildStyles, :base_color, "color")
+      parent_color_class = prop_class(ComponentParentStyles, :override_color, "color")
+
+      refute child_color_class in String.split(merged.class)
+      assert parent_color_class in String.split(merged.class)
+    end
+
+    test "list static css carries property metadata for component merging" do
+      parent_attrs = class_attrs(ComponentParentStyles.static_list_spread())
+
+      merged =
+        LiveStyle.Runtime.resolve_attrs(
+          ComponentChildStyles,
+          [:base_color, parent_attrs],
+          nil
+        )
+
+      child_color_class = prop_class(ComponentChildStyles, :base_color, "color")
+      parent_color_class = prop_class(ComponentParentStyles, :override_color, "color")
+
+      refute child_color_class in String.split(merged.class)
+      assert parent_color_class in String.split(merged.class)
+    end
+  end
+
   describe "cross-module refs in list" do
     test "resolves cross-module refs at compile time" do
       result = StaticStyles.cross_module_list()
-      assert [{:class, [class_string]}] = result
+      class_string = class_string(result)
       assert is_binary(class_string)
       assert class_string != ""
     end
 
     test "cross-module merge produces correct number of classes" do
-      [{:class, [class_string]}] = StaticStyles.cross_module_list()
+      class_string = class_string(StaticStyles.cross_module_list())
 
       # shared_base has display + margin, button has display + padding
       # display overlaps (button wins since it's last), so 3 unique properties:
@@ -275,11 +343,11 @@ defmodule LiveStyle.CssStaticsTest do
       class_pair = List.keyfind(result, :class, 0)
       style_pair = List.keyfind(result, :style, 0)
 
-      assert {:class, [class_string]} = class_pair
-      assert is_binary(class_string)
-      assert class_string != ""
+      assert {:class, %LiveStyle.Attrs{} = attrs} = class_pair
+      assert is_binary(attrs.class)
+      assert attrs.class != ""
 
-      assert {:style, [style_string]} = style_pair
+      assert {:style, style_string} = style_pair
       assert is_binary(style_string)
       assert String.contains?(style_string, "0.5")
     end
@@ -293,11 +361,11 @@ defmodule LiveStyle.CssStaticsTest do
       class_pair = List.keyfind(result, :class, 0)
       style_pair = List.keyfind(result, :style, 0)
 
-      assert {:class, [class_string]} = class_pair
-      assert is_binary(class_string)
-      assert class_string != ""
+      assert {:class, %LiveStyle.Attrs{} = attrs} = class_pair
+      assert is_binary(attrs.class)
+      assert attrs.class != ""
 
-      assert {:style, [style_string]} = style_pair
+      assert {:style, style_string} = style_pair
       assert is_binary(style_string)
       assert String.contains?(style_string, "opacity")
       assert String.contains?(style_string, "0.5")
@@ -310,11 +378,11 @@ defmodule LiveStyle.CssStaticsTest do
       class_pair = List.keyfind(result, :class, 0)
       style_pair = List.keyfind(result, :style, 0)
 
-      assert {:class, [class_string]} = class_pair
-      assert is_binary(class_string)
-      assert class_string != ""
+      assert {:class, %LiveStyle.Attrs{} = attrs} = class_pair
+      assert is_binary(attrs.class)
+      assert attrs.class != ""
 
-      assert {:style, [style_string]} = style_pair
+      assert {:style, style_string} = style_pair
       assert is_binary(style_string)
       assert String.contains?(style_string, "view-transition-class:")
       assert String.contains?(style_string, "view-transition-name: my-card")
@@ -325,7 +393,7 @@ defmodule LiveStyle.CssStaticsTest do
     test "truthy branch returns merged class string" do
       result = StaticStyles.conditional_ref(true)
       assert is_list(result)
-      assert [{:class, [class_string]}] = result
+      class_string = class_string(result)
       assert is_binary(class_string)
       # :button has display + padding, :primary has background-color + color = 4 classes
       assert length(String.split(class_string)) == 4
@@ -334,7 +402,7 @@ defmodule LiveStyle.CssStaticsTest do
     test "falsy branch returns only base classes" do
       result = StaticStyles.conditional_ref(false)
       assert is_list(result)
-      assert [{:class, [class_string]}] = result
+      class_string = class_string(result)
       assert is_binary(class_string)
       # Only :button (display + padding) = 2 classes
       assert length(String.split(class_string)) == 2
@@ -345,7 +413,7 @@ defmodule LiveStyle.CssStaticsTest do
     test "truthy branch returns do-branch classes" do
       result = StaticStyles.if_else_ref(true)
       assert is_list(result)
-      assert [{:class, [class_string]}] = result
+      class_string = class_string(result)
 
       expected = StaticStyles.__live_style__(:class_strings) |> Keyword.get(:primary)
       assert MapSet.new(String.split(class_string)) == MapSet.new(String.split(expected))
@@ -354,7 +422,7 @@ defmodule LiveStyle.CssStaticsTest do
     test "falsy branch returns else-branch classes" do
       result = StaticStyles.if_else_ref(false)
       assert is_list(result)
-      assert [{:class, [class_string]}] = result
+      class_string = class_string(result)
 
       expected = StaticStyles.__live_style__(:class_strings) |> Keyword.get(:secondary)
       assert MapSet.new(String.split(class_string)) == MapSet.new(String.split(expected))
@@ -362,14 +430,14 @@ defmodule LiveStyle.CssStaticsTest do
 
     test "if/else with base class merges correctly on truthy" do
       result = StaticStyles.if_else_with_base(true)
-      assert [{:class, [class_string]}] = result
+      class_string = class_string(result)
       # :button (display + padding) + :primary (background-color + color) = 4 classes
       assert length(String.split(class_string)) == 4
     end
 
     test "if/else with base class merges correctly on falsy" do
       result = StaticStyles.if_else_with_base(false)
-      assert [{:class, [class_string]}] = result
+      class_string = class_string(result)
       # :button (display + padding) + :secondary (background-color + color) = 4 classes
       assert length(String.split(class_string)) == 4
     end
@@ -378,24 +446,24 @@ defmodule LiveStyle.CssStaticsTest do
   describe "branch optimization for case" do
     test "each branch returns correct pre-computed classes" do
       primary_result = StaticStyles.case_ref(:primary)
-      assert [{:class, [primary_class]}] = primary_result
+      primary_class = class_string(primary_result)
       expected = StaticStyles.__live_style__(:class_strings) |> Keyword.get(:primary)
       assert MapSet.new(String.split(primary_class)) == MapSet.new(String.split(expected))
 
       secondary_result = StaticStyles.case_ref(:secondary)
-      assert [{:class, [secondary_class]}] = secondary_result
+      secondary_class = class_string(secondary_result)
       expected = StaticStyles.__live_style__(:class_strings) |> Keyword.get(:secondary)
       assert MapSet.new(String.split(secondary_class)) == MapSet.new(String.split(expected))
 
       default_result = StaticStyles.case_ref(:unknown)
-      assert [{:class, [default_class]}] = default_result
+      default_class = class_string(default_result)
       expected = StaticStyles.__live_style__(:class_strings) |> Keyword.get(:button)
       assert MapSet.new(String.split(default_class)) == MapSet.new(String.split(expected))
     end
 
     test "case with base class merges correctly" do
       result = StaticStyles.case_with_base(:primary)
-      assert [{:class, [class_string]}] = result
+      class_string = class_string(result)
       # :button (display + padding) + :primary (background-color + color) = 4 classes
       assert length(String.split(class_string)) == 4
     end
@@ -404,17 +472,17 @@ defmodule LiveStyle.CssStaticsTest do
   describe "branch optimization for cond" do
     test "each branch returns correct pre-computed classes" do
       large_result = StaticStyles.cond_ref(150)
-      assert [{:class, [class_string]}] = large_result
+      class_string = class_string(large_result)
       expected = StaticStyles.__live_style__(:class_strings) |> Keyword.get(:primary)
       assert MapSet.new(String.split(class_string)) == MapSet.new(String.split(expected))
 
       medium_result = StaticStyles.cond_ref(75)
-      assert [{:class, [class_string]}] = medium_result
+      class_string = class_string(medium_result)
       expected = StaticStyles.__live_style__(:class_strings) |> Keyword.get(:secondary)
       assert MapSet.new(String.split(class_string)) == MapSet.new(String.split(expected))
 
       small_result = StaticStyles.cond_ref(10)
-      assert [{:class, [class_string]}] = small_result
+      class_string = class_string(small_result)
       expected = StaticStyles.__live_style__(:class_strings) |> Keyword.get(:button)
       assert MapSet.new(String.split(class_string)) == MapSet.new(String.split(expected))
     end
@@ -437,17 +505,17 @@ defmodule LiveStyle.CssStaticsTest do
     test "multiple && conditionals are branch-optimized" do
       # Both true: :button + :primary = 4 classes
       result = StaticStyles.two_conditionals(true, true)
-      assert [{:class, [class_string]}] = result
+      class_string = class_string(result)
       assert length(String.split(class_string)) == 4
 
       # First true only: just :button = 2 classes
       result = StaticStyles.two_conditionals(true, false)
-      assert [{:class, [class_string]}] = result
+      class_string = class_string(result)
       assert length(String.split(class_string)) == 2
 
       # Second true only: just :primary = 2 classes
       result = StaticStyles.two_conditionals(false, true)
-      assert [{:class, [class_string]}] = result
+      class_string = class_string(result)
       assert length(String.split(class_string)) == 2
 
       # Neither: empty
@@ -458,14 +526,14 @@ defmodule LiveStyle.CssStaticsTest do
     test "case + && multi-conditional is branch-optimized" do
       # :button + :primary + :with_hover
       result = StaticStyles.case_and_conditional(:primary, true)
-      assert [{:class, [class_string]}] = result
+      class_string = class_string(result)
       # button(display+padding) + primary(bg+color) + with_hover(2 color conditions)
       # display, padding, bg-color, color(last wins from with_hover's 2 classes)
       assert length(String.split(class_string)) > 2
 
       # :button + :secondary, no with_hover
       result = StaticStyles.case_and_conditional(:secondary, false)
-      assert [{:class, [class_string]}] = result
+      class_string = class_string(result)
       assert length(String.split(class_string)) > 2
     end
   end

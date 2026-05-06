@@ -8,7 +8,7 @@ defmodule LiveStyle.Compiler do
   ## CSS Generation
 
       css = LiveStyle.Compiler.generate_css()
-      # => "@layer live_style { .x1234{display:flex} ... }"
+      # => ".x1234:not(#\\#){display:flex} ..."
 
   ## Class Resolution (useful for testing)
 

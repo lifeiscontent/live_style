@@ -247,10 +247,20 @@ end
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
+| `manifest_path` | string | `_build/{env}/live_style/{app}/manifest.etf` | Override where compiled style data is stored |
+| `usage_path` | string | `_build/{env}/live_style/{app}/usage.etf` | Override where class usage data is stored |
 | `shorthand_behavior` | atom | `:accept_shorthands` | How to handle CSS shorthands |
+| `class_name_prefix` | string | `"x"` | Prefix for generated classes, variables, and keyframes |
+| `debug_class_names` | boolean | `false` | Include property names in generated class names |
+| `font_size_px_to_rem` | boolean | `false` | Convert numeric `font_size` px values to rem |
+| `font_size_root_px` | number | `16` | Root pixel size used for px-to-rem conversion |
 | `use_css_layers` | boolean | `false` | Use CSS `@layer` for specificity |
-| `prefix_css` | mfa | `nil` | Vendor prefixing function |
-| `deprecated?` | mfa | `nil` | Deprecation check function |
+| `validate_properties` | boolean | `true` | Validate CSS property names at compile time |
+| `unknown_property_level` | atom | `:warn` | `:warn`, `:error`, or `:ignore` for unknown CSS properties |
+| `vendor_prefix_level` | atom | `:warn` | `:warn` or `:ignore` for unnecessary vendor-prefixed properties |
+| `deprecated_property_level` | atom | `:warn` | `:warn` or `:ignore` for deprecated properties |
+| `prefix_css` | function or MFA | `nil` | Vendor prefixing function |
+| `deprecated?` | function or MFA | `nil` | Deprecation check function |
 
 ### Profile Options
 

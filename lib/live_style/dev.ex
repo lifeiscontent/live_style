@@ -146,21 +146,7 @@ defmodule LiveStyle.Dev do
 
     # Show each class's contribution
     for ref <- class_refs do
-      name = if is_tuple(ref), do: elem(ref, 0), else: ref
-      props = Keyword.get(prop_classes, name, [])
-
-      IO.puts("#{IO.ANSI.cyan()}:#{name}#{IO.ANSI.reset()}")
-
-      if props == [] do
-        IO.puts("  (no properties)")
-      else
-        for {prop, class} <- props do
-          class_display = format_class_value(class)
-          IO.puts("  #{prop}: #{class_display}")
-        end
-      end
-
-      IO.puts("")
+      output_class_diff(ref, prop_classes)
     end
 
     # Show merged result
@@ -176,6 +162,24 @@ defmodule LiveStyle.Dev do
     IO.puts("")
 
     :ok
+  end
+
+  defp output_class_diff(ref, prop_classes) do
+    name = if is_tuple(ref), do: elem(ref, 0), else: ref
+    props = Keyword.get(prop_classes, name, [])
+
+    IO.puts("#{IO.ANSI.cyan()}:#{name}#{IO.ANSI.reset()}")
+    output_class_props(props)
+    IO.puts("")
+  end
+
+  defp output_class_props([]), do: IO.puts("  (no properties)")
+
+  defp output_class_props(props) do
+    for {prop, class} <- props do
+      class_display = format_class_value(class)
+      IO.puts("  #{prop}: #{class_display}")
+    end
   end
 
   @doc """

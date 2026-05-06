@@ -150,8 +150,8 @@ defmodule LiveStyle.Types do
   ## Examples
 
       Types.transform_list([
-        Functions.rotate(Units.deg(45)),
-        Functions.scale(1.5)
+        "rotate(45deg)",
+        "scale(1.5)"
       ])
   """
   @spec transform_list(list(String.t())) :: property_type()

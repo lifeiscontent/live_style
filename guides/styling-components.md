@@ -95,7 +95,9 @@ class :container,
   ]
 ```
 
-Using breakpoint constants with string interpolation:
+Using breakpoint constants with string interpolation. Define those constants as
+media query conditions like `"(min-width: 768px)"`, then add the `@media` prefix
+at the call site:
 
 ```elixir
 class :grid,
