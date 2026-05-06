@@ -35,7 +35,7 @@ defmodule LiveStyle.Compiler.CSS.Vars do
   """
   @spec generate_properties(Manifest.t()) :: String.t()
   def generate_properties(manifest) do
-    manifest.vars
+    Manifest.entries(manifest, :vars)
     |> Enum.filter(fn {_key, entry} -> Keyword.get(entry, :type) != nil end)
     |> Enum.sort_by(fn {_key, entry} -> Keyword.fetch!(entry, :ident) end)
     |> Enum.map_join("\n", fn {_key, entry} ->
@@ -60,7 +60,7 @@ defmodule LiveStyle.Compiler.CSS.Vars do
   """
   @spec generate_vars(Manifest.t()) :: String.t()
   def generate_vars(manifest) do
-    vars = manifest.vars
+    vars = Manifest.entries(manifest, :vars)
 
     if vars == [] do
       ""

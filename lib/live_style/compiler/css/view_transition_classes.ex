@@ -20,6 +20,7 @@ defmodule LiveStyle.Compiler.CSS.ViewTransitionClasses do
   ```
   """
 
+  alias LiveStyle.Manifest
   alias LiveStyle.Utils
 
   # Map view transition keys (snake_case atoms) to CSS pseudo-elements
@@ -45,7 +46,7 @@ defmodule LiveStyle.Compiler.CSS.ViewTransitionClasses do
   """
   @spec generate(LiveStyle.Manifest.t()) :: String.t()
   def generate(manifest) do
-    manifest.view_transition_classes
+    Manifest.entries(manifest, :view_transition_classes)
     |> Enum.sort_by(fn {_key, entry} -> Keyword.fetch!(entry, :ident) end)
     |> Enum.map_join("\n", fn {_key, entry} ->
       generate_entry(entry)

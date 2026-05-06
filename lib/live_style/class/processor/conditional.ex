@@ -15,9 +15,12 @@ defmodule LiveStyle.Class.Processor.Conditional do
   """
 
   alias LiveStyle.Class.{Builder, Conditional}
-  alias LiveStyle.{CSSValue, ShorthandBehavior}
+  alias LiveStyle.Config
+  alias LiveStyle.CSSValue
   alias LiveStyle.MediaQuery.Transform, as: MediaQueryTransform
+  alias LiveStyle.Property.Validation
   alias LiveStyle.Selector.Condition, as: ConditionSelector
+  alias LiveStyle.ShorthandBehavior
 
   @doc """
   Processes a list of conditional declarations into atomic class entries.
@@ -38,16 +41,23 @@ defmodule LiveStyle.Class.Processor.Conditional do
       ]
   """
   @spec transform(list(), keyword()) :: list()
-  def transform(declarations, _opts \\ []) do
+  def transform(declarations, opts \\ []) do
     declarations
     |> Enum.flat_map(fn {prop, conditions} ->
       # Convert key to CSS string at boundary
       css_prop = CSSValue.to_css_property(prop)
+      maybe_validate_property(css_prop, opts)
 
       # Use style resolution for conditional properties
       ShorthandBehavior.expand_shorthand_conditions(css_prop, conditions)
     end)
     |> Enum.flat_map(&process_expanded/1)
+  end
+
+  defp maybe_validate_property(css_prop, opts) do
+    if Config.validate_properties?() do
+      Validation.validate!(css_prop, opts)
+    end
   end
 
   # Process an expanded conditional declaration

@@ -25,6 +25,7 @@ defmodule LiveStyle.Compiler.CSS.Pipeline do
 
   alias LiveStyle.Compiler.CSS
   alias LiveStyle.Compiler.CSS.Writer.Stats
+  alias LiveStyle.Manifest
   alias LiveStyle.Storage
 
   @doc """
@@ -92,12 +93,12 @@ defmodule LiveStyle.Compiler.CSS.Pipeline do
   @spec stats(LiveStyle.Manifest.t()) :: keyword()
   def stats(manifest) do
     [
-      vars: length(manifest.vars),
-      keyframes: length(manifest.keyframes),
-      classes: length(manifest.classes),
-      theme_classes: length(manifest.theme_classes),
-      position_try: length(manifest.position_try),
-      view_transition_classes: length(manifest.view_transition_classes)
+      vars: Manifest.count(manifest, :vars),
+      keyframes: Manifest.count(manifest, :keyframes),
+      classes: Manifest.count(manifest, :classes),
+      theme_classes: Manifest.count(manifest, :theme_classes),
+      position_try: Manifest.count(manifest, :position_try),
+      view_transition_classes: Manifest.count(manifest, :view_transition_classes)
     ]
   end
 end

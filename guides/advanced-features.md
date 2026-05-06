@@ -26,7 +26,7 @@ defmodule MyAppWeb.Card do
 
   def render(assigns) do
     ~H"""
-    <div class={LiveStyle.default_marker()}>
+    <div {css([LiveStyle.default_marker()])}>
       <div {css(:card_content)}>
         Hover the parent to move me
       </div>
@@ -58,8 +58,7 @@ defmodule MyAppWeb.Table do
   use LiveStyle
   alias LiveStyle.When
 
-  @row_marker LiveStyle.marker(:row)
-  @row_hover When.ancestor(":hover", @row_marker)
+  @row_hover When.ancestor(":hover", marker(:row))
 
   class :cell,
     opacity: [
@@ -75,9 +74,9 @@ defmodule MyAppWeb.Table do
 
   def render(assigns) do
     ~H"""
-    <div class={LiveStyle.default_marker()}>
+    <div {css([LiveStyle.default_marker()])}>
       <table>
-        <tr :for={row <- @rows} class={@row_marker}>
+        <tr :for={row <- @rows} {css([marker(:row)])}>
           <td :for={cell <- row} {css(:cell)}>
             <%= cell %>
           </td>
@@ -278,7 +277,7 @@ export function createViewTransitionDom(options = {}) {
           types: transitionTypes.length ? transitionTypes : ["same-document"],
         })
       } catch (error) {
-        // Firefox 144+ doesn't support callbackOptions yet
+        // Some browsers do not support callbackOptions yet.
         document.startViewTransition(update)
       }
     },
@@ -483,7 +482,10 @@ end
 
 ### Browser Support
 
-View Transitions are supported in Chrome 111+, Edge 111+, Safari 18+, and Firefox 144+. They gracefully degrade in unsupported browsers.
+View Transitions are available in current major browsers, but support details
+continue to move as the API evolves. The adapter above checks
+`document.startViewTransition`, so unsupported browsers render the update
+without an animated transition.
 
 ## Scroll-Driven Animations
 
@@ -637,7 +639,11 @@ Range keywords:
 
 ### Browser Support
 
-Scroll-driven animations are supported in Chrome 115+, Edge 115+, and Safari 18+. They require no JavaScript - the browser handles all animation timing based on scroll position.
+Scroll-driven animation support is still uneven across widely used browsers.
+Treat these as progressive enhancements and consider wrapping critical effects in
+`@supports (animation-timeline: scroll())`. They require no JavaScript in
+supporting browsers - the browser handles animation timing based on scroll
+position.
 
 ## CSS Anchor Positioning
 
@@ -717,7 +723,9 @@ Only positioning-related properties are allowed in `position_try`:
 
 ### Browser Support
 
-CSS Anchor Positioning is available in Chromium 125+ (June 2024). Firefox and Safari don't yet support this feature. Consider feature detection or fallback positioning.
+CSS Anchor Positioning is newly available across current major browser engines,
+but older browser versions still need fallback positioning. Consider feature
+detection when the anchored UI is critical.
 
 ## Combining Features
 
@@ -729,26 +737,24 @@ defmodule MyAppWeb.Dropdown do
   use LiveStyle
   alias LiveStyle.When
 
-  @trigger_marker LiveStyle.marker(:trigger)
-
   class :menu,
     position: "absolute",
     position_anchor: "--dropdown-trigger",
     top: "anchor(bottom)",
     opacity: [
       {:default, "0"},
-      {When.sibling_before(":focus", @trigger_marker), "1"}
+      {When.sibling_before(":focus", marker(:trigger)), "1"}
     ],
     transform: [
       {:default, "translateY(-10px)"},
-      {When.sibling_before(":focus", @trigger_marker), "translateY(0)"}
+      {When.sibling_before(":focus", marker(:trigger)), "translateY(0)"}
     ],
     transition: "opacity 200ms, transform 200ms"
 
   def dropdown(assigns) do
     ~H"""
     <div>
-      <button class={[@trigger_marker]} style="anchor-name: --dropdown-trigger">
+      <button {css([marker(:trigger)])} style="anchor-name: --dropdown-trigger">
         Menu
       </button>
       <div {css(:menu)}>

@@ -120,10 +120,10 @@ defmodule MyAppWeb.Breakpoints do
   use LiveStyle
 
   consts [
-    sm: "@media (min-width: 640px)",
-    md: "@media (min-width: 768px)",
-    lg: "@media (min-width: 1024px)",
-    xl: "@media (min-width: 1280px)"
+    sm: "(min-width: 640px)",
+    md: "(min-width: 768px)",
+    lg: "(min-width: 1024px)",
+    xl: "(min-width: 1280px)"
   ]
 end
 
@@ -235,28 +235,39 @@ end
 | Function | CSS Syntax |
 |----------|------------|
 | `color/1` | `<color>` |
-| `length/1` | `<length>` |
 | `angle/1` | `<angle>` |
+| `custom/2` | custom syntax |
+| `custom_ident/1` | `<custom-ident>` |
+| `image/1` | `<image>` |
 | `integer/1` | `<integer>` |
+| `length/1` | `<length>` |
+| `length_percentage/1` | `<length-percentage>` |
+| `no_inherit/1` | sets `inherits: false` |
 | `number/1` | `<number>` |
-| `time/1` | `<time>` |
 | `percentage/1` | `<percentage>` |
+| `resolution/1` | `<resolution>` |
+| `string/1` | `<string>` |
+| `time/1` | `<time>` |
+| `transform_function/1` | `<transform-function>` |
+| `transform_list/1` | `<transform-list>` |
+| `url/1` | `<url>` |
+| `any/1` | `*` |
 
 ## Recommended Token Structure
 
 A recommended structure for larger applications:
 
 ```
-lib/my_app/tokens/
-├── colors.ex          # MyAppWeb.Colors - raw color palette
-├── semantic.ex        # MyAppWeb.Semantic - themed semantic tokens
-├── spacing.ex         # MyAppWeb.Spacing - spacing scale
-├── font_size.ex       # MyAppWeb.FontSize - typography sizes
-├── radius.ex          # MyAppWeb.Radius - border radii
-├── shadow.ex          # MyAppWeb.Shadow - box shadows
-├── breakpoints.ex     # MyAppWeb.Breakpoints - media queries
-├── z_index.ex         # MyAppWeb.ZIndex - z-index values
-└── animations.ex      # MyAppWeb.Animations - keyframes
+lib/my_app_web/style/
+├── colors.ex          # MyAppWeb.Style.Colors - raw color palette
+├── semantic.ex        # MyAppWeb.Style.Semantic - themed semantic tokens
+├── spacing.ex         # MyAppWeb.Style.Spacing - spacing scale
+├── font_size.ex       # MyAppWeb.Style.FontSize - typography sizes
+├── radius.ex          # MyAppWeb.Style.Radius - border radii
+├── shadow.ex          # MyAppWeb.Style.Shadow - box shadows
+├── breakpoints.ex     # MyAppWeb.Style.Breakpoints - media query conditions
+├── z_index.ex         # MyAppWeb.Style.ZIndex - z-index values
+└── animations.ex      # MyAppWeb.Style.Animations - keyframes
 ```
 
 Example Colors module:

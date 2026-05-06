@@ -3,10 +3,8 @@ defmodule LiveStyle.Config do
   Configuration management for LiveStyle.
 
   This module provides access to all LiveStyle configuration options.
-  Complex configuration logic is split into focused submodules:
-
-  - `LiveStyle.Config.Validation` - property validation settings
-  - `LiveStyle.Config.Shorthand` - shorthand expansion behavior
+  Complex configuration logic is split into focused internal helpers for
+  property validation settings and shorthand expansion behavior.
 
   ## Profiles
 
@@ -26,7 +24,10 @@ defmodule LiveStyle.Config do
   There are several global configurations for the LiveStyle application:
 
     * `:manifest_path` - path where the manifest file is stored
-      (default: `"_build/live_style_manifest.etf"`)
+      (default: `"_build/{env}/live_style/{app}/manifest.etf"`)
+
+    * `:usage_path` - path where the usage manifest file is stored
+      (default: `"_build/{env}/live_style/{app}/usage.etf"`)
 
     * `:shorthand_behavior` - the shorthand expansion behavior
       (default: `LiveStyle.ShorthandBehavior.AcceptShorthands`)

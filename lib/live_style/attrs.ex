@@ -17,10 +17,15 @@ defmodule LiveStyle.Attrs do
   defstruct [:class, :style, :prop_classes]
 
   @type prop_classes :: [{atom() | String.t(), String.t() | :__unset__}]
+  @type prop_classes_source ::
+          prop_classes()
+          | {:live_style_static_refs, module(), list()}
+          | nil
+
   @type t :: %__MODULE__{
           class: String.t() | nil,
           style: String.t() | nil,
-          prop_classes: prop_classes() | nil
+          prop_classes: prop_classes_source()
         }
 
   @doc """
@@ -43,10 +48,18 @@ defmodule LiveStyle.Attrs do
     result = []
     result = if style && style != "", do: [{:style, style} | result], else: result
     has_class = is_binary(class) and class != ""
-    has_prop_classes = is_list(attrs.prop_classes) and attrs.prop_classes != []
+    has_prop_classes = prop_classes_source?(attrs.prop_classes)
     result = if has_class or has_prop_classes, do: [{:class, attrs} | result], else: result
     result
   end
+
+  defp prop_classes_source?(prop_classes) when is_list(prop_classes), do: prop_classes != []
+
+  defp prop_classes_source?({:live_style_static_refs, module, refs})
+       when is_atom(module) and is_list(refs),
+       do: refs != []
+
+  defp prop_classes_source?(_prop_classes), do: false
 
   @doc """
   Extracts just the class string from an Attrs struct.

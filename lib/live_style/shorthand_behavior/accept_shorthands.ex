@@ -1,16 +1,16 @@
 defmodule LiveStyle.ShorthandBehavior.AcceptShorthands do
   @moduledoc """
-  Keeps shorthand properties intact with nil resets for longhands.
+  Keeps shorthand properties intact while tracking related longhands for merging.
 
   This is the default behavior. Shorthand properties are preserved,
-  but conflicting longhand properties are reset to `nil` to ensure
-  deterministic cascade behavior.
+  and related longhands are considered during expansion so later declarations
+  can merge with deterministic cascade behavior.
 
   ## How It Works
 
   When you use a shorthand like `margin: "10px"`, this behavior:
-  1. Keeps the shorthand as the main value
-  2. Returns the shorthand without nil resets (nils are filtered out)
+  1. Expands the shorthand through the same data used by the merger
+  2. Keeps only the emitted shorthand declaration after filtering internal nil resets
 
   This ensures that later longhands properly override earlier shorthands
   through CSS cascade, while keeping the output minimal.

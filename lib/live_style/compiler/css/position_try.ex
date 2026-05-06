@@ -13,6 +13,7 @@ defmodule LiveStyle.Compiler.CSS.PositionTry do
 
   """
 
+  alias LiveStyle.Manifest
   alias LiveStyle.Utils
 
   @doc """
@@ -23,7 +24,7 @@ defmodule LiveStyle.Compiler.CSS.PositionTry do
   """
   @spec generate(LiveStyle.Manifest.t()) :: String.t()
   def generate(manifest) do
-    manifest.position_try
+    Manifest.entries(manifest, :position_try)
     |> Enum.sort_by(fn {_key, entry} -> Keyword.fetch!(entry, :ident) end)
     |> Enum.flat_map(fn {_key, entry} -> generate_entry(entry) end)
     |> Enum.join("\n")

@@ -2,8 +2,8 @@ defmodule LiveStyle.ManifestTest do
   @moduledoc """
   Tests for LiveStyle.Manifest structure and operations.
 
-  These tests verify the sorted list operations that ensure deterministic
-  CSS output ordering across Elixir versions.
+  These tests verify map-backed manifest operations and deterministic entry
+  traversal for CSS output across Elixir versions.
   """
   use ExUnit.Case, async: true
 
@@ -18,14 +18,14 @@ defmodule LiveStyle.ManifestTest do
     test "returns manifest with empty collections" do
       manifest = Manifest.empty()
 
-      assert manifest.vars == []
-      assert manifest.consts == []
-      assert manifest.keyframes == []
-      assert manifest.position_try == []
-      assert manifest.view_transition_classes == []
-      assert manifest.classes == []
-      assert manifest.theme_classes == []
-      assert manifest.module_hashes == []
+      assert manifest.vars == %{}
+      assert manifest.consts == %{}
+      assert manifest.keyframes == %{}
+      assert manifest.position_try == %{}
+      assert manifest.view_transition_classes == %{}
+      assert manifest.classes == %{}
+      assert manifest.theme_classes == %{}
+      assert manifest.module_hashes == %{}
     end
   end
 
@@ -57,7 +57,7 @@ defmodule LiveStyle.ManifestTest do
         |> Manifest.put_var("A.first", value: "a")
         |> Manifest.put_var("M.middle", value: "m")
 
-      keys = Enum.map(manifest.vars, fn {k, _} -> k end)
+      keys = manifest |> Manifest.entries(:vars) |> Enum.map(fn {k, _} -> k end)
       assert keys == ["A.first", "M.middle", "Z.last"]
     end
 
@@ -67,7 +67,7 @@ defmodule LiveStyle.ManifestTest do
         |> Manifest.put_var("Test.color", value: "red")
         |> Manifest.put_var("Test.color", value: "blue")
 
-      assert length(manifest.vars) == 1
+      assert Manifest.count(manifest, :vars) == 1
       assert Manifest.get_var(manifest, "Test.color") == [value: "blue"]
     end
 
@@ -92,7 +92,7 @@ defmodule LiveStyle.ManifestTest do
         |> Manifest.put_const("A.first", "a")
         |> Manifest.put_const("B.second", "b")
 
-      keys = Enum.map(manifest.consts, fn {k, _} -> k end)
+      keys = manifest |> Manifest.entries(:consts) |> Enum.map(fn {k, _} -> k end)
       assert keys == ["A.first", "B.second", "C.third"]
     end
   end
@@ -113,7 +113,7 @@ defmodule LiveStyle.ManifestTest do
         |> Manifest.put_class("A.first", [])
         |> Manifest.put_class("M.middle", [])
 
-      keys = Enum.map(manifest.classes, fn {k, _} -> k end)
+      keys = manifest |> Manifest.entries(:classes) |> Enum.map(fn {k, _} -> k end)
       assert keys == ["A.first", "M.middle", "Z.last"]
     end
   end
@@ -134,7 +134,7 @@ defmodule LiveStyle.ManifestTest do
         |> Manifest.put_keyframes("Bounce.in", [])
         |> Manifest.put_keyframes("Spin.rotate", [])
 
-      keys = Enum.map(manifest.keyframes, fn {k, _} -> k end)
+      keys = manifest |> Manifest.entries(:keyframes) |> Enum.map(fn {k, _} -> k end)
       assert keys == ["Bounce.in", "Fade.out", "Spin.rotate"]
     end
   end
@@ -156,7 +156,7 @@ defmodule LiveStyle.ManifestTest do
       result = Manifest.ensure_keys(old_manifest)
 
       assert result.version == Manifest.current_version()
-      assert result.vars == []
+      assert result.vars == %{}
     end
 
     test "preserves data for current version" do
@@ -213,8 +213,8 @@ defmodule LiveStyle.ManifestTest do
         |> Manifest.put_var("C.c", value: "c")
         |> Manifest.put_var("A.a", value: "a")
 
-      assert manifest1.vars == manifest2.vars
-      assert manifest2.vars == manifest3.vars
+      assert Manifest.entries(manifest1, :vars) == Manifest.entries(manifest2, :vars)
+      assert Manifest.entries(manifest2, :vars) == Manifest.entries(manifest3, :vars)
     end
 
     test "multiple puts maintain consistent order" do
@@ -225,7 +225,7 @@ defmodule LiveStyle.ManifestTest do
           Manifest.put_var(acc, key, value: "#{i}")
         end)
 
-      keys = Enum.map(manifest.vars, fn {k, _} -> k end)
+      keys = manifest |> Manifest.entries(:vars) |> Enum.map(fn {k, _} -> k end)
 
       # Keys should be sorted
       assert keys == Enum.sort(keys)

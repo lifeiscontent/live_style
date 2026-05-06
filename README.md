@@ -8,7 +8,7 @@ LiveStyle provides a type-safe, composable styling system with:
 - **Deterministic hashing**: Same styles always produce same class names
 - **CSS Variables**: Type-safe design tokens with `vars/1`
 - **Constants**: Static values inlined at compile time with `consts/1`
-- **Theming**: Override variables with `theme/2`
+- **Theming**: Override CSS variables with `theme_class/2`
 - **@layer support**: CSS cascade layers for predictable specificity
 - **Last-wins merging**: Like StyleX, later styles override earlier ones
 
@@ -19,7 +19,7 @@ Add `live_style` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:live_style, "~> 0.14.0"}
+    {:live_style, "~> 0.16.2"}
   ]
 end
 ```
@@ -174,7 +174,7 @@ LiveStyle brings Meta's StyleX philosophy to Phoenix LiveView:
 ```elixir
 def deps do
   [
-    {:live_style, "~> 0.14.0"},
+    {:live_style, "~> 0.16.2"},
     # Automatic vendor prefixing
     {:autoprefixer_ex, "~> 0.1.0"},
     # Deprecation warnings for CSS properties

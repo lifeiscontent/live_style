@@ -23,7 +23,7 @@ defmodule LiveStyle.Compiler.CSS.ThemeClasses do
   """
   @spec generate(Manifest.t()) :: String.t()
   def generate(manifest) do
-    manifest.theme_classes
+    Manifest.entries(manifest, :theme_classes)
     |> Enum.sort_by(fn {_key, entry} -> Keyword.fetch!(entry, :ident) end)
     |> Enum.flat_map(fn {_key, entry} ->
       ident = Keyword.fetch!(entry, :ident)
