@@ -61,6 +61,18 @@ defmodule LiveStyle.Manifest do
           module_hashes: %{optional(module()) => binary()}
         }
 
+  @type serializable_t :: %{
+          version: pos_integer(),
+          vars: [{String.t(), var_entry()}],
+          consts: [{String.t(), const_entry()}],
+          keyframes: [{String.t(), keyframes_entry()}],
+          position_try: [{String.t(), position_try_entry()}],
+          view_transition_classes: [{String.t(), view_transition_class_entry()}],
+          classes: [{String.t(), class_entry()}],
+          theme_classes: [{String.t(), theme_class_entry()}],
+          module_hashes: [{module(), binary()}]
+        }
+
   @collections [
     :vars,
     :consts,
@@ -152,7 +164,7 @@ defmodule LiveStyle.Manifest do
   @doc """
   Converts the manifest to a deterministic list-backed representation for disk.
   """
-  @spec to_serializable(t()) :: t()
+  @spec to_serializable(t()) :: serializable_t()
   def to_serializable(manifest) do
     Enum.reduce(@collections, manifest, fn collection, acc ->
       Map.put(acc, collection, entries(acc, collection))
